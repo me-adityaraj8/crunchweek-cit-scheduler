@@ -21,3 +21,8 @@ venv/
 # local-only
 *.zip
 CrunchWeek_StarterPack/
+
+# local database
+local.db
+*.db
+.claude/

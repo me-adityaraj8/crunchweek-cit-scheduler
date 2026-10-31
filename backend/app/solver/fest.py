@@ -4,6 +4,7 @@ Requests are placed one at a time in priority order (effective category, then su
 is never left out of a slot that a lower-priority request later takes, so the result has no priority
 inversions by construction; check_fest verifies it anyway.
 """
+import hashlib
 from dataclasses import dataclass, field
 
 from ..core.checker import _booking_errors, _room_busy, _room_feats, group_busy
@@ -112,7 +113,20 @@ def _describe_holder(ds, all_reqs, h) -> str:
     return f"class {h}" if s else h
 
 
-def _try_displace(ds, st: _State, req, req_id, rooms, time_limit_s, all_reqs) -> Decision | None:
+def _resolve_week(ds, st: _State, time_limit_s, blocked, groups, cache: dict | None) -> Assign | None:
+    """Week-7 re-solve around fixed bookings. With a cache (kept per timetable version), the same inputs
+    always give the same answer, so re-deciding after each new booking doesn't reshuffle Week 7."""
+    key = hashlib.sha1(repr((sorted(blocked), sorted(groups))).encode()).hexdigest()
+    if cache is not None and key in cache:
+        hit = cache[key]
+        return {sid: tuple(v) for sid, v in hit.items()} if hit is not None else None
+    res = solve_timetable(ds, time_limit_s, baseline=st.base, move_weight=1000, blocked=blocked, blocked_groups=groups)
+    if cache is not None and res.status != "timeout":
+        cache[key] = {sid: list(v) for sid, v in res.assign.items()} if res.assign else None
+    return res.assign
+
+
+def _try_displace(ds, st: _State, req, req_id, rooms, time_limit_s, all_reqs, cache=None) -> Decision | None:
     """Institute events may move regular classes for Week 7. Pick the window slot whose only
     conflicts are classes, re-place those classes, and keep every earlier booking fixed."""
     options = []
@@ -131,15 +145,14 @@ def _try_displace(ds, st: _State, req, req_id, rooms, time_limit_s, all_reqs) ->
                    for p in range(x, y + 1)}
         groups = {(g, d, p) for rq, (room, d, x, y) in list(st.placed.items()) + [(req_id, (r["id"], day, a, b))]
                   for g in all_reqs[rq].get("mandatory_for_groups", []) for p in range(x, y + 1)}
-        res = solve_timetable(ds, time_limit_s, baseline=st.base, move_weight=1000, blocked=blocked,
-                              blocked_groups=groups)
-        if res.assign is None:
+        week = _resolve_week(ds, st, time_limit_s, blocked, groups, cache)
+        if week is None:
             continue
         saved = (st.week, st.overrides)
-        st.week = res.assign
+        st.week = week
         st.overrides = {sid: {"session_id": sid, "day": v[0], "start_period": v[1], "room_id": v[2],
                               "displaced_by": st.overrides.get(sid, {}).get("displaced_by", req_id)}
-                        for sid, v in res.assign.items() if tuple(v) != tuple(st.base[sid])}
+                        for sid, v in week.items() if tuple(v) != tuple(st.base[sid])}
         st.refresh()
         if st.fits(req, r["id"], day, a, b):
             st.week, st.overrides = saved
@@ -154,7 +167,9 @@ def _try_displace(ds, st: _State, req, req_id, rooms, time_limit_s, all_reqs) ->
     return None
 
 
-def decide_fest(ds: Dataset, assign: Assign, extra_requests: list[dict] = (), time_limit_s: float = 30) -> FestResult:
+def decide_fest(ds: Dataset, assign: Assign, extra_requests: list[dict] = (), time_limit_s: float = 30,
+                cache: dict | None = None) -> FestResult:
+    """cache: optional dict of Week-7 re-solves for this `assign`, filled in and reused across calls."""
     all_reqs = {**ds.requests, **{r["id"]: r for r in extra_requests}}
     st = _State(ds, assign)
     decisions: dict[str, Decision] = {}
@@ -188,7 +203,7 @@ def decide_fest(ds: Dataset, assign: Assign, extra_requests: list[dict] = (), ti
         d = _place_in_window(ds, st, req, rid, rooms, facts, all_reqs)
         if d is None and cat == "institute_event" and rid in ds.requests:
             # live app requests never move classes: the export's overrides must name a dataset request
-            d = _try_displace(ds, st, req, rid, rooms, time_limit_s, all_reqs)
+            d = _try_displace(ds, st, req, rid, rooms, time_limit_s, all_reqs, cache)
             if d:
                 d.facts = facts + d.facts
         if d is None:
