@@ -5,6 +5,8 @@ from pathlib import Path
 
 from .model import Dataset, DatasetError
 
+SESSION_FIELDS = ("id", "course_id", "kind", "groups", "faculty_id", "size", "duration", "room_types")
+FACULTY_FIELDS = ("id", "name", "max_hours_per_day")
 REQUIRED_KEYS = ("dataset_id", "calendar", "priority_order", "role_category_cap", "rooms",
                  "faculty", "student_groups", "sessions")
 
@@ -43,6 +45,14 @@ def load_dataset(src: str | Path | dict) -> Dataset:
     )
 
 
+def _require(obj, fields, where):
+    if not isinstance(obj, dict):
+        raise DatasetError(f"{where}: expected an object")
+    missing = [k for k in fields if k not in obj]
+    if missing:
+        raise DatasetError(f"{where}: missing {', '.join(missing)}")
+
+
 def apply_changes(ds: Dataset, change_file: dict) -> Dataset:
     """Apply a change file (starter-pack format). Returns a new Dataset; ds is untouched."""
     if not isinstance(change_file, dict) or not isinstance(change_file.get("changes"), list):
@@ -54,6 +64,9 @@ def apply_changes(ds: Dataset, change_file: dict) -> Dataset:
 
     for i, ch in enumerate(change_file["changes"]):
         t = ch.get("type") if isinstance(ch, dict) else None
+        for key in ("days", "periods"):
+            if isinstance(ch, dict) and key in ch and not isinstance(ch[key], list):
+                raise DatasetError(f"Change {i + 1} ({t}): '{key}' must be a list")
         try:
             if t == "faculty_unavailable":
                 if ch["faculty_id"] not in fac:
@@ -70,10 +83,14 @@ def apply_changes(ds: Dataset, change_file: dict) -> Dataset:
                          "reason": ch.get("reason", "")})
             elif t == "add_faculty":
                 f = ch["faculty"]
+                _require(f, FACULTY_FIELDS, f"Change {i + 1} (add_faculty)")
+                f.setdefault("unavailable", [])
+                f.setdefault("preferences", [])
                 raw["faculty"].append(f)
                 fac[f["id"]] = f
             elif t == "add_session":
                 s = ch["session"]
+                _require(s, SESSION_FIELDS, f"Change {i + 1} (add_session)")
                 if s["faculty_id"] not in fac:
                     raise DatasetError(f"Change {i + 1}: session {s['id']} names unknown faculty {s['faculty_id']}")
                 raw["sessions"].append(s)

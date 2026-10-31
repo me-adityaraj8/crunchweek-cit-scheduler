@@ -327,7 +327,6 @@ def _could_take(ds, req, rid, day, a, b, other_id, busy, grp) -> bool:
                         or any(grp.get((g, day, p)) for g in req["mandatory_for_groups"]) for p in per)
             if not clash:
                 return True
-        return False
     return False
 
 

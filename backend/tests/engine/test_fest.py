@@ -100,3 +100,38 @@ def test_institute_event_displaces_class_when_needed(ds, raw, V, base):
              "fest_week": {"bookings": [asdict(d) for d in f.decisions], "session_overrides": f.overrides}}
     rep = V.run(raw, sched)
     assert [v for v in rep["hard_violations"] if v["where"] != "exams"] == []
+
+
+def test_live_institute_event_never_displaces(ds, base):
+    from backend.app.core.checker import check_move
+    sid, crowded = None, None
+    for s_id, s in ds.sessions.items():
+        if "auditorium" in s["room_types"] and s["duration"] == 1 and not s.get("basket_slot") and not s.get("fixed_slot"):
+            if not check_move(ds, base, s_id, "TUE", 3, "AUD"):
+                sid, crowded = s_id, {**base, s_id: ("TUE", 3, "AUD")}
+                break
+    extra = {**ds.requests["BR-01"], "id": "APP-0002", "windows": [{"day": "TUE", "from_period": 3, "to_period": 3}],
+             "duration_periods": 1, "submitted_at": "2027-02-11T10:00:00+05:30"}
+    f = decide_fest(ds, crowded, extra_requests=[extra])
+    assert not any(o["displaced_by"] == "APP-0002" for o in f.overrides)
+    assert _by(f, "APP-0002").status != "approved" or _by(f, "APP-0002").room_id != "AUD"
+
+
+def test_displacement_keeps_mandatory_groups_free(ds, raw, V, base):
+    import copy
+    from backend.app.core.checker import check_move
+    from backend.app.core.dataset import load_dataset as ld
+    for s_id, s in ds.sessions.items():
+        if "auditorium" in s["room_types"] and s["duration"] == 1 and not s.get("basket_slot") and not s.get("fixed_slot"):
+            if not check_move(ds, base, s_id, "MON", 4, "AUD"):
+                crowded = {**base, s_id: ("MON", 4, "AUD")}
+                break
+    # make BR-01 mandatory for a group that has some other class on MON P4 or P5
+    busy = next(g for g in ds.groups if any(g in ds.sessions[x]["groups"] and d == "MON" and p in (4, 5) and x != s_id
+                                           for x, (d, p, _) in crowded.items()))
+    raw2 = copy.deepcopy(raw)
+    next(b for b in raw2["booking_requests"] if b["id"] == "BR-01")["mandatory_for_groups"] = [busy]
+    ds2 = ld(raw2)
+    f = decide_fest(ds2, crowded)
+    viol, _, stats = check_fest(ds2, crowded, [asdict(d) for d in f.decisions], f.overrides)
+    assert viol == [] and stats["priority_inversions"] == []

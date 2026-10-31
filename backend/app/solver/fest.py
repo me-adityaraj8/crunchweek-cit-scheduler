@@ -110,7 +110,7 @@ def _describe_holder(ds, all_reqs, h) -> str:
     return f"class {h}" if s else h
 
 
-def _try_displace(ds, st: _State, req, req_id, rooms, time_limit_s) -> Decision | None:
+def _try_displace(ds, st: _State, req, req_id, rooms, time_limit_s, all_reqs) -> Decision | None:
     """Institute events may move regular classes for Week 7. Pick the window slot whose only
     conflicts are classes, re-place those classes, and keep every earlier booking fixed."""
     for day, a, b in _window_starts(req):
@@ -123,14 +123,22 @@ def _try_displace(ds, st: _State, req, req_id, rooms, time_limit_s) -> Decision 
                 continue
             blocked = {(room, d, p) for room, d, x, y in list(st.placed.values()) + [(r["id"], day, a, b)]
                        for p in range(x, y + 1)}
-            res = solve_timetable(ds, time_limit_s, baseline=st.base, move_weight=1000, blocked=blocked)
+            groups = {(g, d, p) for rq, (room, d, x, y) in list(st.placed.items()) + [(req_id, (r["id"], day, a, b))]
+                      for g in all_reqs[rq].get("mandatory_for_groups", []) for p in range(x, y + 1)}
+            res = solve_timetable(ds, time_limit_s, baseline=st.base, move_weight=1000, blocked=blocked,
+                                  blocked_groups=groups)
             if res.assign is None:
                 continue
+            saved = (st.week, st.overrides)
             st.week = res.assign
             st.overrides = {sid: {"session_id": sid, "day": v[0], "start_period": v[1], "room_id": v[2],
                                   "displaced_by": st.overrides.get(sid, {}).get("displaced_by", req_id)}
                             for sid, v in res.assign.items() if tuple(v) != tuple(st.base[sid])}
             st.refresh()
+            if st.fits(req, r["id"], day, a, b):
+                st.week, st.overrides = saved
+                st.refresh()
+                continue
             st.take(req_id, r["id"], day, a, b)
             moved = sorted(sid for sid, o in st.overrides.items() if o["displaced_by"] == req_id)
             return Decision(req_id, "approved", day, a, b, r["id"],
@@ -172,8 +180,9 @@ def decide_fest(ds: Dataset, assign: Assign, extra_requests: list[dict] = (), ti
             facts.append(f"Requested {want} does not fit: {_room_misfit(ds, req, ds.rooms[want])}")
 
         d = _place_in_window(ds, st, req, rid, rooms, facts, all_reqs)
-        if d is None and cat == "institute_event":
-            d = _try_displace(ds, st, req, rid, rooms, time_limit_s)
+        if d is None and cat == "institute_event" and rid in ds.requests:
+            # live app requests never move classes: the export's overrides must name a dataset request
+            d = _try_displace(ds, st, req, rid, rooms, time_limit_s, all_reqs)
             if d:
                 d.facts = facts + d.facts
         if d is None:

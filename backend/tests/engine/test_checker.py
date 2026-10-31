@@ -89,3 +89,20 @@ def test_check_booking_and_free_rooms(ds):
     assert any("seats" in v.detail for v in too_small)
     free = free_rooms(ds, assign, [], "MON", 1, 1, 100, [], ["lecture_hall"])
     assert "LH-1" not in free and "LH-2" in free
+
+
+def test_inversion_checks_every_window_like_validator(ds, raw, V):
+    import copy
+    raw2 = copy.deepcopy(raw)
+    br03 = next(b for b in raw2["booking_requests"] if b["id"] == "BR-03")
+    br13 = next(b for b in raw2["booking_requests"] if b["id"] == "BR-13")
+    br03["windows"] = [{"day": "WED", "from_period": 1, "to_period": 2}, {"day": "WED", "from_period": 10, "to_period": 11}]
+    br03["room_types"], br03["needs"], br03["attendance"] = ["lecture_hall", "classroom"], [], 60
+    sched = {"dataset_id": "cit-public-v1", "sessions": [],
+             "fest_week": {"bookings": [{"request_id": b["id"], "status": "rejected", "reason": "x"} for b in raw2["booking_requests"] if b["id"] not in ("BR-03", "BR-13")]
+                           + [{"request_id": "BR-03", "status": "rejected", "reason": "x"},
+                              {"request_id": "BR-13", "status": "approved", "day": "WED", "start_period": 10, "end_period": 11,
+                               "room_id": "CR-103", "reason": "x"}], "session_overrides": []}}
+    theirs = V.run(raw2, sched)["bookings"]["priority_inversions"]
+    assert theirs
+    assert full_report(load_dataset(raw2), sched)["bookings"]["priority_inversions"] == theirs

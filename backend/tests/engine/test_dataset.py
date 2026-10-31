@@ -41,3 +41,15 @@ def test_load_rejects_missing_keys(raw):
     bad = {k: v for k, v in raw.items() if k != "sessions"}
     with pytest.raises(DatasetError):
         load_dataset(bad)
+
+
+def test_add_session_missing_fields_is_a_dataset_error():
+    ds = load_dataset(DATA)
+    with pytest.raises(DatasetError, match="duration"):
+        apply_changes(ds, {"changes": [{"type": "add_session", "session": {"id": "X1", "faculty_id": "F01", "kind": "lecture",
+                                                                             "groups": ["Y1-A"], "size": 10, "room_types": ["classroom"]}}]})
+
+
+def test_days_must_be_a_list():
+    with pytest.raises(DatasetError, match="days"):
+        apply_changes(load_dataset(DATA), {"changes": [{"type": "faculty_unavailable", "faculty_id": "F01", "days": "MON", "periods": [1]}]})

@@ -45,7 +45,7 @@ def test_sample_disruption_minimal_and_valid(ds, raw, V, base, fest, sample_disr
 def test_repair_keeps_spectra_bookings_valid(ds, base, fest, sample_disruption):
     ds2 = apply_changes(ds, sample_disruption)
     r = repair(ds2, base, fest, 60)
-    viol, _, stats = check_fest(ds2, r.assign, [asdict(d) for d in fest.decisions], r.overrides)
+    viol, _, stats = check_fest(ds2, r.assign, [asdict(d) for d in r.fest.decisions], r.overrides)
     assert viol == [] and stats["priority_inversions"] == []
 
 
@@ -69,7 +69,8 @@ def test_room_closure_breaking_a_booking_is_reported(ds, base, fest):
                                           "periods": list(range(d.start_period, d.end_period + 1)), "reason": "x"}]})
     r = repair(ds2, base, fest, 30)
     assert r.status == "ok"
-    assert any(d.request_id in c.text and c.code == "booking" for c in r.conflicts)
+    assert any(c.text.startswith(d.request_id) and c.code == "booking_changed" for c in r.conflicts)
+    assert not [c for c in r.conflicts if c.code == "booking"]
 
 
 def test_conflict_text_lists_days_in_week_order(ds, base):
@@ -100,9 +101,44 @@ def test_repair_with_week7_overrides(ds, raw, V, base, sample_disruption):
     assert r.status == "ok"
     assert r.assign[sid] == crowded[sid] or sid in hit          # displaced class keeps its normal slot
     assert r.moved <= len(hit) + 1
-    viol, _, stats = check_fest(ds2, r.assign, [asdict(d) for d in fest.decisions], r.overrides)
+    viol, _, stats = check_fest(ds2, r.assign, [asdict(d) for d in r.fest.decisions], r.overrides)
     assert viol == [] and stats["priority_inversions"] == []
-    sched = {"dataset_id": ds.dataset_id, "sessions": rows(r.assign),
-             "fest_week": {"bookings": [asdict(d) for d in fest.decisions], "session_overrides": r.overrides}}
+    sched = _after_sched(ds, r)
     rep = V.run(V.apply_disruption(raw, sample_disruption), sched, baseline=_sched(ds, crowded))
     assert rep["hard_violation_count"] == 0, rep["hard_violations"][:3]
+
+
+def _after_sched(ds, r):
+    return {"dataset_id": ds.dataset_id, "sessions": rows(r.assign),
+            "fest_week": {"bookings": [asdict(d) for d in r.fest.decisions], "session_overrides": r.fest.overrides}}
+
+
+def test_room_closure_re_decides_bookings_and_stays_valid(ds, raw, V, base, fest):
+    change = {"changes": [{"type": "room_unavailable", "room_id": "CR-105", "days": list(ds.days),
+                           "periods": list(range(1, 10)), "reason": "x"}]}
+    r = repair(apply_changes(ds, change), base, fest, 60)
+    assert r.status == "ok"
+    rep = V.run(V.apply_disruption(raw, change), _after_sched(ds, r), baseline=_sched(ds, base))
+    assert rep["hard_violation_count"] == 0, rep["hard_violations"][:3]
+    assert rep["bookings"]["priority_inversions"] == []
+    changed = {c.text.split(":")[0] for c in r.conflicts if c.code == "booking_changed"}
+    was_cr105 = {d.request_id for d in fest.decisions if d.room_id == "CR-105"}
+    assert was_cr105 and was_cr105 <= changed
+
+
+def test_permanent_class_not_vetoed_by_one_week_booking(ds, base, fest):
+    br08 = next(d for d in fest.decisions if d.request_id == "BR-08")
+    assert br08.status == "approved"
+    size = ds.groups["ECE-3"]["size"]
+    change = {"changes": [
+        {"type": "add_faculty", "faculty": {"id": "F99", "name": "New", "department": "ECE", "max_hours_per_day": 4,
+                                             "needs_accessible": False, "unavailable": [], "preferences": []}},
+        {"type": "add_session", "session": {"id": "EC399-L1", "course_id": "EC399", "kind": "lecture", "groups": ["ECE-3"],
+                                             "faculty_id": "F99", "size": size, "duration": 1,
+                                             "room_types": ["classroom", "lecture_hall"], "needs_accessible": False,
+                                             "basket_slot": None, "fixed_slot": {"day": br08.day, "start_period": br08.start_period}}}]}
+    ds2 = apply_changes(ds, change)
+    r = repair(ds2, base, fest, 60)
+    assert r.status == "ok" and r.assign["EC399-L1"][:2] == (br08.day, br08.start_period)
+    viol, _, _ = check_fest(ds2, r.assign, [asdict(d) for d in r.fest.decisions], r.fest.overrides)
+    assert viol == []
