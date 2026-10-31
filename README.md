@@ -78,7 +78,7 @@ flowchart LR
 | **Solver** | Google OR-Tools CP-SAT |
 | **Database** | Postgres (Neon) — or SQLite locally |
 | **Auth** | PyJWT + bcrypt |
-| **AI Assistant** | Gemini 3.8 Flash *(optional)* |
+| **AI Assistant** | Gemini 3.5 Flash-Lite *(optional)* |
 | **Frontend** | React 19 + Vite + TypeScript + Tailwind 4 · shadcn/ui-style components on Radix · TanStack Query · Motion |
 
 > 📄 Full list with licences → [THIRD_PARTY.md](THIRD_PARTY.md)  

@@ -133,7 +133,7 @@ Rules baked into the architecture:
 | React + Vite SPA | App is a logged-in dashboard; no SEO/SSR needed; fewer moving parts than Next.js | Next.js (SSR and server functions add complexity and Vercel's 10s function timeout tempts proxying solves through it) |
 | Tailwind + shadcn/ui | Fast, consistent, accessible components | — |
 | Postgres on Neon (free) | Real persistence that survives backend restarts; doesn't pause for a week like Supabase free | SQLite on free hosts (disk wiped on restart/redeploy) |
-| Gemini 3.8 Flash (free tier) | Free, supports JSON schema output, good with Hinglish | Paid APIs |
+| Gemini 3.5 Flash-Lite (free tier) | Free, supports JSON schema output, good with Hinglish | Paid APIs |
 | Hosting: everything on Vercel (team decision). SPA as static build; FastAPI as a Vercel Python function under `/api`; Neon via Vercel's Postgres integration | One deploy, one URL, no sleeping server, free Hobby tier. Python functions get up to ~300s and 2 GB on Hobby with Fluid compute, enough for a 60s CP-SAT solve | Render/Koyeb free (0.1 vCPU, sleeps) — fallback only if a Vercel check below fails |
 
 **Must be validated in hour 1, not assumed:** (a) the `ortools` wheel fits Vercel's Python function size limit, (b) a CP-SAT solve of the real dataset finishes inside the function's max duration on Vercel's CPU (cold start included), (c) Neon connects from the function, (d) the Gemini key returns JSON-schema output from the function. Function state is not kept between calls, so everything lives in Postgres. If (a) or (b) fails, the backend moves to Render/Railway and the SPA stays on Vercel.
@@ -381,7 +381,7 @@ Sleep: stagger 2–3 hour naps between hours 9–15 so at least two lanes are al
 
 - Vite SPA over Next.js.
 - Neon over Supabase. Backend on Vercel with the rest (your call); Render as fallback if the hour-1 checks fail.
-- Gemini 3.8 Flash as the only LLM.
+- Gemini 3.5 Flash-Lite as the only LLM.
 - Repair objective weights (1000 per move) — moves dominate soft penalty.
 - Spectra decisions are greedy in priority order (inversion-free by construction), not a joint optimisation, for MVP.
 - Railway-timetable visual direction (to be confirmed with mockups).

@@ -121,6 +121,8 @@ Run: API on :8000 as above, then `cd frontend && npm ci && npm run dev` → http
 - The function has **2 CPUs** (`/api/health` shows `cpus`). With the default 8 workers the solver only reached soft 68 in 60 s; with `SOLVER_WORKERS=2` (set on Vercel) it reaches the optimum, soft 3, in ~49 s. Keep workers = CPUs.
 - Env on Vercel: `JWT_SECRET`, `GEMINI_API_KEY`, `DATABASE_URL` (Neon "velora", pooled), `SOLVER_WORKERS=2`, `SOLVER_TIME_LIMIT_S=120` (60 s was sometimes not enough on 2 CPUs: soft 62 once). `DEMO_PASSWORD` not set (defaults to `demo1234`).
 - Live end-to-end check (`scripts/make_exports.py` against velora-campus): timetable optimal soft 3 (56 s), exams 41/41 penalty 0, Spectra 67/70 with 0 inversions, sample disruption 12 moved, validator 0 hard on both files.
+- Gemini: `GEMINI_MODEL=gemini-3.5-flash-lite` on Vercel. `gemini-2.5-flash` returns 404 for new API keys, and `gemini-3.8-flash` took >8 s per call (over `LLM_TIMEOUT_S`), so the assistant fell back to keyword rules. Check with `/api/health?deep=1` (should say `llm: ok`).
+- Voice input: the Book page's mic records a 16 kHz WAV in the browser and `POST /api/assistant/transcribe` has Gemini transcribe it into the message box (works in Brave, which blocks the browser's own speech API).
 - Long requests: an idle connection can be dropped on the way while a solve runs. `make_exports.py` now opens a fresh connection per request. The frontend should show progress during generate (up to ~2 min) and allow a retry.
 
 ## Next steps

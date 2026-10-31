@@ -31,7 +31,7 @@ See docs/DESIGN.md section 3.2 for reasons. Summary:
 - Frontend: React 19 + Vite 7 + TypeScript + Tailwind 4 + shadcn/ui-style components on Radix, TanStack Query, Motion. Design system and research in `frontend/DESIGN.md`
 - DB: Postgres on Neon
 - Deploy: Vercel for both (Python function under /api); Render as fallback
-- LLM: Gemini 3.8 Flash, for parsing and wording explanations only
+- LLM: Gemini 3.5 Flash-Lite, for parsing and wording explanations only
 
 ## Architecture
 Modular monolith. See docs/DESIGN.md (diagram, data model, API, folder structure).
