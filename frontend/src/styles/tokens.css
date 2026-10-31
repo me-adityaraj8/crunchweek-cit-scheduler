@@ -1,0 +1,116 @@
+/* Signal design tokens. Colour carries meaning or nothing (see frontend/DESIGN.md).
+   Values are OKLCH so light and dark keep the same perceived contrast. */
+
+:root {
+  color-scheme: light;
+
+  /* surfaces */
+  --platform: oklch(0.928 0.006 240);
+  --platform-2: oklch(0.9 0.007 240);
+  --dot: oklch(0.84 0.007 240);
+  --sheet: oklch(1 0 0);
+  --sheet-2: oklch(0.975 0.004 240);
+  --anthracite: oklch(0.29 0.012 250);
+  --anthracite-2: oklch(0.345 0.012 250);
+  --anthracite-3: oklch(0.4 0.012 250);
+
+  /* text */
+  --ink: oklch(0.21 0.012 250);
+  --ink-2: oklch(0.42 0.014 250);
+  --ink-3: oklch(0.52 0.012 250);
+  --on-anthracite: oklch(0.965 0.004 90);
+  --on-anthracite-2: oklch(0.74 0.01 250);
+
+  /* rules */
+  --rule: oklch(0.885 0.006 240);
+  --rule-strong: oklch(0.79 0.008 240);
+
+  /* wayfinding yellow: here, changed, focus */
+  --signal: oklch(0.875 0.165 92);
+  --signal-ink: oklch(0.21 0.02 90);
+  --signal-soft: oklch(0.965 0.055 95);
+  --signal-edge: oklch(0.8 0.15 90);
+
+  /* status signals */
+  --clear: oklch(0.55 0.14 152);
+  --clear-soft: oklch(0.955 0.04 152);
+  --stop: oklch(0.555 0.2 27);
+  --stop-soft: oklch(0.955 0.03 27);
+  --wait: oklch(0.6 0.012 250);
+  --wait-soft: oklch(0.95 0.004 250);
+
+  /* session kinds: line colours, always paired with a letter. Lecture, tutorial, lab and event pass
+     the categorical checks (normal-vision ΔE >= 15, colour-blind ΔE >= 8) in both modes; exam is ink. */
+  --k-lecture: oklch(0.5 0.15 255);
+  --k-lecture-tint: oklch(0.958 0.022 255);
+  --k-lecture-edge: oklch(0.78 0.08 255);
+  --k-tutorial: oklch(0.6 0.11 192);
+  --k-tutorial-tint: oklch(0.958 0.022 192);
+  --k-tutorial-edge: oklch(0.78 0.07 192);
+  --k-lab: oklch(0.48 0.18 300);
+  --k-lab-tint: oklch(0.958 0.026 300);
+  --k-lab-edge: oklch(0.78 0.09 300);
+  --k-exam: oklch(0.3 0.015 250);
+  --k-exam-tint: oklch(0.945 0.004 250);
+  --k-exam-edge: oklch(0.7 0.01 250);
+  --k-event: oklch(0.6 0.19 355);
+  --k-event-tint: oklch(0.958 0.026 355);
+  --k-event-edge: oklch(0.8 0.09 355);
+  --k-on: oklch(1 0 0);
+
+  /* elevation: a mounted sign, not a floating card */
+  --mount: 0 1px 0 var(--rule-strong);
+  --float: 0 0 0 1px var(--rule-strong), 0 18px 40px -18px oklch(0.2 0.02 250 / 0.35);
+}
+
+.dark {
+  color-scheme: dark;
+
+  --platform: oklch(0.19 0.008 250);
+  --platform-2: oklch(0.165 0.008 250);
+  --dot: oklch(0.255 0.009 250);
+  --sheet: oklch(0.228 0.01 250);
+  --sheet-2: oklch(0.252 0.01 250);
+  --anthracite: oklch(0.15 0.006 250);
+  --anthracite-2: oklch(0.21 0.008 250);
+  --anthracite-3: oklch(0.27 0.01 250);
+
+  --ink: oklch(0.955 0.004 250);
+  --ink-2: oklch(0.79 0.01 250);
+  --ink-3: oklch(0.66 0.012 250);
+  --on-anthracite: oklch(0.965 0.004 90);
+  --on-anthracite-2: oklch(0.7 0.01 250);
+
+  --rule: oklch(0.3 0.01 250);
+  --rule-strong: oklch(0.38 0.012 250);
+
+  --signal-soft: oklch(0.33 0.06 92);
+  --signal-edge: oklch(0.7 0.13 92);
+
+  --clear: oklch(0.75 0.15 152);
+  --clear-soft: oklch(0.3 0.05 152);
+  --stop: oklch(0.69 0.19 27);
+  --stop-soft: oklch(0.31 0.065 27);
+  --wait: oklch(0.64 0.012 250);
+  --wait-soft: oklch(0.28 0.008 250);
+
+  --k-lecture: oklch(0.6 0.15 255);
+  --k-lecture-tint: oklch(0.29 0.04 255);
+  --k-lecture-edge: oklch(0.45 0.08 255);
+  --k-tutorial: oklch(0.66 0.11 192);
+  --k-tutorial-tint: oklch(0.29 0.035 192);
+  --k-tutorial-edge: oklch(0.45 0.07 192);
+  --k-lab: oklch(0.56 0.17 300);
+  --k-lab-tint: oklch(0.29 0.045 300);
+  --k-lab-edge: oklch(0.45 0.09 300);
+  --k-exam: oklch(0.88 0.01 250);
+  --k-exam-tint: oklch(0.28 0.008 250);
+  --k-exam-edge: oklch(0.45 0.01 250);
+  --k-event: oklch(0.64 0.17 355);
+  --k-event-tint: oklch(0.29 0.045 355);
+  --k-event-edge: oklch(0.47 0.09 355);
+  --k-on: oklch(0.15 0.01 250);
+
+  --mount: 0 1px 0 oklch(0.13 0.006 250);
+  --float: 0 0 0 1px var(--rule-strong), 0 18px 40px -16px oklch(0 0 0 / 0.6);
+}
