@@ -5,6 +5,7 @@ import { Link, NavLink, Outlet, useLocation } from "react-router";
 import { useDashboard } from "@/api/hooks";
 import { PasswordDialog } from "@/components/account/PasswordDialog";
 import { Drawer } from "@/components/ui/dialog";
+import { Logo } from "@/components/ui/logo";
 import { Tip } from "@/components/ui/overlay";
 import { useAuth, useUser } from "@/lib/auth";
 import { ROLE } from "@/lib/format";
@@ -28,17 +29,9 @@ function isActive(stop: Stop, pathname: string) {
   return stop.to === "/" ? pathname === "/" : pathname === stop.to || pathname.startsWith(stop.to + "/");
 }
 
-/** The V block: the mark on every brand plate. */
+/** The Velora mark on every brand plate. */
 function Mark({ size = 40 }: { size?: number }) {
-  return (
-    <span
-      className="grid shrink-0 place-items-center rounded-[4px] bg-anthracite font-black text-signal"
-      style={{ width: size, height: size, fontSize: size / 2 }}
-      aria-hidden
-    >
-      V
-    </span>
-  );
+  return <Logo size={size} title="" />;
 }
 
 /** The brand: an accent plate with the V block. */

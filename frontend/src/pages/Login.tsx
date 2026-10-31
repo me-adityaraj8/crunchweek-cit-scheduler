@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Segmented } from "@/components/ui/controls";
 import { Field, Input, PasswordInput } from "@/components/ui/field";
 import { LoopText } from "@/components/ui/loop-text";
+import { Logo } from "@/components/ui/logo";
 import { Select } from "@/components/ui/select";
 import { byRole, type AccountOption } from "@/lib/accounts";
 import { useAuth } from "@/lib/auth";
@@ -401,7 +402,7 @@ export default function Login() {
       <div className="mx-auto grid min-h-dvh w-full max-w-[1240px] grid-cols-1 content-center gap-x-10 gap-y-7 px-4 py-16 sm:px-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-7 lg:col-start-1 lg:row-start-1">
           <div className="flex items-center gap-3">
-            <span className="grid size-12 place-items-center rounded-[4px] bg-anthracite text-[24px] font-black text-signal">V</span>
+            <Logo size={52} title="" />
             <div className="leading-tight">
               <div className="text-[20px] font-black tracking-[0.01em]">VELORA</div>
               <div className="text-[13px] font-medium text-ink-2">Chilika Institute of Technology</div>

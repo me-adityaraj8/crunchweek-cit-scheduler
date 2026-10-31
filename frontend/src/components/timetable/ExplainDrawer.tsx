@@ -9,6 +9,7 @@ import { Code, KindBullet, StatusChip } from "@/components/board/signals";
 import { ErrorState, Loading } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { Drawer } from "@/components/ui/dialog";
+import { Logo } from "@/components/ui/logo";
 import { useUser } from "@/lib/auth";
 import { bookingStatus, KIND } from "@/lib/format";
 import { dayShort, periodLabel, periodRange, spanLabel } from "@/lib/time";
@@ -292,7 +293,7 @@ export function ExplainDrawer({ item, days, periods, onClose }: { item: GridItem
           }}
           className="mb-4 inline-flex items-center gap-2 rounded-[4px] border-2 border-rule-strong bg-sheet-2 px-2.5 py-1.5 text-[12.5px] font-bold transition-colors hover:bg-signal-soft"
         >
-          <span className="grid size-5 place-items-center rounded-[3px] bg-anthracite text-[11px] font-black text-signal">V</span>
+          <Logo size={22} title="" />
           Ask Velo about {e.course_id}
         </button>
       )}
