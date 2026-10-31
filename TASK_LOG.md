@@ -12,3 +12,4 @@
 | 2026-10-31 | Varun (Laptop 2) | Lane B: API (auth, data, timetable, views, exams, bookings, changes, export), services, Gemini assistant with keyword fallback, 44 API tests, make_exports script; end-to-end via HTTP: validator 0 hard on both exports, soft 3, 17 moved |
 | 2026-10-31 | Varun (Laptop 2) | Deploy prep: backend is 310 MB unzipped on Linux (181 MB without caches/tests) vs Vercel's 250 MB function limit; Procfile for PaaS. Assistant eval script + 53 cases; keyword fallback 17/20 dataset, 24/24 tricky, 4/4 change, guards ok |
 | 2026-10-31 | Aditya (Laptop 1) | Reviewed Lane B (API 44/44, engine 355/355 green here); app now refuses to start deployed without a real JWT_SECRET |
+| 2026-10-31 | Varun (Laptop 2) | Vercel prep: startup without lifespan events, throwaway SQLite on Vercel when no DATABASE_URL (health warns), pooler-safe Postgres, bearer auth in /api/docs, bundle excludes, README deploy steps; merged with Aditya's JWT_SECRET guard |

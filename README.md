@@ -70,6 +70,26 @@ Score the booking/change assistant on tricky requests (Gemini if `GEMINI_API_KEY
 
 On a PaaS host (Railway, Render, Fly), the `Procfile` starts the API with `uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT`.
 
+## Deploy to Vercel
+
+`vercel.json` runs the API as one Python function (`api/index.py`, up to 300 s per request) under `/api`. The frontend build is added to it when `frontend/` lands.
+
+1. **Create the project.** Either import the GitHub repo at vercel.com (Add New → Project; framework preset "Other"; leave the build settings alone), or deploy from a laptop with the CLI: `npm i -g vercel`, `vercel login`, `vercel link`.
+2. **Add a database.** In the project's Storage tab, connect Neon (Postgres). It sets `DATABASE_URL`. Without it the app still starts, on a throwaway SQLite file, and `/api/health` says so. That's fine for a first check, not for judges.
+3. **Set the environment variables** (Settings → Environment Variables, or `vercel env add NAME`):
+   - `JWT_SECRET`: required. A deployed app refuses to start without 32+ random characters. Generate one with `python -c "import secrets; print(secrets.token_urlsafe(48))"`.
+   - `DEMO_PASSWORD`: the password for every demo account. List it in the Demo accounts table below.
+   - `GEMINI_API_KEY`: optional. Without it the assistant uses keyword rules.
+   - `SOLVER_TIME_LIMIT_S` (default 60) and `SOLVER_WORKERS` (default 8). Lower the workers if the function has few CPUs.
+4. **Deploy** (the Deploy button, or `vercel deploy --prod`). Then open `https://<project>.vercel.app/api/health`: `ok` should be true, `db` should be `ok` (not "temporary"), and `llm` should be `configured`. `/api/docs` has an Authorize button: paste the token from `POST /api/auth/login`.
+5. **Measure the solver on Vercel's CPUs**, from any machine with this repo:
+   ```bash
+   python scripts/make_exports.py --base-url https://<project>.vercel.app --password <DEMO_PASSWORD> --out /tmp/vercel-check
+   ```
+   It prints the solve time and soft penalty, then runs the official validator on both files. A soft penalty well above 3, or a timeout, means too little CPU: raise `SOLVER_TIME_LIMIT_S` (at most about 280) or move the backend.
+
+If the deploy fails on function size, or the solver is too slow, move the backend to Railway or Render (the `Procfile` covers it). Keep the frontend on Vercel, and change the `/api/(.*)` rewrite in `vercel.json` to `https://<backend-host>/api/$1`.
+
 ## Demo accounts
 
 Every account uses the password in `DEMO_PASSWORD` (default `demo1234` locally). The Admin's "reset demo data" (`POST /api/admin/reset`) restores the starter dataset, removes every timetable, request and proposal, and keeps the accounts.
