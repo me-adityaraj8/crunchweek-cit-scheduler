@@ -17,7 +17,7 @@ from . import errors
 from .config import settings
 from .db import Base, SessionLocal, engine
 from .llm import client as llm_client
-from .routers import assistant, auth, bookings, changes, data, exams, export, timetable, views
+from .routers import assistant, auth, bookings, changes, data, exams, export, timetable, velo, views
 from .schemas import Health
 from .services import state
 
@@ -104,6 +104,6 @@ def health(deep: bool = Query(False)):
                   solver_workers=settings.solver_workers, solve_ms=solve_ms, db=db, llm=llm)
 
 
-for r in (auth, data, timetable, views, exams, bookings, changes, assistant, export):
+for r in (auth, data, timetable, views, exams, bookings, changes, assistant, velo, export):
     api.include_router(r.router)
 app.include_router(api)

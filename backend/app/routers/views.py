@@ -15,11 +15,9 @@ from ..services import bookings, proposals, state
 router = APIRouter(tags=["views"])
 
 
-@router.get("/dashboard", response_model=DashboardOut)
-def dashboard(db: Session = Depends(get_db), user: User = Depends(current_user)):
-    row, ds = state.active_dataset(db)
-    v = state.active_version(db, row)
-    ex = state.latest_exams(db, row)
+def pending_for(db: Session, user: User, v) -> list[dict]:
+    """What is waiting for this person to approve: change proposals (Admin) and venue bookings that need
+    their sign-off. Shared by the dashboard and Velo so both always agree."""
     pending = []
     if user.role == "admin":
         for p in proposals.visible(db, user, "pending"):
@@ -32,6 +30,15 @@ def dashboard(db: Session = Depends(get_db), user: User = Depends(current_user))
                 user.role == "admin" or (user.role == "coordinator" and b.approver == user.department)):
             pending.append({"kind": "booking", "id": b.id, "title": b.data["title"],
                             "requested_by": b.data["requester"], "created_at": b.created_at})
+    return pending
+
+
+@router.get("/dashboard", response_model=DashboardOut)
+def dashboard(db: Session = Depends(get_db), user: User = Depends(current_user)):
+    row, ds = state.active_dataset(db)
+    v = state.active_version(db, row)
+    ex = state.latest_exams(db, row)
+    pending = pending_for(db, user, v)
     mine = sum(1 for b in bookings.live_requests(db) if b.created_by == user.id)
     base = {"dataset_id": ds.dataset_id, "pending": pending, "exams_scheduled": len(ex.exams) if ex else 0,
             "exams_total": len(ds.exams), "total": len(ds.sessions), "my_requests": mine}

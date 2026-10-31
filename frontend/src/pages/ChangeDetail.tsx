@@ -9,6 +9,7 @@ import type { Proposal, Summary } from "@/api/types";
 import { Code, Stamp, StatusChip } from "@/components/board/signals";
 import { DiffView, MoveBoard } from "@/components/changes/DiffView";
 import { CompareBars, MetricCard, StackBar } from "@/components/dashboard/Metrics";
+import { useVeloFocus } from "@/components/velo/VeloProvider";
 import { ErrorState, Loading, PageHeader, RuleList, SectionTitle } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/field";
@@ -113,6 +114,7 @@ export default function ChangeDetail() {
   const user = useUser();
   const { data: summary } = useSummary();
   const q = useChange(Number(id));
+  useVeloFocus(id ? { kind: "proposal", id } : null);
   const approve = useApproveChange();
   const reject = useRejectChange();
   const [note, setNote] = useState("");

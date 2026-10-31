@@ -59,6 +59,10 @@ export type PendingItem = S["PendingItem"];
 export type FreeRoom = S["FreeRoom"];
 export type Settings = S["SettingsOut"];
 export type Health = S["Health"];
+export type VeloIn = S["VeloIn"];
+export type VeloOut = S["VeloOut"];
+export type VeloCard = S["VeloCard"];
+export type VeloFocus = S["VeloFocus"];
 
 export type Kind = "lecture" | "tutorial" | "lab" | "exam" | "event";
 export type View = "group" | "faculty" | "room" | "all";

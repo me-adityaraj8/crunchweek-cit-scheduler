@@ -28,6 +28,8 @@ import type {
   Summary,
   TimetableOut,
   User,
+  VeloIn,
+  VeloOut,
   View,
   Week,
 } from "./types";
@@ -196,6 +198,9 @@ export const useTranscribe = () =>
       return request<{ text: string }>("/assistant/transcribe", { form });
     },
   });
+
+/** Velo answers from the same code the pages use and never changes anything itself. */
+export const useAskVelo = () => useMutation({ mutationFn: (body: VeloIn) => request<VeloOut>("/velo", { body }) });
 
 export const useParseChange = () =>
   useMutation({ mutationFn: (body: { text: string; today?: string }) => request<ChangeParse>("/assistant/change", { body }) });

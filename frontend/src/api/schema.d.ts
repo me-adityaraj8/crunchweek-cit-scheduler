@@ -700,6 +700,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/velo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Velo
+         * @description Velo, the assistant on every page: a message (with the page and what it has open) in, a short reply
+         *     with cards out. Read-only by design: it saves nothing, and every change it offers is sent by the
+         *     browser to the usual endpoint after the person confirms.
+         */
+        post: operations["velo_api_velo_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/export/schedule.json": {
         parameters: {
             query?: never;
@@ -1753,6 +1775,93 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** VeloCard */
+        VeloCard: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "rooms" | "draft" | "preview" | "requests" | "confirm_cancel" | "explain" | "alternatives" | "approvals" | "proposals" | "navigate" | "help";
+            /** Data */
+            data: {
+                [key: string]: unknown;
+            };
+        };
+        /** VeloChip */
+        VeloChip: {
+            /** Label */
+            label: string;
+            /**
+             * Guessed
+             * @default false
+             */
+            guessed: boolean;
+        };
+        /**
+         * VeloFocus
+         * @description What the page has open: a session in the timetable, a booking request, a change proposal.
+         */
+        VeloFocus: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "session" | "request" | "proposal";
+            /** Id */
+            id: string;
+        };
+        /** VeloIn */
+        VeloIn: {
+            /** Text */
+            text: string;
+            /**
+             * Page
+             * @default /
+             */
+            page: string;
+            focus?: components["schemas"]["VeloFocus"] | null;
+            /** Draft Text */
+            draft_text?: string | null;
+            /** Last Intent */
+            last_intent?: ("find_rooms" | "book_venue" | "booking_status" | "cancel_booking" | "explain_session" | "alternatives" | "approvals" | "proposals" | "navigate" | "help") | null;
+            /** Today */
+            today?: string | null;
+        };
+        /**
+         * VeloOut
+         * @description Everything here is read-only: cards come from the same code the pages use, and any change is sent
+         *     by the browser to the usual endpoint only after the person confirms it.
+         */
+        VeloOut: {
+            /**
+             * Intent
+             * @enum {string}
+             */
+            intent: "find_rooms" | "book_venue" | "booking_status" | "cancel_booking" | "explain_session" | "alternatives" | "approvals" | "proposals" | "navigate" | "help";
+            /** Understood */
+            understood: components["schemas"]["VeloChip"][];
+            /** Reply */
+            reply: string;
+            /**
+             * Cards
+             * @default []
+             */
+            cards: components["schemas"]["VeloCard"][];
+            /**
+             * Suggestions
+             * @default []
+             */
+            suggestions: string[];
+            /** Draft Text */
+            draft_text?: string | null;
+            /** Navigate */
+            navigate?: string | null;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "model" | "keywords";
         };
         /** ViolationOut */
         ViolationOut: {
@@ -2966,6 +3075,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ChangeParseOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    velo_api_velo_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VeloIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VeloOut"];
                 };
             };
             /** @description Validation Error */

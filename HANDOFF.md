@@ -152,3 +152,13 @@ python3.13 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt   # Wi
 .venv/bin/python -m pytest backend/tests/engine -q   # ~6 min, solver-heavy (run the two folders separately)
 ```
 Read PROJECT_CONTEXT.md, this file, and `starter_pack/README.md`.
+
+## Velo, the assistant on every page (2026-10-31, Aditya)
+
+- Design: `docs/VELO.md` (what we borrowed and from where, anatomy, cards, flows, the rules Velo keeps).
+- Backend: `POST /api/velo` (`routers/velo.py` → `services/velo.py`). Keyword router first (`llm/velo.py`), Gemini only for what the rules can't place (`llm/prompts/velo.md`), and the rules' guess if the model is down. Every answer comes from existing code: `rooms_free`, `parse_booking` + `bookings.check`, `explain_session`, `proposals.to_out`, and `pending_for` (moved out of the dashboard so both agree). It never writes.
+- Writes: the browser sends them to the usual endpoints (`/bookings`, `/bookings/{id}/cancel`, `/changes`) only after Confirm on a card, so role checks and validation are the forms' own.
+- Booking by conversation: the request text so far travels with each message (`draft_text`) and is re-parsed whole, so "100 people" fills the one missing field.
+- Frontend: `components/velo/` (provider with a per-user thread in session storage, launcher, panel, cards, context chips). Pages set what they have open with `useVeloFocus` (timetable drawer, Book a venue `?request=`, change detail). Phones open Velo from the top bar.
+- Tests: `backend/tests/api/test_velo.py` (27), `components/velo/context.test.ts` (6).
+

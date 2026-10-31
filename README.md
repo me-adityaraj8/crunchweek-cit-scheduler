@@ -44,7 +44,7 @@ flowchart LR
     UI[React SPA]
   end
   subgraph Backend[FastAPI app under /api]
-    API[routers<br/>auth · data · timetable · exams · bookings · changes · assistant · export]
+    API[routers<br/>auth · data · timetable · exams · bookings · changes · assistant · velo · export]
     SVC[services<br/>state · bookings · proposals]
     CORE[core<br/>dataset · checker · explain · export]
     SOLV[solver<br/>timetable · exams · fest · repair · infeasibility<br/>OR-Tools CP-SAT]
@@ -234,7 +234,7 @@ Errors always return: `{"error": {"code", "message", "details"}}`.
 | **Exams** | `POST /exams/generate` · `GET /exams` |
 | **Spectra Week** | `POST /bookings/check` · `POST /bookings` · `GET /bookings?mine=1` · `POST /bookings/{id}/cancel` · `POST /bookings/{id}/decide` · `POST /fest/decide-all` · `GET /fest` · `GET /explain/booking/{id}` |
 | **Changes** | `POST /changes/file` · `POST /changes` · `POST /faculty/unavailability` · `GET /changes` · `GET /changes/{id}` · `POST /changes/{id}/approve` · `POST /changes/{id}/reject` |
-| **Assistant** | `POST /assistant/booking` · `POST /assistant/change` |
+| **Assistant** | `POST /assistant/booking` · `POST /assistant/change` · `POST /velo` (Velo, read-only) |
 | **Export** | `GET /export/schedule.json?after=0\|1` |
 | **Health** | `GET /health?deep=1` |
 

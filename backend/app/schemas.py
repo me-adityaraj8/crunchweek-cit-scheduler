@@ -545,3 +545,47 @@ class Health(BaseModel):
 
 
 GenerateOut.model_rebuild()
+
+
+# ---------------------------------------------------------------- Velo, the assistant on every page
+VeloIntent = Literal["find_rooms", "book_venue", "booking_status", "cancel_booking", "explain_session",
+                     "alternatives", "approvals", "proposals", "navigate", "help"]
+
+
+class VeloFocus(BaseModel):
+    """What the page has open: a session in the timetable, a booking request, a change proposal."""
+    kind: Literal["session", "request", "proposal"]
+    id: str = Field(min_length=1, max_length=40)
+
+
+class VeloIn(BaseModel):
+    text: str = Field(min_length=1, max_length=2000)
+    page: str = Field("/", max_length=200)
+    focus: VeloFocus | None = None
+    draft_text: str | None = Field(None, max_length=4000)   # the booking request so far, for follow-up answers
+    last_intent: VeloIntent | None = None
+    today: str | None = None
+
+
+class VeloChip(BaseModel):
+    label: str
+    guessed: bool = False
+
+
+class VeloCard(BaseModel):
+    kind: Literal["rooms", "draft", "preview", "requests", "confirm_cancel", "explain", "alternatives",
+                  "approvals", "proposals", "navigate", "help"]
+    data: dict
+
+
+class VeloOut(BaseModel):
+    """Everything here is read-only: cards come from the same code the pages use, and any change is sent
+    by the browser to the usual endpoint only after the person confirms it."""
+    intent: VeloIntent
+    understood: list[VeloChip]
+    reply: str
+    cards: list[VeloCard] = []
+    suggestions: list[str] = []
+    draft_text: str | None = None
+    navigate: str | None = None
+    mode: Literal["model", "keywords"]

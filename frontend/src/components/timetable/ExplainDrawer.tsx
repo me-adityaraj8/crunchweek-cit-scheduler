@@ -13,6 +13,7 @@ import { useUser } from "@/lib/auth";
 import { bookingStatus, KIND } from "@/lib/format";
 import { dayShort, periodLabel, periodRange, spanLabel } from "@/lib/time";
 import { cn } from "@/lib/utils";
+import { useVelo, useVeloFocus } from "@/components/velo/VeloProvider";
 import type { GridItem } from "./layout";
 
 type SlotState = { kind: "here" } | { kind: "ok"; alt: Alternative } | { kind: "blocked"; alt: Alternative } | { kind: "none" };
@@ -259,6 +260,8 @@ function BookingExplain({ item, periods }: { item: GridItem; periods?: Period[] 
 
 export function ExplainDrawer({ item, days, periods, onClose }: { item: GridItem | null; days: string[]; periods?: Period[]; onClose: () => void }) {
   const e = item?.entry;
+  const velo = useVelo();
+  useVeloFocus(e ? { kind: "session", id: e.session_id } : null, true);
   return (
     <Drawer
       open={!!item}
@@ -276,6 +279,19 @@ export function ExplainDrawer({ item, days, periods, onClose }: { item: GridItem
         ))
       }
     >
+      {item && e && (
+        <button
+          type="button"
+          onClick={() => {
+            onClose();
+            velo.setOpen(true);
+          }}
+          className="mb-4 inline-flex items-center gap-2 rounded-[4px] border-2 border-rule-strong bg-sheet-2 px-2.5 py-1.5 text-[12.5px] font-bold transition-colors hover:bg-signal-soft"
+        >
+          <span className="grid size-5 place-items-center rounded-[3px] bg-anthracite text-[11px] font-black text-signal">V</span>
+          Ask Velo about {e.course_id}
+        </button>
+      )}
       {item && (e ? <SessionExplain item={item} days={days} periods={periods} onClose={onClose} /> : <BookingExplain item={item} periods={periods} />)}
     </Drawer>
   );

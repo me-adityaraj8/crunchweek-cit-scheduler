@@ -1,15 +1,16 @@
 import { Loader2, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router";
+import { useLocation, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { ApiError, errorMessage } from "@/api/client";
 import { useBookings, useCancelBooking, useSummary } from "@/api/hooks";
-import type { Booking, BookingParse } from "@/api/types";
+import type { Booking, BookingParse, PartialDraft } from "@/api/types";
 import { StatusChip } from "@/components/board/signals";
 import { BookingForm } from "@/components/booking/BookingForm";
 import { ChatPane } from "@/components/booking/ChatPane";
 import { emptyForm, guessedSet, mergeDraft, type FormState } from "@/components/booking/draft";
 import { GenerateCard } from "@/components/dashboard/GenerateCard";
+import { useVeloFocus } from "@/components/velo/VeloProvider";
 import { ErrorState, Loading, PageHeader, SectionTitle } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { bookingStatus, categoryLabel } from "@/lib/format";
@@ -114,6 +115,19 @@ export default function Book() {
   }, [params, summary]);
 
   const [filled, setFilled] = useState(0);
+  const location = useLocation();
+  const request = params.get("request");
+  useVeloFocus(request ? { kind: "request", id: request } : null);
+
+  // a draft Velo handed over with "Open in the form"
+  const handed = (location.state as { draft?: PartialDraft; guessed?: string[] } | null)?.draft;
+  useEffect(() => {
+    if (!handed) return;
+    setForm(mergeDraft(emptyForm(), handed));
+    setGuessed(guessedSet((location.state as { guessed?: string[] }).guessed ?? []));
+    setFilled((n) => n + 1);
+  }, [handed, location.state]);
+
   const onDraft = (r: BookingParse) => {
     setForm((f) => mergeDraft(f, r.draft));
     setGuessed(guessedSet(r.guessed_fields));
