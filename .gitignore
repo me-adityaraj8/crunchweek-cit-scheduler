@@ -26,3 +26,6 @@ CrunchWeek_StarterPack/
 local.db
 *.db
 .claude/
+.vercel
+.env*
+!.env.example
