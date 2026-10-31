@@ -44,6 +44,19 @@ Passed when last run (each suite run separately after its fixes):
 ```
 Known minor gaps (not fixed): basket sessions of different durations are modelled slightly stricter than the validator; `Decision.displaces` of an earlier event can go stale after a later displacement re-solve (overrides themselves are correct).
 
+## Engine check on Laptop 2 (2026-10-31, Varun)
+Same code as `8531cb1`, Windows, Python 3.13, ortools 9.15.6755, 16 threads. On Windows the venv python is `.venv/Scripts/python`.
+- Full pipeline (timetable → exams → Spectra → export, then sample disruption → repair → export), checked with `validator.py`:
+  - `schedule.json`: 0 hard, soft 3 (optimal, 28s), exams 0 penalty (9s), booking score 67/70, 0 inversions.
+  - `schedule_after.json`: 0 hard, soft 4, 16 moved (8 time, 8 room only), `proven_minimal` True (0.7s). The count differs from Laptop 1's 13–14 because the base timetable differs between runs.
+- `pytest backend/tests/engine -m "not slow"`: **353 passed, 2 failed** (6m55s). Both pass on Laptop 1, so they depend on the machine:
+  - `test_simple_repairs_are_fast`: repair took 16.4s, limit 15s.
+  - `test_timeout_on_an_impossible_change_still_names_the_cause`: with every `lab_cs` room closed, `explain_infeasible` (1 worker, 10s) did not prove infeasibility in time, so `repair` returned `timeout` instead of naming CS-LAB.
+
+Risks this points to:
+1. **Hosting CPU.** Timetable quality depends on cores (soft ~201 after 30s on 1 thread vs 3 on 8). Judges generate in our app, so measure on the real host before choosing it.
+2. **Infeasibility on a slow host.** `explain_infeasible` is single-threaded. If it times out, judges get "timeout" instead of a named conflict (rescheduling marks). A counting check in `quick_conflicts` would catch "every room of the type a session needs is closed" instantly: compare the hours sessions need per room type with the free room-hours of that type.
+
 ## Next steps
 1. Task 0: Vercel project + Neon + Gemini key, deploy the health check. **Measure CP-SAT on Vercel's CPU** — quality depends on cores; raise `SOLVER_TIME_LIMIT_S` if only 1 core.
 2. Lane B (API + AI) and Lane C (frontend) per docs/PLAN.md.
