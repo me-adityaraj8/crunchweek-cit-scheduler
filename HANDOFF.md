@@ -36,7 +36,7 @@ Passed when last run (each suite run separately after its fixes):
 - `test_qa_repair.py` 17/17: random disruptions valid and equal to an independently computed minimum, named infeasibility causes, guards.
 - `test_qa_booking_aware.py` 2/2: soft 3 (optimal), booking score 67/70.
 
-**Not yet confirmed:** one full run of the whole suite after the last repair changes (two-phase repair, baseline-aware commitments) was still running when tokens ran out. Next person: run it first:
+**Full suite confirmed:** 404 passed, 0 failed (13m39s, slow tests included) on the pushed code. To re-run:
 ```
 .venv/bin/python -m pytest backend/tests/engine -q            # ~20 min with slow tests
 .venv/bin/python -m pytest backend/tests/engine -q -m "not slow"   # quicker
