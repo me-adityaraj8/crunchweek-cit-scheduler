@@ -28,7 +28,7 @@ Admin, Department coordinator, Faculty, Club representative. Nobody approves the
 ## Technology stack
 See docs/DESIGN.md section 3.2 for reasons. Summary:
 - Backend: Python + FastAPI, Google OR-Tools CP-SAT for timetable / exams / repair
-- Frontend: React + Vite + TypeScript + Tailwind + shadcn/ui
+- Frontend: React 19 + Vite 7 + TypeScript + Tailwind 4 + shadcn/ui-style components on Radix, TanStack Query, Motion. Design system and research in `frontend/DESIGN.md`
 - DB: Postgres on Neon
 - Deploy: Vercel for both (Python function under /api); Render as fallback
 - LLM: Gemini 2.5 Flash, for parsing and wording explanations only
@@ -62,11 +62,12 @@ Seeded demo accounts (README), password from `DEMO_PASSWORD`, bcrypt. `POST /api
 
 ## Completed features
 - Repo set up, starter pack committed.
+- Frontend (Lane C): every page for the four roles (overview, timetable with explanations and manual-move proposals, find a room, booking assistant with live checks, Spectra week board, changes with before/after diff and approval, approvals, exams, data and export, settings), light and dark themes, phone layout. Built against the real API types (`frontend/src/api/schema.d.ts`). 18 unit tests.
 - API + AI (Lane B): auth and roles, dataset upload/reset, timetable generate/views/manual moves/explain, dashboard, free rooms, exams, Spectra bookings (check, submit, cancel, lab approvals), change proposals with approval and stale/self-approval guards, Gemini assistant with keyword fallback, export, `scripts/make_exports.py`. 44 API tests.
 - Engine (Lane A): dataset loading + change files, checker that matches validator.py, CP-SAT timetable, exam scheduler, Spectra week decisions, export, minimal-move repair with infeasibility reasons, explanations. Numbers in HANDOFF.md.
 
 ## Pending features
-Frontend (Lane C, in progress in a separate session), deployment + hosting check (Task 0; size numbers in HANDOFF), `exports/` from the deployed app, a Gemini run of `scripts/eval_llm.py` (needs a key), video.
+Deployment + hosting check (Task 0; size numbers in HANDOFF), `exports/` from the deployed app, a Gemini run of `scripts/eval_llm.py` (needs a key), video.
 
 ## Known bugs
 - Approving a change re-decides Spectra week only when app requests changed since the proposal; otherwise it reuses the repair's decisions. If displacement re-solves are needed, approval can take tens of seconds.

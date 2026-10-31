@@ -23,3 +23,9 @@ def test_deployed_app_refuses_a_weak_or_public_secret(settings, env):
 
 def test_deployed_app_accepts_a_real_secret():
     require_production_secrets(_settings(database_url="postgresql://x", jwt_secret="k" * 40), env={"VERCEL": "1"})
+
+
+def test_health_reports_cpus_and_solver_workers(client):
+    from backend.app.config import settings
+    body = client.get("/api/health").json()
+    assert body["cpus"] >= 1 and body["solver_workers"] == settings.solver_workers

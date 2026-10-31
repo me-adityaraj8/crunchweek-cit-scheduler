@@ -11,7 +11,8 @@ _Last updated: 2026-10-31 by Varun (Laptop 2)_
   - Sample disruption: 13–14 sessions moved (exactly the ones hit by CR-102 closing and F07's Mondays), 0 hard violations under the official validator.
   - Full pipeline export passes `validator.py` with 0 hard violations.
 - **Lane B (API + AI) is built and tested locally** (Laptop 2): see the Lane B section below.
-- Task 0 (deploy + hosting check) and Lane C (frontend) are not started.
+- **Lane C (frontend) is built and checked against the real API locally** (Laptop 2): see the Lane C section below.
+- Task 0 (deploy + hosting check) is not done.
 
 ## Engine API for Lane B (see PLAN.md Interfaces blocks)
 - `core.dataset`: `load_dataset(path|dict)`, `apply_changes(ds, change_file)` → raise `DatasetError` with a readable message for bad JSON, missing fields, wrong types or unknown faculty/room/session ids. Map it to HTTP 400.
@@ -93,9 +94,38 @@ So the Vercel function may or may not fit. And CPU matters as much as size: judg
 - Not yet run with Gemini (no key). Once `GEMINI_API_KEY` is in `.env`: `python scripts/eval_llm.py`.
 - Parser changes from this: an event type not stated → the usual one for the role (admin institute, coordinator department, faculty guest lecture, club club), marked guessed. Start time without a length → 1 hour. A day without a time → any teaching hour that day plus a question. "The auditorium" → AUD when only one room has that type. A start past the last period → a question.
 
+## Lane C — Frontend (2026-10-31, Varun, Laptop 2)
+Run: API on :8000 as above, then `cd frontend && npm ci && npm run dev` → http://localhost:5173 (Vite proxies `/api`). Checks: `npm test` (18 unit tests: time model, grid lanes, proposal diff, split-flap), `npm run build` (type check + production build, clean).
+
+**Design.** `frontend/DESIGN.md` has the research (SBB, Schiphol, DB timetables, Vignelli, 25Live, Skedda, Linear, Open MCT), the five directions considered and the chosen one: "Signal", transit information design. One typeface (Archivo, used across its width axis), anthracite/white/platform grey, yellow only for "you are here" or "changed", colour otherwise only for meaning. Tokens: `src/styles/tokens.css` (OKLCH, light + dark). The session-kind colours pass the colour-blind and normal-vision separation checks in both themes.
+
+**Pages** (each role sees only its own; the nav is drawn as a route line, bottom bar on phones):
+- Login: live service board from `/api/health`, one-click demo accounts (password from `VITE_DEMO_PASSWORD`, default `demo1234`).
+- Overview: per role. Admin gets a split-flap status board, the soft-penalty breakdown, approvals and a dot-matrix of room use; faculty get "today" as a departures board; clubs get their requests.
+- Timetable: group/faculty/room/all-rooms, regular or Spectra week. Sessions glide to their Week-7 slot on the toggle. Lunch band, live "now" line, parallel electives side by side. Click any session for "Why here?": the checker's facts plus a map of every other start time (blocked by what, or the soft cost). Admin/coordinator can propose a move from there. Phones get a day list.
+- Book a venue: assistant chat on the left, live form on the right. Every edit calls `/bookings/check`; guessed fields are marked; the result shows as a ticket, stamped on submit. Works with the LLM down. "Your requests" list with cancel.
+- Spectra week: decision board in priority order (Replay re-runs the cascade), a reason drawer with "lost to" jump, venue lanes by day, Week-7 overrides.
+- Changes: change-file upload (admin), "time I can't teach" grid (faculty), plain-language change request. Proposal page: figures (moved, time/room-only, soft before → after, "minimal, proven"), what changed in words, a before/after timetable that glides sessions with dashed "was here" outlines, a moves board, infeasible conflicts, and Apply/Reject (handles 409 stale).
+- Approvals (admin + coordinators), Exams (Mon–Sat × AM/PM board, seat use), Find a room (period scrubber + rooms × periods grid; a free cell starts a booking), Data and export (numbered pipeline, downloads, checker report, reset), Settings (drag-to-reorder priority, lab owners).
+
+**Verified** in the browser against a real API (separate instance on :8100 with its own SQLite, so `local.db` was untouched): every page as admin and faculty, light and dark, 375px with no horizontal scroll, the sample disruption diff, a Hinglish booking through to submit. No console errors.
+
+**Not done / known gaps:** no Playwright end-to-end tests; coordinator and club views were only checked by reading the code paths, not clicked through; drag-and-drop moves on the grid aren't built (moves go through the "Why here?" drawer); `src/api/schema.d.ts` was generated from the API as of commit c5a1855, so regenerate it (`npm run types` with the API on :8000) after any schema change.
+
+**`vercel.json` does not serve the frontend yet.** Aditya switched it to Vercel's `services` config (495ab31) while the frontend was being built, so the SPA was left for him to add in that format rather than guessed. It needs a static build of `frontend/` (`npm ci && npm run build`, Node 20+, output `frontend/dist`) and a fallback to `/index.html` for every path outside `/api`, so deep links survive a reload. Set `VITE_DEMO_PASSWORD` at build time if the deployed `DEMO_PASSWORD` isn't `demo1234`.
+
+## Deployment (2026-10-31, Aditya)
+- Vercel project **velora** (renamed from crunchweek-cit-scheduler), connected to the GitHub repo: every push to `main` deploys to production.
+- Live API: https://crunchweek-cit-scheduler.vercel.app/api/health (public). `velora-campus.vercel.app` is reserved as an alias but must be added as a project domain in the dashboard (Settings → Domains) to be public and follow new deploys.
+- `vercel.json` uses Vercel **services** (CLI 59 rejects the old top-level `functions`): one `api` service at the repo root, `/api/(.*)` routed to it, maxDuration 300. Add the frontend as a second service at `/` when it lands.
+- The function has **2 CPUs** (`/api/health` shows `cpus`). With the default 8 workers the solver only reached soft 68 in 60 s; with `SOLVER_WORKERS=2` (set on Vercel) it reaches the optimum, soft 3, in ~49 s. Keep workers = CPUs.
+- Env on Vercel: `JWT_SECRET`, `GEMINI_API_KEY`, `SOLVER_WORKERS=2`. `DEMO_PASSWORD` not set (defaults to `demo1234`). **`DATABASE_URL` not set yet**: connect the Neon database "velora" in the Storage tab, then redeploy.
+- Long requests: a client can drop a 2–3 min request while it waits silently. Keep generate at 60 s; the frontend should show progress and allow a retry.
+
 ## Next steps
-1. Task 0: decide the host. **Set `JWT_SECRET` first** (32+ random chars, `python -c "import secrets; print(secrets.token_urlsafe(48))"`): a deployed app refuses to start without it, because the fallback secret is in this public repo. Neon + Gemini key; deploy; open `/api/health` (add `?deep=1` to test the LLM). **Measure a real `POST /api/timetable/generate` on the host.** See Deploy prep above for the size and CPU numbers.
-2. Lane C (frontend) is being built in `frontend/` by Varun's separate UI/UX session (on Laptop 2). Don't edit `frontend/` from another session meanwhile. When it lands, `vercel.json` needs the SPA build (`frontend/dist`) and an `index.html` fallback.
+1. Task 0, **owner: Aditya** (Varun's call, 2026-10-31): create the Vercel project and **try Vercel first**. The repo is on Aditya's GitHub, so importing it at vercel.com from his account is the simplest route. Send Varun the deployed URL and what `/api/health` and `make_exports.py` report. Step-by-step in README "Deploy to Vercel". **Set `JWT_SECRET` first** (32+ random chars, `python -c "import secrets; print(secrets.token_urlsafe(48))"`): a deployed app refuses to start without it, because the fallback secret is in this public repo. Neon via the Vercel Storage tab sets `DATABASE_URL`; Gemini key optional. Then open `/api/health` (add `?deep=1` to test the LLM) and run `scripts/make_exports.py --base-url <url>` to measure the solver on Vercel's CPUs. If the function is too big or too slow, use the Railway/Render fallback (see Deploy prep above).
+   Ready for serverless (commit b63b4b8): startup runs before the first request even without lifespan events; with no `DATABASE_URL` on Vercel it uses a throwaway SQLite in `/tmp` and health says so; Postgres has prepared statements off for Neon's pooler; `api/index.py` sets its own import path; the function bundle excludes frontend, tests, docs, exports and the CSVs.
+2. Add the frontend to `vercel.json` (see the Lane C section: static `frontend/dist` build plus an `index.html` fallback). Then walk the DESIGN.md section 2 journeys on the live URL as each role (coordinator and club especially), and record the demo video from the frontend.
 3. Then `scripts/make_exports.py` against the deployed URL and commit `exports/`.
 
 ## Before you start

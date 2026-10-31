@@ -10,7 +10,7 @@ If the key is missing, the call fails, times out (`LLM_TIMEOUT_S`) or returns an
 
 ## AI tools used to build the project
 
-- Claude Code (Anthropic): repo setup and docs; the engine (`backend/app/core`, `backend/app/solver`) and its tests; the API, services, LLM layer and API tests (`backend/app/*.py`, `routers/`, `services/`, `llm/`, `backend/tests/api`), deployment config and `scripts/make_exports.py`; design and build plan in `docs/`.
+- Claude Code (Anthropic): repo setup and docs; the engine (`backend/app/core`, `backend/app/solver`) and its tests; the API, services, LLM layer and API tests (`backend/app/*.py`, `routers/`, `services/`, `llm/`, `backend/tests/api`), deployment config and `scripts/make_exports.py`; design and build plan in `docs/`; the web frontend (`frontend/`): design research, the visual design system in `frontend/DESIGN.md`, every page and component, and the frontend tests.
 
 ## Where prompts are kept
 

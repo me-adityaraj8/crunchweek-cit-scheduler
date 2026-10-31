@@ -1,0 +1,241 @@
+@import "tailwindcss";
+@import "@fontsource-variable/archivo/wdth.css";
+@import "./styles/tokens.css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --font-sans: "Archivo Variable", "Archivo", ui-sans-serif, system-ui, sans-serif;
+
+  --color-platform: var(--platform);
+  --color-platform-2: var(--platform-2);
+  --color-sheet: var(--sheet);
+  --color-sheet-2: var(--sheet-2);
+  --color-anthracite: var(--anthracite);
+  --color-anthracite-2: var(--anthracite-2);
+  --color-anthracite-3: var(--anthracite-3);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-on-anthracite: var(--on-anthracite);
+  --color-on-anthracite-2: var(--on-anthracite-2);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+  --color-signal: var(--signal);
+  --color-signal-ink: var(--signal-ink);
+  --color-signal-soft: var(--signal-soft);
+  --color-signal-edge: var(--signal-edge);
+  --color-clear: var(--clear);
+  --color-clear-soft: var(--clear-soft);
+  --color-stop: var(--stop);
+  --color-stop-soft: var(--stop-soft);
+  --color-wait: var(--wait);
+  --color-wait-soft: var(--wait-soft);
+
+  --color-k-lecture: var(--k-lecture);
+  --color-k-lecture-tint: var(--k-lecture-tint);
+  --color-k-lecture-edge: var(--k-lecture-edge);
+  --color-k-tutorial: var(--k-tutorial);
+  --color-k-tutorial-tint: var(--k-tutorial-tint);
+  --color-k-tutorial-edge: var(--k-tutorial-edge);
+  --color-k-lab: var(--k-lab);
+  --color-k-lab-tint: var(--k-lab-tint);
+  --color-k-lab-edge: var(--k-lab-edge);
+  --color-k-exam: var(--k-exam);
+  --color-k-exam-tint: var(--k-exam-tint);
+  --color-k-exam-edge: var(--k-exam-edge);
+  --color-k-event: var(--k-event);
+  --color-k-event-tint: var(--k-event-tint);
+  --color-k-event-edge: var(--k-event-edge);
+  --color-k-on: var(--k-on);
+
+  --shadow-mount: var(--mount);
+  --shadow-float: var(--float);
+
+  --radius-sign: 12px;
+  --radius-sheet: 10px;
+  --radius-cell: 6px;
+
+  --ease-arrive: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-leave: cubic-bezier(0.4, 0, 1, 1);
+
+  --animate-shimmer: shimmer 1.4s linear infinite;
+  --animate-alarm: alarm 0.9s ease-out 2;
+  --animate-rise: rise 0.22s var(--ease-arrive) both;
+  --animate-fade-in: fade-in 0.16s var(--ease-arrive) both;
+  --animate-fade-out: fade-out 0.12s var(--ease-leave) both;
+  --animate-pop-in: pop-in 0.16s var(--ease-arrive) both;
+  --animate-pop-out: pop-out 0.1s var(--ease-leave) both;
+  --animate-drawer-in: drawer-in 0.26s var(--ease-arrive) both;
+  --animate-drawer-out: drawer-out 0.18s var(--ease-leave) both;
+  --animate-sheet-up: sheet-up 0.26s var(--ease-arrive) both;
+  --animate-sheet-down: sheet-down 0.18s var(--ease-leave) both;
+
+  @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes fade-out { from { opacity: 1; } to { opacity: 0; } }
+  @keyframes pop-in { from { opacity: 0; transform: translateY(4px) scale(0.98); } to { opacity: 1; transform: none; } }
+  @keyframes pop-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(2px) scale(0.98); } }
+  @keyframes drawer-in { from { transform: translateX(100%); } to { transform: none; } }
+  @keyframes drawer-out { from { transform: none; } to { transform: translateX(100%); } }
+  @keyframes sheet-up { from { transform: translateY(100%); } to { transform: none; } }
+  @keyframes sheet-down { from { transform: none; } to { transform: translateY(100%); } }
+
+  @keyframes shimmer {
+    from { background-position: 200% 0; }
+    to { background-position: -200% 0; }
+  }
+  @keyframes alarm {
+    0% { box-shadow: 0 0 0 0 color-mix(in oklch, var(--stop) 55%, transparent); }
+    100% { box-shadow: 0 0 0 8px transparent; }
+  }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+  }
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    margin: 0;
+    background-color: var(--platform);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 20px;
+    font-feature-settings: "tnum" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  ::selection {
+    background: var(--signal);
+    color: var(--signal-ink);
+  }
+  :focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 5px var(--signal);
+    border-radius: 4px;
+  }
+  button, [role="button"] { cursor: pointer; }
+  button:disabled { cursor: not-allowed; }
+  * { scrollbar-width: thin; scrollbar-color: var(--rule-strong) transparent; }
+}
+
+@layer components {
+  /* the platform: a faint dot grid like timetable paper under glass */
+  .platform-bg {
+    background-color: var(--platform);
+    background-image: radial-gradient(circle at 1px 1px, var(--dot) 1px, transparent 0);
+    background-size: 18px 18px;
+  }
+  /* a printed sheet: timetables, forms, lists */
+  .sheet {
+    background: var(--sheet);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-sheet);
+    box-shadow: var(--mount);
+  }
+  /* hatching marks event bookings (not teaching) on any grid */
+  .hatch-event {
+    background-image: repeating-linear-gradient(
+      135deg,
+      var(--k-event-tint) 0 5px,
+      color-mix(in oklch, var(--k-event-edge) 35%, var(--k-event-tint)) 5px 6px
+    );
+  }
+  .hatch-closed {
+    background-image: repeating-linear-gradient(
+      135deg,
+      transparent 0 5px,
+      color-mix(in oklch, var(--ink-3) 22%, transparent) 5px 6px
+    );
+  }
+  .skeleton {
+    background: linear-gradient(90deg, var(--sheet-2) 0%, var(--platform) 50%, var(--sheet-2) 100%);
+    background-size: 200% 100%;
+    animation: var(--animate-shimmer);
+    border-radius: 6px;
+  }
+  .label-caps {
+    font-size: 11px;
+    line-height: 14px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-stretch: 85%;
+    font-weight: 650;
+  }
+}
+
+/* ---------------------------------------------------------------- split-flap tiles
+   Classic four-layer flip: the old top half falls away while the new bottom half swings down. */
+.flap {
+  --fh: 1.32em;
+  --fw: 0.8em;
+  --flap-ms: 70ms;
+  --flap-bg: color-mix(in oklch, var(--anthracite) 84%, white);
+  --flap-fg: var(--on-anthracite);
+  position: relative;
+  display: inline-block;
+  width: var(--fw);
+  height: var(--fh);
+  margin-right: 0.06em;
+  perspective: 280px;
+  font-weight: 700;
+  font-stretch: 75%;
+  font-style: normal;
+  text-align: center;
+  color: var(--flap-fg);
+  vertical-align: middle;
+}
+.flap > span {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 50%;
+  overflow: hidden;
+  background: var(--flap-bg);
+  backface-visibility: hidden;
+}
+.flap > .t, .flap > .ft { top: 0; border-radius: 0.12em 0.12em 0 0; }
+.flap > .b, .flap > .fb { bottom: 0; border-radius: 0 0 0.12em 0.12em; }
+.flap > span > i {
+  display: block;
+  height: var(--fh);
+  line-height: var(--fh);
+  font-style: normal;
+}
+.flap > .b > i, .flap > .fb > i { transform: translateY(-50%); }
+.flap > .ft { transform-origin: 50% 100%; animation: flap-top var(--flap-ms) ease-in both; z-index: 2; filter: brightness(1.08); }
+.flap > .fb { transform-origin: 50% 0%; animation: flap-bottom var(--flap-ms) ease-out both; z-index: 2; filter: brightness(0.92); }
+.flap::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(50% - 0.5px);
+  height: 1px;
+  background: oklch(0 0 0 / 0.55);
+  z-index: 3;
+}
+.flap[data-tone="clear"] { --flap-fg: oklch(0.82 0.17 152); }
+.flap[data-tone="stop"] { --flap-fg: oklch(0.72 0.19 27); }
+.flap[data-tone="caution"] { --flap-fg: var(--signal); }
+.flap[data-tone="wait"] { --flap-fg: var(--on-anthracite-2); }
+.flap[data-tone="ink"] { --flap-bg: var(--sheet-2); --flap-fg: var(--ink); }
+.flap[data-tone="ink"]::after { background: var(--rule-strong); }
+
+@keyframes flap-top { from { transform: rotateX(0deg); } to { transform: rotateX(-90deg); } }
+@keyframes flap-bottom { 0%, 50% { transform: rotateX(90deg); } to { transform: rotateX(0deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,14 @@
+# Not needed on Vercel (keeps uploads and the Python function small)
+.venv
+venv
+*.db
+.env
+.env.*
+!.env.example
+.claude
+frontend/node_modules
+frontend/dist
+backend/tests
+docs
+exports
+Problem statement.pdf

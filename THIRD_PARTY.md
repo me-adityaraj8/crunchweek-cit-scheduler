@@ -15,4 +15,24 @@
 | python-multipart | 0.0.32 | Apache-2.0 | JSON file uploads as form data |
 | pytest | 9.2.0 | MIT | Tests (dev only) |
 
-Frontend libraries will be added here as they're pinned.
+## Frontend (`frontend/package.json`, exact versions pinned)
+
+| Library | Version | Licence | Used for |
+| --- | --- | --- | --- |
+| React, React DOM | 19.2.9 | MIT | UI |
+| React Router | 7.18.5 | MIT | Pages and deep links |
+| TanStack Query | 5.105.0 | MIT | API data fetching and cache |
+| Motion (formerly Framer Motion) | 12.43.0 | MIT | Animations: session glides, diff playback, stamps, reorder list |
+| Radix UI primitives (dialog, dropdown menu, label, popover, select, slot, switch, toggle group, tooltip) | 1.3.1 / 2.2.1 / 2.1.17 / 1.3.1 / 2.4.1 / 1.5.0 / 1.4.1 / 1.2.1 / 1.4.1 | MIT | Accessible building blocks under the shadcn/ui-style components |
+| cmdk | 1.1.1 | MIT | "Where to?" command palette |
+| sonner | 2.0.8 | MIT | Toasts |
+| lucide-react | 1.66.0 | ISC | Icons |
+| class-variance-authority | 0.7.1 | Apache-2.0 | Component variants |
+| clsx | 2.1.1 | MIT | Class names |
+| tailwind-merge | 3.7.0 | MIT | Class names |
+| Tailwind CSS, @tailwindcss/vite | 4.1.18 | MIT | Styling |
+| Archivo variable font (@fontsource-variable/archivo) | 5.3.0 | OFL-1.1 | The one typeface, used across its width axis |
+| Vite, @vitejs/plugin-react | 7.3.7, 5.2.0 | MIT | Dev server and build |
+| TypeScript | 5.9.3 | Apache-2.0 | Types (dev only) |
+| openapi-typescript | 7.13.0 | MIT | API types generated from `/api/openapi.json` (dev only) |
+| Vitest, Testing Library (react, dom), jsdom | 3.2.7, 16.3.3, 10.4.2, 26.1.0 | MIT | Frontend tests (dev only) |

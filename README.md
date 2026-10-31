@@ -12,7 +12,7 @@
 ![Postgres](https://img.shields.io/badge/Postgres-Neon-336791?style=for-the-badge&logo=postgresql&logoColor=white)
 ![Gemini](https://img.shields.io/badge/Gemini_2.5-Flash-8E75B2?style=for-the-badge&logo=google&logoColor=white)
 
-> 🚧 **Work in progress** — The engine and API are built; the web frontend and deployment are next.  
+> 🚧 **Work in progress** — The engine, the API and the web frontend are built; deployment is next.  
 > Live link and screenshots will be added here.
 
 </div>
@@ -24,6 +24,7 @@
 - [How It Works](#-how-it-works)
 - [Tech Stack](#-tech-stack)
 - [Getting Started](#-getting-started)
+- [Deploy to Vercel](#-deploy-to-vercel)
 - [Demo Accounts](#-demo-accounts)
 - [API Overview](#-api-overview)
 - [Rules Worth Knowing](#-rules-worth-knowing)
@@ -78,9 +79,10 @@ flowchart LR
 | **Database** | Postgres (Neon) — or SQLite locally |
 | **Auth** | PyJWT + bcrypt |
 | **AI Assistant** | Gemini 2.5 Flash *(optional)* |
-| **Frontend** | React + Vite + TypeScript + Tailwind *(in progress)* |
+| **Frontend** | React 19 + Vite + TypeScript + Tailwind 4 · shadcn/ui-style components on Radix · TanStack Query · Motion |
 
-> 📄 Full list with licences → [THIRD_PARTY.md](THIRD_PARTY.md)
+> 📄 Full list with licences → [THIRD_PARTY.md](THIRD_PARTY.md)  
+> 🎨 The visual design and its research → [frontend/DESIGN.md](frontend/DESIGN.md)
 
 ---
 
@@ -89,6 +91,7 @@ flowchart LR
 ### Prerequisites
 
 - **Python 3.12+**
+- **Node 20+** for the web frontend
 - *(Optional)* A Postgres database URL or a `GEMINI_API_KEY`
 
 ### 1. Clone & set up the environment
@@ -116,7 +119,20 @@ cp .env.example .env       # every variable has a sensible local default
 > 🌐 Open **http://localhost:8000/api/docs** for the interactive Swagger UI.  
 > Without a `DATABASE_URL`, the app uses a local SQLite file (`local.db`) and seeds demo data on first start.
 
-### 4. Run the tests
+### 4. Start the web app
+
+In a second terminal:
+
+```bash
+cd frontend
+npm ci
+npm run dev          # http://localhost:5173, proxies /api to :8000
+```
+
+> 🔐 Log in with one of the demo account buttons.  
+> To proxy to another API port, put `API_PROXY=http://localhost:8100` in `frontend/.env.local`. If the deployed `DEMO_PASSWORD` isn't `demo1234`, build with `VITE_DEMO_PASSWORD` set so the one-click buttons work.
+
+### 5. Run the tests
 
 ```bash
 # API tests (~3 min)
@@ -124,9 +140,12 @@ cp .env.example .env       # every variable has a sensible local default
 
 # Engine tests (~7 min)
 .venv/bin/python -m pytest backend/tests/engine -q -m "not slow"
+
+# Frontend unit tests, type check, production build
+cd frontend && npm test && npm run build
 ```
 
-### 5. Export & validate
+### 6. Export & validate
 
 Produce the two export files from a running app (local or deployed) and check them with the official validator:
 
@@ -134,7 +153,7 @@ Produce the two export files from a running app (local or deployed) and check th
 .venv/bin/python scripts/make_exports.py --base-url http://localhost:8000
 ```
 
-### 6. Evaluate the AI assistant
+### 7. Evaluate the AI assistant
 
 Score the booking/change assistant on tricky requests (uses Gemini if `GEMINI_API_KEY` is set, otherwise the keyword fallback):
 
@@ -149,6 +168,28 @@ On Railway, Render, or Fly, the included `Procfile` starts the API with:
 ```
 uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
 ```
+
+---
+
+## 🚢 Deploy to Vercel
+
+`vercel.json` runs the API as one Python function (`api/index.py`, up to 300 s per request) under `/api`. The frontend still has to be added to it: a static build of `frontend/` (`npm ci && npm run build`, output `frontend/dist`), with every path outside `/api` falling back to `index.html` so deep links like `/timetable?view=room&id=AUD` work on reload.
+
+1. **Create the project.** Either import the GitHub repo at vercel.com (Add New → Project; framework preset "Other"; leave the build settings alone), or deploy from a laptop with the CLI: `npm i -g vercel`, `vercel login`, `vercel link`.
+2. **Add a database.** In the project's Storage tab, connect Neon (Postgres). It sets `DATABASE_URL`. Without it the app still starts, on a throwaway SQLite file, and `/api/health` says so. That's fine for a first check, not for judges.
+3. **Set the environment variables** (Settings → Environment Variables, or `vercel env add NAME`):
+   - `JWT_SECRET`: required. A deployed app refuses to start without 32+ random characters. Generate one with `python -c "import secrets; print(secrets.token_urlsafe(48))"`.
+   - `DEMO_PASSWORD`: the password for every demo account. List it in the Demo accounts table below.
+   - `GEMINI_API_KEY`: optional. Without it the assistant uses keyword rules.
+   - `SOLVER_TIME_LIMIT_S` (default 60) and `SOLVER_WORKERS` (default 8). Lower the workers if the function has few CPUs.
+4. **Deploy** (the Deploy button, or `vercel deploy --prod`). Then open `https://<project>.vercel.app/api/health`: `ok` should be true, `db` should be `ok` (not "temporary"), and `llm` should be `configured`. `/api/docs` has an Authorize button: paste the token from `POST /api/auth/login`.
+5. **Measure the solver on Vercel's CPUs**, from any machine with this repo:
+   ```bash
+   python scripts/make_exports.py --base-url https://<project>.vercel.app --password <DEMO_PASSWORD> --out /tmp/vercel-check
+   ```
+   It prints the solve time and soft penalty, then runs the official validator on both files. A soft penalty well above 3, or a timeout, means too little CPU: raise `SOLVER_TIME_LIMIT_S` (at most about 280) or move the backend.
+
+If the deploy fails on function size, or the solver is too slow, move the backend to Railway or Render (the `Procfile` covers it). Keep the frontend on Vercel, and change the `/api/(.*)` rewrite in `vercel.json` to `https://<backend-host>/api/$1`.
 
 ---
 
@@ -242,6 +283,8 @@ App bookings **never** move classes. Only the dataset's approved institute event
 │       └── api/           # HTTP flow tests
 ├── 🌐 api/
 │   └── index.py           # Vercel function entry; vercel.json routes /api/* to it
+├── 🎨 frontend/           # React SPA: src/pages (one per screen), src/components (board, timetable,
+│                          #   booking, changes, ui), src/api (typed client); DESIGN.md is the design system
 ├── 📜 scripts/
 │   └── make_exports.py    # Drives the app's API to produce exports/
 ├── 📦 starter_pack/       # Organisers' starter pack: dataset, validator, examples (never edited)

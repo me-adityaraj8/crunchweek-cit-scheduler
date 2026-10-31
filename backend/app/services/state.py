@@ -4,6 +4,7 @@ import json
 from dataclasses import asdict
 
 from sqlalchemy import delete, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..auth import hash_password
@@ -244,4 +245,7 @@ def reset_demo(db: Session) -> Dataset:
 
 def ensure_seeded(db: Session) -> None:
     if db.scalar(select(User.id).limit(1)) is None or db.scalar(select(DatasetRow.id).limit(1)) is None:
-        reset_demo(db)
+        try:
+            reset_demo(db)
+        except IntegrityError:      # two fresh instances seeding at once: the other one won
+            db.rollback()

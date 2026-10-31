@@ -1,8 +1,17 @@
 {
-  "functions": {
-    "api/index.py": { "maxDuration": 300 }
+  "services": {
+    "api": {
+      "root": "./",
+      "framework": "fastapi",
+      "functions": {
+        "**/*.py": {
+          "maxDuration": 300,
+          "excludeFiles": "{frontend/**,backend/tests/**,docs/**,exports/**,scripts/**,starter_pack/data/csv/**,*.pdf}"
+        }
+      }
+    }
   },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index" }
+    { "source": "/api/(.*)", "destination": { "service": "api" } }
   ]
 }
