@@ -2,7 +2,7 @@
 
 Timetable generation, midsem exam scheduling, Spectra-week venue booking and disruption handling for Chilika Institute of Technology.
 
-> Work in progress: the engine and the API are built; the web frontend and the deployment are next. Live link and screenshots will be added here.
+> Work in progress: the engine, the API and the web frontend are built; deployment is next. Live link and screenshots will be added here.
 
 ## How it works
 
@@ -36,7 +36,7 @@ flowchart LR
 
 ## Tech stack
 
-Python 3.12+ · FastAPI · SQLAlchemy 2 · Pydantic 2 · Google OR-Tools CP-SAT · Postgres (Neon) or SQLite locally · PyJWT + bcrypt · Gemini 2.5 Flash (optional). Frontend: React + Vite + TypeScript + Tailwind (in progress). Full list with licences: [THIRD_PARTY.md](THIRD_PARTY.md).
+Python 3.12+ · FastAPI · SQLAlchemy 2 · Pydantic 2 · Google OR-Tools CP-SAT · Postgres (Neon) or SQLite locally · PyJWT + bcrypt · Gemini 2.5 Flash (optional). Frontend: React 19 + Vite + TypeScript + Tailwind 4, shadcn/ui-style components on Radix, TanStack Query, Motion. Full list with licences: [THIRD_PARTY.md](THIRD_PARTY.md). The visual design and its research: [frontend/DESIGN.md](frontend/DESIGN.md).
 
 ## Run it locally
 
@@ -49,11 +49,22 @@ cp .env.example .env                                  # optional; every variable
 
 Open http://localhost:8000/api/docs for the interactive API. With no `DATABASE_URL` the app uses a local SQLite file (`local.db`) and seeds the demo data on first start.
 
+Then the web app (Node 20+), in a second terminal:
+
+```bash
+cd frontend
+npm ci
+npm run dev          # http://localhost:5173, proxies /api to :8000
+```
+
+Log in with one of the demo account buttons. To proxy to another API port, put `API_PROXY=http://localhost:8100` in `frontend/.env.local`. If the deployed `DEMO_PASSWORD` isn't `demo1234`, build with `VITE_DEMO_PASSWORD` set so the one-click buttons work.
+
 Tests:
 
 ```bash
 .venv/bin/python -m pytest backend/tests/api -q                     # API, ~3 min
 .venv/bin/python -m pytest backend/tests/engine -q -m "not slow"     # engine, ~7 min
+cd frontend && npm test && npm run build                            # frontend unit tests, type check, production build
 ```
 
 Produce the two export files from a running app (local or deployed) and check them with the official validator:
@@ -72,7 +83,7 @@ On a PaaS host (Railway, Render, Fly), the `Procfile` starts the API with `uvico
 
 ## Deploy to Vercel
 
-`vercel.json` runs the API as one Python function (`api/index.py`, up to 300 s per request) under `/api`. The frontend build is added to it when `frontend/` lands.
+`vercel.json` runs the API as one Python function (`api/index.py`, up to 300 s per request) under `/api`. The frontend still has to be added to it: a static build of `frontend/` (`npm ci && npm run build`, output `frontend/dist`), with every path outside `/api` falling back to `index.html` so deep links like `/timetable?view=room&id=AUD` work on reload.
 
 1. **Create the project.** Either import the GitHub repo at vercel.com (Add New → Project; framework preset "Other"; leave the build settings alone), or deploy from a laptop with the CLI: `npm i -g vercel`, `vercel login`, `vercel link`.
 2. **Add a database.** In the project's Storage tab, connect Neon (Postgres). It sets `DATABASE_URL`. Without it the app still starts, on a throwaway SQLite file, and `/api/health` says so. That's fine for a first check, not for judges.
@@ -144,6 +155,8 @@ backend/app/routers/   HTTP endpoints
 backend/app/llm/       Gemini client, prompts/, parsers with keyword fallback
 backend/tests/         engine/ (solver + checker vs validator), api/ (HTTP flows)
 api/index.py           Vercel function entry; vercel.json routes /api/* to it
+frontend/              React SPA: src/pages (one per screen), src/components (board, timetable, booking,
+                       changes, ui), src/api (typed client); DESIGN.md is the design system
 scripts/make_exports.py  drives the app's API to produce exports/
 starter_pack/          organisers' starter pack: dataset, validator, examples (never edited)
 exports/               schedule.json and schedule_after.json produced by the app
