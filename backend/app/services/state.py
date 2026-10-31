@@ -212,7 +212,16 @@ def upsert_demo_users(db: Session, ds: Dataset, reset_passwords: bool = False) -
         elif reset_passwords:
             u.password_hash = pw
         u.name, u.role, u.department, u.faculty_id = a["name"], a["role"], a["department"], a["faculty_id"]
-    db.execute(delete(User).where(User.email.not_in([a["email"] for a in accounts])))
+    # accounts the dataset no longer has: delete them, unless they made bookings, proposals or other
+    # history (the database won't drop a referenced row); those stay but leave the login page
+    obsolete = list(db.scalars(select(User.id).where(User.email.not_in([a["email"] for a in accounts]))))
+    if obsolete:
+        used = set()
+        for col in (TimetableVersion.created_by, BookingRequest.created_by, BookingRequest.decided_by,
+                    ChangeProposal.requested_by, ChangeProposal.decided_by, AuditLog.actor):
+            used |= set(db.scalars(select(col).where(col.in_(obsolete))))
+        if gone := [i for i in obsolete if i not in used]:
+            db.execute(delete(User).where(User.id.in_(gone)))
     db.flush()
 
 

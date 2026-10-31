@@ -62,3 +62,25 @@ def test_startup_adds_demo_accounts_missing_from_an_older_database(client):
         assert db.scalar(select(User).where(User.email == "f12@cit.demo")) is not None
     r = client.post("/api/auth/login", json={"email": "f12@cit.demo", "password": PW})
     assert r.status_code == 200, r.text
+
+
+def test_old_accounts_with_history_do_not_block_new_ones(client):
+    """An account from an older version that made a booking can't be deleted (Postgres enforces the
+    reference); syncing must still add the new accounts."""
+    from sqlalchemy import delete, select
+
+    from backend.app.auth import hash_password
+    from backend.app.db import SessionLocal
+    from backend.app.models import AuditLog, User
+    from backend.app.services import state
+
+    with SessionLocal() as db:
+        old = User(email="old-club@cit.demo", password_hash=hash_password("x"), name="Old Club", role="club")
+        db.add(old)
+        db.flush()
+        db.add(AuditLog(actor=old.id, action="booking.submit", entity="request:APP-0001", payload={}))
+        db.execute(delete(User).where(User.email == "f13@cit.demo"))
+        db.commit()
+        state.ensure_seeded(db)
+        assert db.scalar(select(User).where(User.email == "f13@cit.demo")) is not None
+        assert db.scalar(select(User).where(User.email == "old-club@cit.demo")) is not None   # kept: it has history

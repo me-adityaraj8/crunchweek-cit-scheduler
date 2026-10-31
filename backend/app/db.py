@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 from .config import settings
@@ -19,7 +19,13 @@ def _url(raw: str) -> str:
 def make_engine(url: str):
     url = _url(url)
     if url.startswith("sqlite"):
-        return create_engine(url, connect_args={"check_same_thread": False})
+        eng = create_engine(url, connect_args={"check_same_thread": False})
+
+        @event.listens_for(eng, "connect")
+        def _fk_on(conn, _record):    # enforce foreign keys like Postgres does, so local runs catch the same errors
+            conn.execute("PRAGMA foreign_keys=ON")
+
+        return eng
     # prepare_threshold=None: no server-side prepared statements, which break behind Neon's pooled
     # (PgBouncer) connection string
     return create_engine(url, pool_pre_ping=True, pool_size=2, max_overflow=2,
