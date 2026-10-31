@@ -1,6 +1,7 @@
 """FastAPI app. Every route lives under /api so the SPA and the API can share one origin."""
 import logging
 import threading
+import os
 import time
 from contextlib import asynccontextmanager
 
@@ -98,7 +99,9 @@ def health(deep: bool = Query(False)):
         db = f"error: {type(e).__name__}"
     llm = llm_client.status() if deep else ("configured" if llm_client.settings.gemini_api_key else
                                             "not configured (assistant falls back to rule-based parsing)")
-    return Health(ok=ok_solver and db.startswith("ok"), ortools=ortools.__version__, solve_ms=solve_ms, db=db, llm=llm)
+    cpus = len(os.sched_getaffinity(0)) if hasattr(os, "sched_getaffinity") else (os.cpu_count() or 1)
+    return Health(ok=ok_solver and db.startswith("ok"), ortools=ortools.__version__, cpus=cpus,
+                  solver_workers=settings.solver_workers, solve_ms=solve_ms, db=db, llm=llm)
 
 
 for r in (auth, data, timetable, views, exams, bookings, changes, assistant, export):

@@ -500,6 +500,8 @@ class SettingsOut(BaseModel):
 class Health(BaseModel):
     ok: bool
     ortools: str
+    cpus: int
+    solver_workers: int
     solve_ms: int
     db: str
     llm: str
