@@ -66,7 +66,7 @@ function Understood({ out }: { out: VeloOut }) {
   if (!out.understood.length) return null;
   return (
     <div className="flex flex-col gap-1.5">
-      <p className="eyebrow">Understood{out.mode === "model" ? "" : " · keywords"}</p>
+      <p className="eyebrow">{out.mode === "agent" ? "Checked with" : "Understood"}{out.mode === "keywords" ? " · keywords" : ""}</p>
       <ul className="flex flex-wrap gap-1">
         {out.understood.map((c, i) => (
           <li

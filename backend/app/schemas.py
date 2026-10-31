@@ -568,7 +568,8 @@ class VeloIn(BaseModel):
     page: str = Field("/", max_length=200)
     focus: VeloFocus | None = None
     draft_text: str | None = Field(None, max_length=4000)   # the booking request so far, for follow-up answers
-    last_intent: VeloIntent | None = None
+    last_intent: str | None = Field(None, max_length=40)
+    conversation_id: str | None = Field(None, max_length=40)
     today: str | None = None
 
 
@@ -579,18 +580,28 @@ class VeloChip(BaseModel):
 
 class VeloCard(BaseModel):
     kind: Literal["rooms", "draft", "preview", "requests", "confirm_cancel", "explain", "alternatives",
-                  "approvals", "proposals", "navigate", "help"]
+                  "approvals", "proposals", "navigate", "help", "table", "bars", "stats", "occupancy", "compare",
+                  "action"]
     data: dict
 
 
 class VeloOut(BaseModel):
     """Everything here is read-only: cards come from the same code the pages use, and any change is sent
     by the browser to the usual endpoint only after the person confirms it."""
-    intent: VeloIntent
+    intent: str                  # the keyword router's intent, or the agent's first tool ("chat" for none)
     understood: list[VeloChip]
     reply: str
     cards: list[VeloCard] = []
     suggestions: list[str] = []
     draft_text: str | None = None
     navigate: str | None = None
-    mode: Literal["model", "keywords"]
+    mode: Literal["model", "keywords", "agent"]
+    conversation_id: str | None = None
+    tools: list[str] = []
+    latency_ms: int | None = None
+
+
+class VeloActionOut(BaseModel):
+    status: str
+    result: dict | None = None
+    repeat: bool = False

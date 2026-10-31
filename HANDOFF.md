@@ -175,3 +175,11 @@ Read PROJECT_CONTEXT.md, this file, and `starter_pack/README.md`.
 - Design: `docs/VELO.md` section 8. Code: `frontend/src/components/velo/live/` (VeloOrb + shaders, expression controller, OrbView with a still fallback, voice/ machine + engine + session hook, VeloVoicePanel, AudioVisualizer, LiveTranscript, VoiceControls). three.js is lazy-loaded (own chunk).
 - Voice: browser SpeechRecognition (en-IN, live words) or record-until-silence → `/assistant/transcribe`; replies via `POST /api/assistant/speak` (Gemini TTS, `GEMINI_TTS_MODEL`, `GEMINI_TTS_VOICE`) played through Web Audio, else the browser's speechSynthesis. The Gemini TTS model is unverified until deployed with the key; if it fails, the browser voice is used and the screen says which.
 - Not verified here: real mic and speech (the in-app browser blocks the microphone); that path shows its "microphone blocked" state correctly.
+
+## Velo agent: tool calling (2026-11-01, Aditya)
+
+- Audit, architecture, tools and gaps: `docs/VELO_AGENT.md`.
+- Backend: `llm/chat.py` (OpenAI-compatible chat with tools; Groq by default, Gemini through its compatible endpoint), `services/velo_tools.py` (23 tools, permission layer, pending actions, `confirm`), `services/velo_agent.py` (loop, conversation memory). New tables `velo_conversations`, `velo_messages`, `velo_actions`. `proposals.dry_run` reuses the repair solver without saving.
+- Endpoints: `POST /api/velo` (agent when a model key is set, keyword router otherwise), `POST /api/velo/actions/{id}/confirm|discard`, `GET /api/velo/conversations/{id}`.
+- Env: `LLM_PROVIDER`, `GROQ_API_KEY`, `GROQ_MODEL`, `AGENT_MAX_STEPS`, `AGENT_RETRIES`, `AGENT_TIMEOUT_S`, `VELO_CONTEXT_TTL_MIN`, `VELO_ACTION_TTL_MIN` (see `.env.example`).
+- Eval: `python -m backend.eval.velo_eval --base <url>` runs 49 scenarios over HTTP with the demo accounts; it never confirms anything.

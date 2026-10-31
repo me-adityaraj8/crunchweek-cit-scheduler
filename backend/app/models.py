@@ -122,3 +122,42 @@ class Setting(Base):
     __tablename__ = "settings"
     key: Mapped[str] = mapped_column(String(60), primary_key=True)
     value: Mapped[dict | list] = mapped_column(JSON)
+
+
+class VeloConversation(Base):
+    """One Velo thread. `memory` holds the things the person is talking about (room, day, course, request)
+    so "what about Tuesday?" keeps the room; `summary` keeps older turns short once they leave the window."""
+    __tablename__ = "velo_conversations"
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    memory: Mapped[dict] = mapped_column(JSON, default=dict)
+    summary: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class VeloMessage(Base):
+    __tablename__ = "velo_messages"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    conversation_id: Mapped[str] = mapped_column(ForeignKey("velo_conversations.id"), index=True)
+    role: Mapped[str] = mapped_column(String(12))              # user | assistant
+    content: Mapped[str] = mapped_column(Text)
+    payload: Mapped[dict] = mapped_column(JSON, default=dict)  # assistant: tools used, cards
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class VeloAction(Base):
+    """A change Velo prepared and the person has not confirmed yet. Confirming runs the normal service once;
+    `base_version` makes a confirm against a timetable that has changed since fail as stale."""
+    __tablename__ = "velo_actions"
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    conversation_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    tool: Mapped[str] = mapped_column(String(40))
+    args: Mapped[dict] = mapped_column(JSON)
+    preview: Mapped[dict] = mapped_column(JSON, default=dict)
+    base_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="pending")   # pending | done | discarded | failed | stale | expired
+    result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

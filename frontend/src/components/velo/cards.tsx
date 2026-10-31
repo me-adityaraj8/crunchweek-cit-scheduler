@@ -3,8 +3,8 @@ import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router";
 import { errorMessage } from "@/api/client";
-import { useCancelBooking, useRequestChange, useSubmitBooking, useSummary } from "@/api/hooks";
-import type { Booking, BookingDraft, BookingSubmit, FreeRoom, Proposal, VeloCard } from "@/api/types";
+import { useCancelBooking, useConfirmVeloAction, useRequestChange, useSubmitBooking, useSummary } from "@/api/hooks";
+import type { Booking, BookingDraft, BookingSubmit, FreeRoom, Proposal, VeloActionOut, VeloCard } from "@/api/types";
 import { Code, KindBullet, Lamp, StatusChip } from "@/components/board/signals";
 import { Button } from "@/components/ui/button";
 import { bookingStatus, categoryLabel, featureLabel, kindOf, proposalStatus, roomTypeLabel } from "@/lib/format";
@@ -41,6 +41,7 @@ const RUN_STEPS: Record<string, string[]> = {
   submit: ["Checking the rules", "Sending the request", "Deciding by priority"],
   cancel: ["Cancelling the request", "Freeing the slot", "Deciding the others again"],
   move: ["Checking the move", "Repairing the timetable", "Sending to the Admin"],
+  decide: ["Checking it is still waiting", "Recording the decision", "Updating the schedule"],
 };
 
 /**
@@ -572,6 +573,236 @@ function ProposalsCard({ d }: { d: Data }) {
   );
 }
 
+// ---------------------------------------------------------------- the agent's data cards
+function TableCard({ d }: { d: Data }) {
+  const [all, setAll] = useState(false);
+  const rows = d.rows as Data[];
+  const cols = d.columns as { key: string; label: string }[];
+  const shown = all ? rows : rows.slice(0, 10);
+  return (
+    <Shell eyebrow={d.title} aside={d.subtitle ? <span className="text-[12px] font-bold text-ink-3">{d.subtitle}</span> : undefined}>
+      {rows.length === 0 ? (
+        <p className="px-3 py-3 text-[13px] text-ink-2">Nothing here.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[420px] border-collapse text-left text-[12.5px]">
+            <thead>
+              <tr className="border-b-2 border-rule">
+                {cols.map((c) => (
+                  <th key={c.key} scope="col" className="eyebrow whitespace-nowrap px-3 py-1.5 font-black">
+                    {c.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y-2 divide-rule">
+              {shown.map((r, i) => (
+                <tr key={i}>
+                  {cols.map((c, j) => (
+                    <td key={c.key} className={cn("px-3 py-1.5 align-top", j === 0 ? "whitespace-nowrap font-bold" : "text-ink-2", c.key === "course" && "font-bold text-ink")}>
+                      {String(r[c.key] ?? "—")}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {rows.length > 10 && (
+        <div className="border-t-2 border-rule px-3 py-2">
+          <button type="button" onClick={() => setAll(!all)} className="text-[12.5px] font-bold underline-offset-2 hover:underline">
+            {all ? "Show fewer" : `Show all ${rows.length}`}
+          </button>
+        </div>
+      )}
+    </Shell>
+  );
+}
+
+function BarsCard({ d }: { d: Data }) {
+  const reduce = useReducedMotion();
+  const items = d.items as { label: string; value: number; max: number; sub?: string }[];
+  return (
+    <Shell eyebrow={d.title} aside={d.note ? <span className="text-[12px] font-bold text-ink-3">{d.note}</span> : undefined}>
+      <ul className="flex flex-col gap-2.5 px-3 py-3">
+        {items.map((it, i) => (
+          <li key={it.label} className="flex flex-col gap-1">
+            <div className="flex items-baseline justify-between gap-3 text-[12.5px]">
+              <span className="truncate font-bold">{it.label}</span>
+              <span className="shrink-0 font-mono font-bold tabular-nums">
+                {it.value}
+                {d.unit === "%" ? "%" : ` ${d.unit}`}
+              </span>
+            </div>
+            <div className="h-2.5 overflow-hidden rounded-[3px] border-2 border-rule-strong bg-sheet-2">
+              <motion.div
+                className="h-full bg-signal"
+                initial={reduce ? false : { width: 0 }}
+                animate={{ width: `${Math.min(100, (100 * it.value) / Math.max(it.max, 1))}%` }}
+                transition={{ duration: 0.4, delay: reduce ? 0 : i * 0.03, ease: [0.23, 1, 0.32, 1] }}
+              />
+            </div>
+            {it.sub && <span className="text-[11.5px] text-ink-3">{it.sub}</span>}
+          </li>
+        ))}
+      </ul>
+    </Shell>
+  );
+}
+
+function StatsCard({ d }: { d: Data }) {
+  return (
+    <Shell eyebrow={d.title}>
+      <dl className="divide-y-2 divide-rule">
+        {(d.items as { label: string; value: string }[]).map((it, i) => (
+          <div key={`${it.label}-${i}`} className="grid grid-cols-[minmax(0,9.5rem)_1fr] gap-3 px-3 py-1.5 text-[12.5px]">
+            <dt className="font-bold text-ink-2">{it.label}</dt>
+            <dd className="font-semibold">{it.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </Shell>
+  );
+}
+
+const CELL: Record<string, string> = {
+  free: "bg-sheet",
+  class: "bg-k-lecture-tint",
+  booked: "bg-k-event-tint",
+  pending: "bg-caution-soft",
+  closed: "bg-stop-soft",
+};
+const CELL_LABEL: Record<string, string> = { free: "Free", class: "Class", booked: "Booked", pending: "Pending", closed: "Closed" };
+
+type Period = { period: number; time: string; state: string; label: string };
+
+/** Neighbouring periods with the same thing in them, as one row ("08:00–11:00 Free"). */
+function runs(periods: Period[]): { from: Period; to: Period }[] {
+  const out: { from: Period; to: Period }[] = [];
+  for (const p of periods) {
+    const last = out[out.length - 1];
+    if (last && last.to.state === p.state && last.to.label === p.label && last.to.period + 1 === p.period) last.to = p;
+    else out.push({ from: p, to: p });
+  }
+  return out;
+}
+
+function OccupancyCard({ d }: { d: Data }) {
+  const periods = d.periods as Period[];
+  const free = periods.filter((p) => p.state === "free").length;
+  return (
+    <Shell eyebrow={`${d.room} · ${d.day_label}${d.week === "spectra" ? " · Spectra week" : ""}`} aside={<span className="text-[12px] font-bold text-ink-3">{free} free</span>}>
+      <div className="flex gap-1 px-3 pt-3" aria-hidden>
+        {periods.map((p) => (
+          <span key={p.period} title={`P${p.period} ${CELL_LABEL[p.state]}`} className={cn("h-5 flex-1 rounded-[3px] border-2 border-rule-strong", CELL[p.state])} />
+        ))}
+      </div>
+      <ul className="divide-y-2 divide-rule pt-2">
+        {runs(periods).map((r) => (
+          <li key={r.from.period} className="flex items-center gap-3 px-3 py-1.5 text-[12.5px]">
+            <span className="w-[5.5rem] shrink-0 font-mono text-[11.5px] text-ink-2">
+              {r.from.time.split("–")[0]}–{r.to.time.split("–")[1]}
+            </span>
+            <span className={cn("shrink-0 rounded-[3px] border-2 border-rule-strong px-1.5 text-[11px] font-black", CELL[r.from.state])}>{CELL_LABEL[r.from.state]}</span>
+            <span className="truncate text-ink-2">{r.from.label}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="border-t-2 border-rule px-3 py-2 text-[11.5px] text-ink-3">Scheduled from the timetable and bookings, not live occupancy.</p>
+    </Shell>
+  );
+}
+
+function CompareCard({ d }: { d: Data }) {
+  const rows = d.rows as Data[];
+  const ok = d.status !== "infeasible";
+  return (
+    <Shell eyebrow={d.title} aside={<StatusChip aspect={ok ? "clear" : "stop"}>{ok ? `${d.moved} moved` : "No valid fix"}</StatusChip>}>
+      {ok ? (
+        <>
+          <ul className="divide-y-2 divide-rule">
+            {rows.slice(0, 12).map((r) => (
+              <li key={r.session} className="flex flex-col gap-0.5 px-3 py-2 text-[12.5px]">
+                <span className="font-bold">
+                  {r.course} <span className="font-normal text-ink-3">· {r.groups}</span>
+                </span>
+                <span className="flex flex-wrap items-center gap-1.5 font-mono text-[11.5px]">
+                  <span className="text-ink-3 line-through decoration-ink-3/60">{r.before}</span>
+                  <ArrowRight className="size-3.5 text-ink-3" />
+                  <span className="font-bold">{r.after}</span>
+                </span>
+              </li>
+            ))}
+            {rows.length === 0 && <li className="px-3 py-2.5 text-[12.5px] text-ink-2">Nothing has to move.</li>}
+          </ul>
+          <p className="border-t-2 border-rule px-3 py-2 text-[12px] text-ink-2">
+            Soft penalty {d.soft_before} → {d.soft_after ?? "—"}
+            {d.proven_minimal ? " · fewest possible moves, proven" : ""}. Every hard rule passes.
+          </p>
+        </>
+      ) : (
+        <ul className="flex flex-col gap-1 px-3 py-2.5 text-[12.5px]">
+          {(d.conflicts as { text: string }[]).map((c, i) => (
+            <li key={i} className="flex items-start gap-1.5">
+              <CircleAlert className="mt-0.5 size-3.5 shrink-0 text-stop" /> {c.text}
+            </li>
+          ))}
+        </ul>
+      )}
+    </Shell>
+  );
+}
+
+const ACTION_STEPS: Record<string, keyof typeof RUN_STEPS> = {
+  submit_booking: "submit",
+  cancel_booking: "cancel",
+  create_change_proposal: "move",
+  decide_request: "decide",
+};
+
+/** A change the agent prepared on the server. Confirm runs it once there, with the usual checks. */
+function AgentActionCard({ d, msgId, action }: { d: Data; msgId: string; action?: ActionState }) {
+  const confirm = useConfirmVeloAction();
+  const lines = d.lines as { label: string; value: string }[];
+  const warnings = d.warnings as string[];
+  const danger = d.tool === "cancel_booking" || (d.tool === "decide_request" && /reject/i.test(d.confirm));
+  return (
+    <Shell eyebrow={d.title} aside={<Lamp aspect={danger ? "stop" : "caution"} />}>
+      <dl className="divide-y-2 divide-rule">
+        {lines.map((l) => (
+          <div key={l.label} className="grid grid-cols-[6.5rem_1fr] gap-3 px-3 py-1.5 text-[12.5px]">
+            <dt className="font-bold text-ink-2">{l.label}</dt>
+            <dd className="font-semibold">{l.value}</dd>
+          </div>
+        ))}
+      </dl>
+      <div className="flex flex-col gap-2 border-t-2 border-rule px-3 py-2.5">
+        {warnings.map((w) => (
+          <p key={w} className="flex items-start gap-1.5 text-[12px] text-ink-2">
+            <CircleAlert className="mt-px size-3.5 shrink-0" /> {w}
+          </p>
+        ))}
+        <ActionFlow<VeloActionOut>
+          msgId={msgId}
+          action={action}
+          danger={danger}
+          label={d.confirm}
+          steps={ACTION_STEPS[d.tool] ?? "submit"}
+          preview={<>{d.title} Nothing has changed yet; this runs once, with the same checks as the page.</>}
+          run={() => confirm.mutateAsync(d.id)}
+          result={(r) => (
+            <div className="flex items-center gap-2 text-[13px]">
+              <StatusChip aspect="clear">Done</StatusChip>
+              <span className="text-[12.5px] text-ink-2">{String(r.result?.message ?? "")}</span>
+            </div>
+          )}
+        />
+      </div>
+    </Shell>
+  );
+}
+
 // ---------------------------------------------------------------- navigation and help
 function NavigateCard({ d }: { d: Data }) {
   const nav = useNavigate();
@@ -629,6 +860,18 @@ export function VeloCards({ cards, msgId, action }: { cards: VeloCard[]; msgId: 
             return <NavigateCard key={k} d={d} />;
           case "help":
             return <HelpCard key={k} d={d} />;
+          case "table":
+            return <TableCard key={k} d={d} />;
+          case "bars":
+            return <BarsCard key={k} d={d} />;
+          case "stats":
+            return <StatsCard key={k} d={d} />;
+          case "occupancy":
+            return <OccupancyCard key={k} d={d} />;
+          case "compare":
+            return <CompareCard key={k} d={d} />;
+          case "action":
+            return <AgentActionCard key={k} d={d} msgId={msgId} action={action} />;
           default:
             return null;
         }

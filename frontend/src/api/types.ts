@@ -61,6 +61,7 @@ export type Settings = S["SettingsOut"];
 export type Health = S["Health"];
 export type VeloIn = S["VeloIn"];
 export type VeloOut = S["VeloOut"];
+export type VeloActionOut = S["VeloActionOut"];
 export type VeloCard = S["VeloCard"];
 export type VeloFocus = S["VeloFocus"];
 

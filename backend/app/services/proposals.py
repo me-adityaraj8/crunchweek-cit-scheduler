@@ -49,15 +49,34 @@ def _counts(diff: list[dict]) -> dict:
             "removed": sum(1 for m in diff if not m["after"])}
 
 
+def _repair(db: Session, ds: Dataset, version: TimetableVersion, change_file: dict):
+    ds2 = apply_changes(ds, change_file)                 # DatasetError -> 400 naming the problem
+    base = state.to_assign(version.assignments)
+    r = repair(ds2, base, state.fest_of(version), settings.solver_time_limit_s, extra_requests=bookings.extras(db))
+    return ds2, r
+
+
+def dry_run(db: Session, ds: Dataset, version: TimetableVersion, change_file: dict) -> dict:
+    """What a change would do to the timetable, computed by the same repair and checker as a real proposal,
+    without saving anything."""
+    if not isinstance(change_file, dict) or not isinstance(change_file.get("changes"), list) or not change_file["changes"]:
+        raise bad_request('A change file needs a non-empty "changes" list')
+    ds2, r = _repair(db, ds, version, change_file)
+    out = {"status": "infeasible", "conflicts": [{"code": c.code, "text": c.text} for c in r.conflicts],
+           "soft_before": r.soft_before, "diff": [], "moved": 0, "time_changed": 0, "room_only": 0, "added": 0,
+           "removed": 0, "soft_after": None, "proven_minimal": False}
+    if r.status == "ok" and r.assign is not None and not check_timetable(ds2, r.assign):
+        diff = _diff(ds, ds2, version.assignments, state.from_assign(r.assign))
+        out.update(status="feasible", diff=diff, soft_after=r.soft_after, proven_minimal=r.proven_minimal,
+                   **_counts(diff))
+    return out
+
+
 def from_changes(db: Session, row: DatasetRow, ds: Dataset, version: TimetableVersion, change_file: dict,
                  kind: str, title: str, user: User) -> ChangeProposal:
     if not isinstance(change_file, dict) or not isinstance(change_file.get("changes"), list) or not change_file["changes"]:
         raise bad_request('A change file needs a non-empty "changes" list')
-    ds2 = apply_changes(ds, change_file)                 # DatasetError -> 400 naming the problem
-    base = state.to_assign(version.assignments)
-    fest = state.fest_of(version)
-    extra = bookings.extras(db)
-    r = repair(ds2, base, fest, settings.solver_time_limit_s, extra_requests=extra)
+    ds2, r = _repair(db, ds, version, change_file)
     p = ChangeProposal(kind=kind, title=title, payload=change_file, base_version=version.id,
                        requested_by=user.id, soft_before=r.soft_before,
                        conflicts=[{"code": c.code, "text": c.text} for c in r.conflicts])

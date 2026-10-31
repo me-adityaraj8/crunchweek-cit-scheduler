@@ -46,6 +46,17 @@ class Settings:
     # Velo's spoken replies (voice mode). Unset or unavailable: the browser's own voice is used instead.
     gemini_tts_model: str = os.environ.get("GEMINI_TTS_MODEL") or "gemini-2.5-flash-preview-tts"
     gemini_tts_voice: str = os.environ.get("GEMINI_TTS_VOICE") or "Kore"
+    # Velo's agent: an OpenAI-compatible chat model with tool calling. Groq by default; Gemini works through its
+    # OpenAI-compatible endpoint. No key for the chosen provider: Velo uses its keyword rules instead.
+    llm_provider: str = (os.environ.get("LLM_PROVIDER")
+                         or ("groq" if os.environ.get("GROQ_API_KEY") else "gemini")).strip().lower()
+    groq_api_key: str = os.environ.get("GROQ_API_KEY", "")
+    groq_model: str = os.environ.get("GROQ_MODEL") or "openai/gpt-oss-120b"
+    agent_max_steps: int = int(os.environ.get("AGENT_MAX_STEPS") or 5)
+    agent_retries: int = int(os.environ.get("AGENT_RETRIES") or 2)
+    agent_timeout_s: float = float(os.environ.get("AGENT_TIMEOUT_S") or 20)
+    velo_context_ttl_min: int = int(os.environ.get("VELO_CONTEXT_TTL_MIN") or 120)
+    velo_action_ttl_min: int = int(os.environ.get("VELO_ACTION_TTL_MIN") or 15)
     solver_time_limit_s: float = float(os.environ.get("SOLVER_TIME_LIMIT_S") or 60)
     solver_workers: int = int(os.environ.get("SOLVER_WORKERS") or 8)
     llm_timeout_s: float = float(os.environ.get("LLM_TIMEOUT_S") or 8)

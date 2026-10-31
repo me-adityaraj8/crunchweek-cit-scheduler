@@ -662,6 +662,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/assistant/speak": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Speak
+         * @description Velo's reply as speech (voice mode). 503 when the voice model isn't available, so the browser can
+         *     use its own voice; never an empty or made-up sound.
+         */
+        post: operations["speak_api_assistant_speak_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/assistant/booking": {
         parameters: {
             query?: never;
@@ -711,11 +732,69 @@ export interface paths {
         put?: never;
         /**
          * Velo
-         * @description Velo, the assistant on every page: a message (with the page and what it has open) in, a short reply
-         *     with cards out. Read-only by design: it saves nothing, and every change it offers is sent by the
-         *     browser to the usual endpoint after the person confirms.
+         * @description Velo, the assistant on every page. With a model configured, the agent answers through typed tools
+         *     that call the same services as the pages; without one (or if it can't be reached) the keyword router
+         *     answers. Either way nothing changes here: changes are prepared, and run only through the confirm below.
          */
         post: operations["velo_api_velo_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/velo/actions/{action_id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm
+         * @description Run a change Velo prepared, once, with the normal service and its checks. Repeating returns the first
+         *     result; an expired or stale action is refused.
+         */
+        post: operations["confirm_api_velo_actions__action_id__confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/velo/actions/{action_id}/discard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Discard */
+        post: operations["discard_api_velo_actions__action_id__discard_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/velo/conversations/{conversation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Conversation
+         * @description The person's own thread, oldest first (empty for anyone else's).
+         */
+        get: operations["conversation_api_velo_conversations__conversation_id__get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1674,6 +1753,11 @@ export interface components {
             /** Room */
             room: string;
         };
+        /** SpeakIn */
+        SpeakIn: {
+            /** Text */
+            text: string;
+        };
         /** SummaryOut */
         SummaryOut: {
             /** Dataset Id */
@@ -1778,13 +1862,27 @@ export interface components {
             /** Context */
             ctx?: Record<string, never>;
         };
+        /** VeloActionOut */
+        VeloActionOut: {
+            /** Status */
+            status: string;
+            /** Result */
+            result?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Repeat
+             * @default false
+             */
+            repeat: boolean;
+        };
         /** VeloCard */
         VeloCard: {
             /**
              * Kind
              * @enum {string}
              */
-            kind: "rooms" | "draft" | "preview" | "requests" | "confirm_cancel" | "explain" | "alternatives" | "approvals" | "proposals" | "navigate" | "help";
+            kind: "rooms" | "draft" | "preview" | "requests" | "confirm_cancel" | "explain" | "alternatives" | "approvals" | "proposals" | "navigate" | "help" | "table" | "bars" | "stats" | "occupancy" | "compare" | "action";
             /** Data */
             data: {
                 [key: string]: unknown;
@@ -1826,7 +1924,9 @@ export interface components {
             /** Draft Text */
             draft_text?: string | null;
             /** Last Intent */
-            last_intent?: ("find_rooms" | "book_venue" | "booking_status" | "cancel_booking" | "explain_session" | "alternatives" | "approvals" | "proposals" | "navigate" | "help") | null;
+            last_intent?: string | null;
+            /** Conversation Id */
+            conversation_id?: string | null;
             /** Today */
             today?: string | null;
         };
@@ -1836,11 +1936,8 @@ export interface components {
          *     by the browser to the usual endpoint only after the person confirms it.
          */
         VeloOut: {
-            /**
-             * Intent
-             * @enum {string}
-             */
-            intent: "find_rooms" | "book_venue" | "booking_status" | "cancel_booking" | "explain_session" | "alternatives" | "approvals" | "proposals" | "navigate" | "help";
+            /** Intent */
+            intent: string;
             /** Understood */
             understood: components["schemas"]["VeloChip"][];
             /** Reply */
@@ -1863,7 +1960,16 @@ export interface components {
              * Mode
              * @enum {string}
              */
-            mode: "model" | "keywords";
+            mode: "model" | "keywords" | "agent";
+            /** Conversation Id */
+            conversation_id?: string | null;
+            /**
+             * Tools
+             * @default []
+             */
+            tools: string[];
+            /** Latency Ms */
+            latency_ms?: number | null;
         };
         /** ViolationOut */
         ViolationOut: {
@@ -3024,6 +3130,39 @@ export interface operations {
             };
         };
     };
+    speak_api_assistant_speak_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SpeakIn"];
+            };
+        };
+        responses: {
+            /** @description Velo's reply as speech */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "audio/wav": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     booking_api_assistant_booking_post: {
         parameters: {
             query?: never;
@@ -3110,6 +3249,99 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VeloOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_api_velo_actions__action_id__confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                action_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VeloActionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    discard_api_velo_actions__action_id__discard_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                action_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VeloActionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    conversation_api_velo_conversations__conversation_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

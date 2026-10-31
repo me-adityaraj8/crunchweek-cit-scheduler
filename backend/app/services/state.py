@@ -14,7 +14,7 @@ from ..core.checker import check_timetable, soft_score
 from ..core.dataset import load_dataset
 from ..core.model import Assign, Dataset
 from ..errors import ApiError
-from ..models import (AuditLog, BookingRequest, ChangeProposal, DatasetRow, ExamSchedule, Setting,
+from ..models import (AuditLog, BookingRequest, ChangeProposal, DatasetRow, ExamSchedule, Setting, VeloAction,
                       TimetableVersion, User)
 from ..solver.fest import Decision, FestResult
 
@@ -233,7 +233,7 @@ def upsert_demo_users(db: Session, ds: Dataset, reset_passwords: bool = False) -
 
 
 def clear_runtime(db: Session, keep_audit: bool = False) -> None:
-    tables = [ChangeProposal, BookingRequest, ExamSchedule, TimetableVersion, DatasetRow, Setting]
+    tables = [VeloAction, ChangeProposal, BookingRequest, ExamSchedule, TimetableVersion, DatasetRow, Setting]
     for table in ([] if keep_audit else [AuditLog]) + tables:
         db.execute(delete(table))
     _ds_cache.clear()

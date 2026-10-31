@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[3]
 _tmp = tempfile.mkdtemp(prefix="cit-api-")
 os.environ["DATABASE_URL"] = f"sqlite:///{Path(_tmp) / 'test.db'}"
 os.environ["GEMINI_API_KEY"] = ""
+os.environ["GROQ_API_KEY"] = ""
 os.environ.setdefault("SOLVER_TIME_LIMIT_S", "20")
 os.environ["DEMO_PASSWORD"] = "test-pass"
 

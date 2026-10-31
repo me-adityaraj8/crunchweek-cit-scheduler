@@ -29,6 +29,7 @@ import type {
   TimetableOut,
   User,
   VeloIn,
+  VeloActionOut,
   VeloOut,
   View,
   Week,
@@ -201,6 +202,10 @@ export const useTranscribe = () =>
 
 /** Velo answers from the same code the pages use and never changes anything itself. */
 export const useAskVelo = () => useMutation({ mutationFn: (body: VeloIn) => request<VeloOut>("/velo", { body }) });
+
+/** Run a change Velo prepared (once; the server refuses expired or stale ones), then refresh every page. */
+export const useConfirmVeloAction = () =>
+  useStateMutation((id: string) => request<VeloActionOut>(`/velo/actions/${encodeURIComponent(id)}/confirm`, { method: "POST" }));
 
 export const useParseChange = () =>
   useMutation({ mutationFn: (body: { text: string; today?: string }) => request<ChangeParse>("/assistant/change", { body }) });

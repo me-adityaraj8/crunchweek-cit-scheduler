@@ -25,6 +25,8 @@ interface Thread {
   messages: Msg[];
   draftText: string | null;
   lastIntent: VeloOut["intent"] | null;
+  /** the server-side thread Velo's agent remembers (room, day, course...) for follow-ups */
+  conversationId?: string | null;
 }
 
 interface Velo extends Thread {
@@ -134,8 +136,14 @@ export function VeloProvider({ children }: { children: ReactNode }) {
           focus: override === undefined ? focus : override,
           draft_text: thread.draftText,
           last_intent: thread.lastIntent,
+          conversation_id: thread.conversationId ?? null,
         });
-        setThread((th) => ({ messages: [...th.messages, { id: nid(), from: "velo", out }], draftText: out.draft_text ?? null, lastIntent: out.intent }));
+        setThread((th) => ({
+          messages: [...th.messages, { id: nid(), from: "velo", out }],
+          draftText: out.draft_text ?? null,
+          lastIntent: out.intent,
+          conversationId: out.conversation_id ?? th.conversationId ?? null,
+        }));
         if (!openRef.current) setUnread(true);
         flash(moodFor({ last: out }));
         if (out.navigate) {
@@ -151,7 +159,7 @@ export function VeloProvider({ children }: { children: ReactNode }) {
         throw e;
       }
     },
-    [askVelo, flash, focus, location.pathname, nav, setOpen, thread.draftText, thread.lastIntent, wide],
+    [askVelo, flash, focus, location.pathname, nav, setOpen, thread.draftText, thread.lastIntent, thread.conversationId, wide],
   );
 
   const send = useCallback(
