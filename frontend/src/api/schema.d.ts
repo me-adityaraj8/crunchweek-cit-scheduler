@@ -41,6 +41,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/signup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Signup
+         * @description Make your own account (club representative or faculty) and log straight in.
+         */
+        post: operations["signup_api_auth_signup_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/signup-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Signup Options
+         * @description What the sign-up form offers: the faculty members of the loaded dataset.
+         */
+        get: operations["signup_options_api_auth_signup_options_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/me": {
         parameters: {
             query?: never;
@@ -52,6 +92,23 @@ export interface paths {
         get: operations["me_api_me_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Change Password */
+        post: operations["change_password_api_auth_password_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -71,6 +128,46 @@ export interface paths {
          */
         get: operations["demo_accounts_api_auth_demo_accounts_get"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Users
+         * @description Every account: people's own (newest first), then the demo accounts.
+         */
+        get: operations["list_users_api_users_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/users/{user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set Role
+         * @description Give someone's own account a role. Only an Admin can make coordinators and admins.
+         */
+        put: operations["set_role_api_users__user_id__put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1127,6 +1224,15 @@ export interface components {
             /** Words */
             words?: string | null;
         };
+        /** FacultyChoice */
+        FacultyChoice: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Department */
+            department: string;
+        };
         /** FacultyOut */
         FacultyOut: {
             /** Id */
@@ -1355,6 +1461,13 @@ export interface components {
             /** Raw Text */
             raw_text?: string | null;
         };
+        /** PasswordIn */
+        PasswordIn: {
+            /** Current Password */
+            current_password: string;
+            /** New Password */
+            new_password: string;
+        };
         /** PendingItem */
         PendingItem: {
             /**
@@ -1445,6 +1558,18 @@ export interface components {
             /** Can Approve */
             can_approve: boolean;
         };
+        /** RoleIn */
+        RoleIn: {
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "admin" | "coordinator" | "faculty" | "club";
+            /** Department */
+            department?: string | null;
+            /** Faculty Id */
+            faculty_id?: string | null;
+        };
         /** RoomOut */
         RoomOut: {
             /** Id */
@@ -1489,6 +1614,32 @@ export interface components {
             lab_owners: {
                 [key: string]: string[];
             };
+        };
+        /**
+         * SignupIn
+         * @description Anyone can sign up for the roles that only ask for things. An Admin gives out coordinator and
+         *     admin, the roles that approve (PUT /users/{id}).
+         */
+        SignupIn: {
+            /** Name */
+            name: string;
+            /** Email */
+            email: string;
+            /** Password */
+            password: string;
+            /**
+             * Role
+             * @default club
+             * @enum {string}
+             */
+            role: "club" | "faculty";
+            /** Faculty Id */
+            faculty_id?: string | null;
+        };
+        /** SignupOptions */
+        SignupOptions: {
+            /** Faculty */
+            faculty: components["schemas"]["FacultyChoice"][];
         };
         /** Slot */
         Slot: {
@@ -1587,6 +1738,8 @@ export interface components {
             department?: string | null;
             /** Faculty Id */
             faculty_id?: string | null;
+            /** Demo */
+            demo: boolean;
         };
         /** ValidationError */
         ValidationError: {
@@ -1704,6 +1857,59 @@ export interface operations {
             };
         };
     };
+    signup_api_auth_signup_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SignupIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoginOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    signup_options_api_auth_signup_options_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignupOptions"];
+                };
+            };
+        };
+    };
     me_api_me_get: {
         parameters: {
             query?: never;
@@ -1724,6 +1930,39 @@ export interface operations {
             };
         };
     };
+    change_password_api_auth_password_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     demo_accounts_api_auth_demo_accounts_get: {
         parameters: {
             query?: never;
@@ -1740,6 +1979,61 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DemoAccount"][];
+                };
+            };
+        };
+    };
+    list_users_api_users_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserOut"][];
+                };
+            };
+        };
+    };
+    set_role_api_users__user_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoleIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

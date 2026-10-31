@@ -2,18 +2,25 @@ import { ArrowRight, Loader2, Mic, MoonStar, SunMedium } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router";
+import { toast } from "sonner";
 import { errorMessage } from "@/api/client";
-import { useDemoAccounts, useHealth } from "@/api/hooks";
+import { useDemoAccounts, useHealth, useSignupOptions } from "@/api/hooks";
+import type { SignupIn } from "@/api/types";
 import { SplitFlap, type FlapTone } from "@/components/board/SplitFlap";
 import { Button } from "@/components/ui/button";
-import { Field, Input } from "@/components/ui/field";
+import { Segmented } from "@/components/ui/controls";
+import { Field, Input, PasswordInput } from "@/components/ui/field";
 import { Select } from "@/components/ui/select";
 import { byRole, type AccountOption } from "@/lib/accounts";
 import { useAuth } from "@/lib/auth";
+import { ROLE } from "@/lib/format";
 import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
 const DEMO_PASSWORD = import.meta.env.VITE_DEMO_PASSWORD || "demo1234";
+
+type Mode = "login" | "signup";
+type SignupRole = SignupIn["role"] & string;
 
 /** Live status for the service tiles, from GET /api/health. */
 function useStatuses() {
@@ -87,7 +94,134 @@ function ServiceBento() {
   );
 }
 
-/** One role in the login bento: a single account (Admin) or a dropdown of accounts. */
+function Problem({ text }: { text: string | null }) {
+  if (!text) return null;
+  return (
+    <p role="alert" className="text-[13px] font-medium text-stop">
+      {text}
+    </p>
+  );
+}
+
+/** Log in with your own account (or a demo account's address and the README password). */
+function LoginForm({ onDone }: { onDone: () => void }) {
+  const { login } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit(ev: FormEvent) {
+    ev.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      await login(email.trim(), password);
+      onDone();
+    } catch (err) {
+      setError(errorMessage(err));
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form onSubmit={submit} className="flex flex-col gap-3">
+      <Field label="Email" htmlFor="login-email">
+        <Input id="login-email" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
+      </Field>
+      <Field label="Password" htmlFor="login-password">
+        <PasswordInput id="login-password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+      </Field>
+      <Problem text={error} />
+      <Button type="submit" variant="primary" size="lg" className="mt-1" disabled={busy}>
+        {busy && <Loader2 className="animate-spin" />} Log in
+      </Button>
+    </form>
+  );
+}
+
+/** Make your own account. Club representatives and faculty sign up here; an Admin gives the roles that approve. */
+function SignupForm({ onDone }: { onDone: () => void }) {
+  const { signup } = useAuth();
+  const [role, setRole] = useState<SignupRole>("club");
+  const [facultyId, setFacultyId] = useState<string>();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const options = useSignupOptions(role === "faculty");
+  const faculty = options.data?.faculty ?? [];
+
+  async function submit(ev: FormEvent) {
+    ev.preventDefault();
+    if (role === "faculty" && !facultyId) {
+      setError("Pick which faculty member you are.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const user = await signup({ name, email: email.trim(), password, role, faculty_id: role === "faculty" ? facultyId : null });
+      toast.success("Account created", { description: `You're logged in as ${ROLE[user.role].toLowerCase()}.` });
+      onDone();
+    } catch (err) {
+      setError(errorMessage(err));
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form onSubmit={submit} className="flex flex-col gap-3">
+      <Field label="I am a">
+        <Segmented<SignupRole>
+          aria-label="Account type"
+          value={role}
+          onChange={(r) => {
+            setRole(r);
+            setError(null);
+          }}
+          items={[
+            { value: "club", label: "Club representative" },
+            { value: "faculty", label: "Faculty member" },
+          ]}
+          className="grid w-full grid-cols-2"
+        />
+      </Field>
+      {role === "faculty" && (
+        <Field label="Which faculty member are you?" htmlFor="signup-faculty" hint="Links the account to your timetable. One account per faculty member.">
+          <Select
+            id="signup-faculty"
+            value={facultyId}
+            onValueChange={(id) => {
+              setFacultyId(id);
+              if (!name.trim()) setName(faculty.find((f) => f.id === id)?.name ?? "");
+            }}
+            options={faculty.map((f) => ({ value: f.id, label: f.name, hint: f.id, group: f.department }))}
+            placeholder={options.isLoading ? "Loading the faculty list" : options.isError ? "Couldn't load the faculty list" : "Choose your name"}
+            disabled={!faculty.length}
+          />
+        </Field>
+      )}
+      <Field label={role === "club" ? "Name or club name" : "Your name"} htmlFor="signup-name" hint={role === "club" ? "Shown on your venue requests." : undefined}>
+        <Input id="signup-name" autoComplete={role === "club" ? "organization" : "name"} value={name} onChange={(e) => setName(e.target.value)} required minLength={2} maxLength={120} />
+      </Field>
+      <Field label="Email" htmlFor="signup-email">
+        <Input id="signup-email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+      </Field>
+      <Field label="Password" htmlFor="signup-password" hint="At least 8 characters.">
+        <PasswordInput id="signup-password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
+      </Field>
+      <Problem text={error} />
+      <Button type="submit" variant="primary" size="lg" className="mt-1" disabled={busy}>
+        {busy && <Loader2 className="animate-spin" />} Create account
+      </Button>
+      <p className="text-[12.5px] text-ink-3">Coordinator and Admin accounts approve requests, so an Admin gives those roles.</p>
+    </form>
+  );
+}
+
+/** One role in the demo bento: a single account (Admin) or a dropdown of accounts. */
 function RoleTile({ chip, title, description, options, busy, onGo, delay }: { chip: string; title: string; description: string; options: AccountOption[]; busy: string | null; onGo: (email: string) => void; delay: number }) {
   const [email, setEmail] = useState(options[0]?.value ?? "");
   useEffect(() => {
@@ -126,35 +260,23 @@ function RoleTile({ chip, title, description, options, busy, onGo, delay }: { ch
   );
 }
 
-export default function Login() {
-  const { user, login, notice } = useAuth();
-  const { theme, toggle } = useTheme();
-  const nav = useNavigate();
-  const location = useLocation();
-  const from = (location.state as { from?: string } | null)?.from ?? "/";
+/** One click into any role, no sign-up: for judges and anyone trying the app. */
+function DemoTiles({ onDone }: { onDone: () => void }) {
+  const { login } = useAuth();
   const { data: accounts, isLoading, isError, refetch } = useDemoAccounts();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
 
-  if (user) return <Navigate to={from} replace />;
-
-  async function go(e: string, p: string) {
-    setBusy(e);
+  async function go(email: string) {
+    setBusy(email);
     setError(null);
     try {
-      await login(e, p);
-      nav(from, { replace: true });
+      await login(email, DEMO_PASSWORD);
+      onDone();
     } catch (err) {
       setError(errorMessage(err));
       setBusy(null);
     }
-  }
-
-  function submit(ev: FormEvent) {
-    ev.preventDefault();
-    if (email && password) go(email.trim(), password);
   }
 
   const roles = accounts ? byRole(accounts) : null;
@@ -166,6 +288,45 @@ export default function Login() {
         roles.club.length > 0 && { chip: "Club", title: "Club", description: "Request venues in plain English or Hinglish", options: roles.club },
       ].filter((t): t is { chip: string; title: string; description: string; options: AccountOption[] } => !!t)
     : [];
+
+  return (
+    <section className="flex flex-col gap-3" aria-labelledby="demo-title">
+      <div>
+        <h2 id="demo-title" className="text-[16px] font-bold">
+          Demo for judges
+        </h2>
+        <p className="mt-0.5 text-[13px] text-ink-2">One click, no sign-up. Pick a role and an account; each role sees its own pages.</p>
+      </div>
+      {isError ? (
+        <p className="rounded-[10px] border border-stop/40 bg-stop-soft p-3 text-[13px]">
+          Can't reach the API, so the demo accounts didn't load.{" "}
+          <button className="font-semibold underline" onClick={() => refetch()}>
+            Try again
+          </button>
+        </p>
+      ) : (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" aria-label="Demo accounts">
+          {isLoading && Array.from({ length: 4 }, (_, i) => <div key={i} className="skeleton h-[168px] rounded-[14px]" />)}
+          {tiles.map((t, i) => (
+            <RoleTile key={t.title} {...t} busy={busy} onGo={go} delay={0.05 * i} />
+          ))}
+        </div>
+      )}
+      <Problem text={error} />
+    </section>
+  );
+}
+
+export default function Login() {
+  const { user, notice } = useAuth();
+  const { theme, toggle } = useTheme();
+  const nav = useNavigate();
+  const location = useLocation();
+  const from = (location.state as { from?: string } | null)?.from ?? "/";
+  const [mode, setMode] = useState<Mode>("login");
+
+  if (user) return <Navigate to={from} replace />;
+  const done = () => nav(from, { replace: true });
 
   return (
     <div className="platform-bg relative min-h-dvh">
@@ -196,52 +357,29 @@ export default function Login() {
           <ServiceBento />
         </div>
 
-        <section className="sheet flex flex-col gap-5 rounded-[18px] p-5 sm:p-6" aria-labelledby="login-title">
-          <div>
-            <h2 id="login-title" className="text-[20px] font-bold">
-              Log in
-            </h2>
-            <p className="mt-1 text-[13.5px] text-ink-2">Pick a role and an account. Each role sees its own pages.</p>
-          </div>
+        <section className="sheet flex flex-col gap-5 rounded-[18px] p-5 sm:p-6" aria-label={mode === "login" ? "Log in" : "Create an account"}>
+          <Segmented<Mode>
+            aria-label="Log in or create an account"
+            value={mode}
+            onChange={setMode}
+            items={[
+              { value: "login", label: "Log in" },
+              { value: "signup", label: "Create account" },
+            ]}
+            className="grid w-full grid-cols-2"
+          />
 
           {notice && <p className="rounded-[8px] bg-signal-soft px-3 py-2 text-[13px]">{notice}</p>}
 
-          {isError ? (
-            <p className="rounded-[10px] border border-stop/40 bg-stop-soft p-3 text-[13px]">
-              Can't reach the API, so the demo accounts didn't load.{" "}
-              <button className="font-semibold underline" onClick={() => refetch()}>
-                Try again
-              </button>
-            </p>
-          ) : (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" aria-label="Demo accounts">
-              {isLoading && Array.from({ length: 4 }, (_, i) => <div key={i} className="skeleton h-[168px] rounded-[14px]" />)}
-              {tiles.map((t, i) => (
-                <RoleTile key={t.title} {...t} busy={busy} onGo={(e) => go(e, DEMO_PASSWORD)} delay={0.05 * i} />
-              ))}
-            </div>
-          )}
+          {mode === "login" ? <LoginForm onDone={done} /> : <SignupForm onDone={done} />}
 
-          <details className="group rounded-[12px] border border-rule">
-            <summary className="cursor-pointer list-none px-3 py-2.5 text-[13px] font-semibold text-ink-2 hover:text-ink">Use an email and password instead</summary>
-            <form onSubmit={submit} className="flex flex-col gap-3 border-t border-rule p-3">
-              <Field label="Email" htmlFor="email">
-                <Input id="email" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
-              </Field>
-              <Field label="Password" htmlFor="password" hint="Demo accounts use the password in the README.">
-                <Input id="password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-              </Field>
-              <Button type="submit" variant="primary" disabled={!!busy}>
-                Log in
-              </Button>
-            </form>
-          </details>
+          <div className="flex items-center gap-3 text-[12px] font-semibold text-ink-3" aria-hidden>
+            <span className="h-px flex-1 bg-rule" />
+            or
+            <span className="h-px flex-1 bg-rule" />
+          </div>
 
-          {error && (
-            <p role="alert" className="text-[13px] font-medium text-stop">
-              {error}
-            </p>
-          )}
+          <DemoTiles onDone={done} />
         </section>
       </div>
     </div>

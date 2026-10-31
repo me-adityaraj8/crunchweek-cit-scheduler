@@ -17,6 +17,7 @@ class UserOut(BaseModel):
     role: Role
     department: str | None = None
     faculty_id: str | None = None
+    demo: bool                          # a shared demo account (password can't be changed, Admin can't edit it)
 
 
 class LoginIn(BaseModel):
@@ -35,6 +36,37 @@ class DemoAccount(BaseModel):
     name: str
     description: str
     department: str | None = None
+
+
+class SignupIn(BaseModel):
+    """Anyone can sign up for the roles that only ask for things. An Admin gives out coordinator and
+    admin, the roles that approve (PUT /users/{id})."""
+    name: str = Field(max_length=200)
+    email: str = Field(max_length=200)
+    password: str = Field(max_length=200)
+    role: Literal["club", "faculty"] = "club"
+    faculty_id: str | None = None       # required for faculty: which faculty member of the dataset you are
+
+
+class FacultyChoice(BaseModel):
+    id: str
+    name: str
+    department: str
+
+
+class SignupOptions(BaseModel):
+    faculty: list[FacultyChoice]
+
+
+class PasswordIn(BaseModel):
+    current_password: str = Field(max_length=200)
+    new_password: str = Field(max_length=200)
+
+
+class RoleIn(BaseModel):
+    role: Role
+    department: str | None = None       # required for coordinator
+    faculty_id: str | None = None       # required for faculty
 
 
 # ---------------------------------------------------------------- shared

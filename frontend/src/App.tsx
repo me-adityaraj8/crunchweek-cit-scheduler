@@ -43,7 +43,8 @@ function Stop({ children }: { children: ReactNode }) {
           </Button>
         }
       >
-        Your account can't open this page. Log in with a different demo account to see it.
+        Your account can't open this page.{" "}
+        {user.demo ? "Log in with a different demo account to see it." : "If you need it, ask an Admin to change your role."}
       </Empty>
     );
   }

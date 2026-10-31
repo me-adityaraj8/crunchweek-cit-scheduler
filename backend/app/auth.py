@@ -1,4 +1,5 @@
-"""JWT login and role guards. Demo accounts only: no sign-up, no password reset."""
+"""JWT login and role guards. Two kinds of account: the seeded demo accounts (one shared password, for
+judges) and people's own accounts made with POST /auth/signup (services/accounts.py)."""
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
@@ -13,9 +14,16 @@ from .errors import ApiError, forbidden
 from .models import User
 
 TOKEN_HOURS = 12
+# every demo account, and only those, has an address on this domain (.demo is not a real TLD, so sign-up can
+# refuse it and nobody's own account can be mistaken for one)
+DEMO_DOMAIN = "@cit.demo"
 
 # app roles -> the role names the dataset uses for booking requests (role_category_cap keys)
 DATASET_ROLE = {"admin": "admin", "coordinator": "department_coordinator", "faculty": "faculty", "club": "club"}
+
+
+def is_demo(user: User) -> bool:
+    return user.email.endswith(DEMO_DOMAIN)
 
 
 def hash_password(pw: str) -> str:
@@ -46,7 +54,7 @@ def current_user(creds: HTTPAuthorizationCredentials | None = Depends(bearer), d
     except jwt.PyJWTError:
         raise ApiError(401, "unauthenticated", "Your session has expired, log in again")
     user = db.get(User, int(claims["sub"]))
-    if user is None:          # demo data was reset and the account no longer exists
+    if user is None:          # a demo account the newly loaded dataset doesn't have any more
         raise ApiError(401, "unauthenticated", "Your session has expired, log in again")
     return user
 

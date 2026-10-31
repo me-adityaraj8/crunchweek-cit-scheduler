@@ -23,7 +23,7 @@ Full brief: `Problem statement.pdf`. Data + export format: `starter_pack/README.
 - LLM may parse/explain only; validity must be decided by our code. Manual booking form must work with LLM down.
 
 ## Roles
-Admin, Department coordinator, Faculty, Club representative. Nobody approves their own request. Demo accounts for all four + Admin "reset demo data" button.
+Admin, Department coordinator, Faculty, Club representative. Nobody approves their own request. Demo accounts for all four (one per department, faculty member and club in the dataset) + Admin "reset demo data" button. People can also sign up for their own club or faculty account; an Admin gives the coordinator and admin roles.
 
 ## Technology stack
 See docs/DESIGN.md section 3.2 for reasons. Summary:
@@ -41,7 +41,7 @@ See README.md. `starter_pack/` is organiser material and must not be modified.
 
 ## Database schema
 SQLAlchemy models in `backend/app/models.py`, created at startup (no migrations). Scheduling state is JSON next to the row it belongs to:
-- `users`: demo accounts (email, role admin/coordinator/faculty/club, department, faculty_id, bcrypt hash)
+- `users`: demo accounts (`@cit.demo` addresses, follow the dataset) and people's own accounts (email, role admin/coordinator/faculty/club, department, faculty_id, bcrypt hash)
 - `datasets`: starter-pack JSON with changes applied, `applied_changes`, `parent_id`, one `active`
 - `timetable_versions`: `assignments` {session: [day, start, room]}, `fest` {decisions, overrides, cache}, soft, kind generated/change/manual, status active/archived
 - `exam_schedules`, `booking_requests` (app requests `APP-0001`…, dataset shape in `data`, status, decision, approver, confirmed placement)
@@ -52,7 +52,7 @@ SQLAlchemy models in `backend/app/models.py`, created at startup (no migrations)
 All under `/api`; table in README.md, live docs at `/api/docs`. Response shapes in `backend/app/schemas.py`.
 
 ## Authentication
-Seeded demo accounts (README), password from `DEMO_PASSWORD`, bcrypt. `POST /api/auth/login` returns a 12h HS256 JWT (`JWT_SECRET`); send `Authorization: Bearer`. Role guards in `backend/app/auth.py`; "not your own request" checks in the services.
+Two kinds of account (README "Accounts"), both bcrypt. Demo accounts are the `@cit.demo` addresses, seeded from the dataset with the shared `DEMO_PASSWORD`; reset and dataset uploads re-sync only those. Own accounts come from `POST /api/auth/signup` (club or faculty, one own account per faculty member), change their password with `POST /api/auth/password`, and get coordinator/admin only from an Admin (`PUT /api/users/{id}`, Settings → People). Rules in `backend/app/services/accounts.py`. `POST /api/auth/login` returns a 12h HS256 JWT (`JWT_SECRET`); send `Authorization: Bearer`. Every request reloads the user, so a role change applies on the next click. Role guards in `backend/app/auth.py`; "not your own request" checks in the services.
 
 ## Dependencies
 `requirements.txt` (runtime, pinned) and `requirements-dev.txt` (+ pytest). Licences in THIRD_PARTY.md.
@@ -62,6 +62,7 @@ Seeded demo accounts (README), password from `DEMO_PASSWORD`, bcrypt. `POST /api
 
 ## Completed features
 - Repo set up, starter pack committed.
+- Own accounts: sign-up (club/faculty), log in, change password, Admin's People list for roles; demo tiles stay on the login page for judges. Reset keeps own accounts.
 - Frontend (Lane C): every page for the four roles (overview, timetable with explanations and manual-move proposals, find a room, booking assistant with live checks, Spectra week board, changes with before/after diff and approval, approvals, exams, data and export, settings), light and dark themes, phone layout. Built against the real API types (`frontend/src/api/schema.d.ts`). 18 unit tests.
 - API + AI (Lane B): auth and roles, dataset upload/reset, timetable generate/views/manual moves/explain, dashboard, free rooms, exams, Spectra bookings (check, submit, cancel, lab approvals), change proposals with approval and stale/self-approval guards, Gemini assistant with keyword fallback, export, `scripts/make_exports.py`. 44 API tests.
 - Engine (Lane A): dataset loading + change files, checker that matches validator.py, CP-SAT timetable, exam scheduler, Spectra week decisions, export, minimal-move repair with infeasibility reasons, explanations. Numbers in HANDOFF.md.

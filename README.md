@@ -25,7 +25,7 @@
 - [Tech Stack](#-tech-stack)
 - [Getting Started](#-getting-started)
 - [Deploy to Vercel](#-deploy-to-vercel)
-- [Demo Accounts](#-demo-accounts)
+- [Accounts](#-accounts)
 - [API Overview](#-api-overview)
 - [Rules Worth Knowing](#-rules-worth-knowing)
 - [Known Limitations](#-known-limitations)
@@ -129,7 +129,7 @@ npm ci
 npm run dev          # http://localhost:5173, proxies /api to :8000
 ```
 
-> 🔐 Log in with one of the demo account buttons.  
+> 🔐 Create an account, or use a demo tile under "Demo for judges".  
 > To proxy to another API port, put `API_PROXY=http://localhost:8100` in `frontend/.env.local`. If the deployed `DEMO_PASSWORD` isn't `demo1234`, build with `VITE_DEMO_PASSWORD` set so the one-click buttons work.
 
 ### 5. Run the tests
@@ -193,12 +193,20 @@ If the deploy fails on function size, or the solver is too slow, move the backen
 
 ---
 
-## 👥 Demo Accounts
+## 👥 Accounts
 
-All accounts use the password in `DEMO_PASSWORD` (default: **`demo1234`** locally).  
-The Admin's **"Reset Demo Data"** (`POST /api/admin/reset`) restores the starter dataset, removes every timetable, request, and proposal, and keeps the accounts.
+### Your own account
 
-The login page has one tile per role. Coordinator, Faculty and Club each have a dropdown, since the accounts come from the loaded dataset: one coordinator per department, one account per faculty member, one per club that makes venue requests.
+Anyone can **sign up** on the login page (*Create account*) with an email and a password of at least 8 characters, as a **club representative** or a **faculty member**. Faculty pick which faculty member they are, and each faculty member can have one own account. You're logged in straight away; the key button next to your name changes your password.
+
+Coordinator and Admin are the roles that approve requests, so nobody can sign up as one. An Admin gives those roles under **Settings → People**, which lists every account; a change applies from the person's next click.
+
+### Demo accounts (for judges)
+
+All demo accounts use the password in `DEMO_PASSWORD` (default: **`demo1234`** locally). It's shared, so the app won't change it.  
+The Admin's **"Reset Demo Data"** (`POST /api/admin/reset`) restores the starter dataset and removes every timetable, request, and proposal, people's own included. Every account stays.
+
+The login page's **Demo for judges** section has one tile per role. Coordinator, Faculty and Club each have a dropdown, since the accounts come from the loaded dataset: one coordinator per department, one account per faculty member, one per club that makes venue requests.
 
 | Role | Accounts (examples) | What to try |
 |------|---------------------|-------------|
@@ -211,7 +219,7 @@ The login page has one tile per role. Coordinator, Faculty and Club each have a 
 
 ## 🔌 API Overview
 
-All routes live under `/api` and require `Authorization: Bearer <token>` except login, the demo-account list, and health.  
+All routes live under `/api` and require `Authorization: Bearer <token>` except login, sign-up (and its faculty list), the demo-account list, and health.  
 Errors always return: `{"error": {"code", "message", "details"}}`.
 
 <details>
@@ -219,7 +227,7 @@ Errors always return: `{"error": {"code", "message", "details"}}`.
 
 | Area | Routes |
 |------|--------|
-| **Auth** | `POST /auth/login` · `GET /me` · `GET /auth/demo-accounts` |
+| **Auth** | `POST /auth/login` · `POST /auth/signup` · `GET /auth/signup-options` · `GET /me` · `POST /auth/password` · `GET /auth/demo-accounts` · `GET /users` *(Admin)* · `PUT /users/{id}` *(Admin: give a role)* |
 | **Data** | `POST /data/dataset` *(Admin; JSON file)* · `GET /data/summary` · `GET/PUT /settings` *(priority order, lab owners)* · `POST /admin/reset` |
 | **Timetable** | `POST /timetable/generate` · `GET /timetable?view=group\|faculty\|room\|all&id=&week=regular\|spectra` · `POST /timetable/check-move` · `POST /timetable/manual` · `GET /explain/session/{id}` |
 | **Views** | `GET /dashboard` · `GET /rooms/free?day&from&to&capacity&needs&types&week` |
@@ -259,7 +267,7 @@ App bookings **never** move classes. Only the dataset's approved institute event
 
 | Limitation | Details |
 |-----------|---------|
-| **Auth** | Login is seeded demo accounts only — no sign-up, no password reset. |
+| **Auth** | No email check and no "forgot password" email (there's no mail service), and no login rate limit. Own and demo accounts share one campus, so "Reset Demo Data" also clears requests made from own accounts. |
 | **Long solves** | Solves run inside the request (no job queue); the solver time limit is set by `SOLVER_TIME_LIMIT_S`. |
 | **CPU-dependent quality** | Solution quality depends on CPU cores. With one core the timetable is valid but less optimised in the same time. |
 | **AI fallback** | Without `GEMINI_API_KEY`, the assistant uses keyword rules — fine for plain requests, weaker on vague or conditional ones. |
@@ -274,7 +282,7 @@ App bookings **never** move classes. Only the dataset's approved institute event
 │   ├── app/
 │   │   ├── core/          # Dataset loading, checker (mirrors validator), explanations, export
 │   │   ├── solver/        # CP-SAT timetable, exams, Spectra-week, repair, infeasibility
-│   │   ├── services/      # State, bookings, proposals — what the routers call
+│   │   ├── services/      # State, accounts, bookings, proposals — what the routers call
 │   │   ├── routers/       # HTTP endpoints
 │   │   └── llm/           # Gemini client, prompts/, parsers with keyword fallback
 │   └── tests/

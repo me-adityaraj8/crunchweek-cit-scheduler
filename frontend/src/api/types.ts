@@ -8,6 +8,10 @@ export type Role = S["UserOut"]["role"];
 export type User = S["UserOut"];
 export type LoginOut = S["LoginOut"];
 export type DemoAccount = S["DemoAccount"];
+export type SignupIn = S["SignupIn"];
+export type SignupOptions = S["SignupOptions"];
+export type FacultyChoice = S["FacultyChoice"];
+export type RoleIn = S["RoleIn"];
 
 export type Summary = S["SummaryOut"];
 export type Room = S["RoomOut"];

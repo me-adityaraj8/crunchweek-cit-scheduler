@@ -22,9 +22,12 @@ import type {
   ManualMoveIn,
   ManualMoveOut,
   Proposal,
+  RoleIn,
   Settings,
+  SignupOptions,
   Summary,
   TimetableOut,
+  User,
   View,
   Week,
 } from "./types";
@@ -32,6 +35,11 @@ import type {
 // ---------------------------------------------------------------- queries
 export const useDemoAccounts = () =>
   useQuery({ queryKey: ["demo-accounts"], queryFn: () => request<DemoAccount[]>("/auth/demo-accounts"), staleTime: 60_000 });
+
+export const useSignupOptions = (enabled: boolean) =>
+  useQuery({ queryKey: ["signup-options"], queryFn: () => request<SignupOptions>("/auth/signup-options"), enabled, staleTime: 300_000 });
+
+export const useUsers = () => useQuery({ queryKey: ["users"], queryFn: () => request<User[]>("/users") });
 
 export const useHealth = () => useQuery({ queryKey: ["health"], queryFn: () => request<Health>("/health"), staleTime: 30_000 });
 
@@ -105,7 +113,7 @@ export const useFreeRooms = (q: FreeRoomQuery | null) =>
 function useRefreshAll() {
   const qc = useQueryClient();
   return () =>
-    qc.invalidateQueries({ predicate: (q) => !["demo-accounts", "health"].includes(String(q.queryKey[0])) });
+    qc.invalidateQueries({ predicate: (q) => !["demo-accounts", "signup-options", "health"].includes(String(q.queryKey[0])) });
 }
 
 function useStateMutation<TIn, TOut>(fn: (input: TIn) => Promise<TOut>) {
@@ -161,6 +169,20 @@ export const useDecideBooking = () =>
 export const useManualMove = () => useStateMutation((body: ManualMoveIn) => request<ManualMoveOut>("/timetable/manual", { body }));
 
 export const usePutSettings = () => useStateMutation((body: Settings) => request<Settings>("/settings", { method: "PUT", body }));
+
+// accounts: a role change only touches the account list, not the timetable
+export const useSetRole = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...body }: RoleIn & { id: number }) => request<User>(`/users/${id}`, { method: "PUT", body }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
+  });
+};
+
+export const useChangePassword = () =>
+  useMutation({
+    mutationFn: (body: { current_password: string; new_password: string }) => request<{ ok: boolean }>("/auth/password", { body }),
+  });
 
 // read-only calls that are still triggered by the user
 export const useParseBooking = () =>

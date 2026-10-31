@@ -8,7 +8,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from ..auth import hash_password
+from ..auth import DEMO_DOMAIN, hash_password
 from ..config import STARTER_DATASET, settings
 from ..core.checker import check_timetable, soft_score
 from ..core.dataset import load_dataset
@@ -172,34 +172,39 @@ def put_settings(db: Session, ds: Dataset, values: dict, user: User) -> dict:
 
 
 # ---------------------------------------------------------------- demo accounts and reset
-def demo_accounts(ds: Dataset) -> list[dict]:
-    """Accounts the login page offers, derived from the loaded dataset: the Admin, one coordinator per
-    department, one account per faculty member and one per club that makes venue requests."""
+def teaching_departments(ds: Dataset) -> list[str]:
+    """Departments that teach, in dataset order: one coordinator account each."""
     depts = []
     for d in [g.get("department") for g in ds.groups.values()] + [f["department"] for f in ds.faculty.values()]:
         if d and d not in ("COMMON", "ADMIN") and d not in depts:
             depts.append(d)
-    out = [{"email": "admin@cit.demo", "name": "Dean's Office", "role": "admin", "department": None,
+    return depts
+
+
+def demo_accounts(ds: Dataset) -> list[dict]:
+    """Accounts the login page offers, derived from the loaded dataset: the Admin, one coordinator per
+    department, one account per faculty member and one per club that makes venue requests."""
+    out = [{"email": f"admin{DEMO_DOMAIN}", "name": "Dean's Office", "role": "admin", "department": None,
             "faculty_id": None, "description": "Generates timetables, approves changes, decides Spectra week"}]
-    for d in depts:
-        out.append({"email": f"{d.lower()}.coord@cit.demo", "name": f"{d} Coordinator",
+    for d in teaching_departments(ds):
+        out.append({"email": f"{d.lower()}.coord{DEMO_DOMAIN}", "name": f"{d} Coordinator",
                     "role": "coordinator", "department": d, "faculty_id": None,
                     "description": f"Books rooms for {d} events, approves bookings of {d} labs"})
     for f in ds.faculty.values():
-        out.append({"email": f"{f['id'].lower()}@cit.demo", "name": f["name"], "role": "faculty",
+        out.append({"email": f"{f['id'].lower()}{DEMO_DOMAIN}", "name": f["name"], "role": "faculty",
                     "department": f["department"], "faculty_id": f["id"],
                     "description": f"Sees {f['id']}'s timetable, marks leave, asks for changes"})
     clubs = sorted({r["requester"] for r in ds.requests.values() if r.get("role") == "club" and r.get("requester")})
     for name in clubs or ["Student Club"]:
         slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
-        out.append({"email": f"{slug}@cit.demo" if clubs else "club@cit.demo", "name": name, "role": "club",
+        out.append({"email": f"{slug}{DEMO_DOMAIN}" if clubs else f"club{DEMO_DOMAIN}", "name": name, "role": "club",
                     "department": None, "faculty_id": None, "description": "Submits and cancels venue requests"})
     return out
 
 
 def upsert_demo_users(db: Session, ds: Dataset, reset_passwords: bool = False) -> None:
     """Create the demo accounts, or re-point existing ones at the loaded dataset (same email, same id,
-    so logged-in sessions survive a reset or a dataset upload)."""
+    so logged-in sessions survive a reset or a dataset upload). People's own accounts are left alone."""
     pw = None
     accounts = demo_accounts(ds)
     for a in accounts:
@@ -212,9 +217,11 @@ def upsert_demo_users(db: Session, ds: Dataset, reset_passwords: bool = False) -
         elif reset_passwords:
             u.password_hash = pw
         u.name, u.role, u.department, u.faculty_id = a["name"], a["role"], a["department"], a["faculty_id"]
-    # accounts the dataset no longer has: delete them, unless they made bookings, proposals or other
-    # history (the database won't drop a referenced row); those stay but leave the login page
-    obsolete = list(db.scalars(select(User.id).where(User.email.not_in([a["email"] for a in accounts]))))
+    # demo accounts the dataset no longer has: delete them, unless they made bookings, proposals or other
+    # history (the database won't drop a referenced row); those stay but leave the login page.
+    # People's own accounts (any other address) are never touched here.
+    obsolete = list(db.scalars(select(User.id).where(User.email.endswith(DEMO_DOMAIN),
+                                                     User.email.not_in([a["email"] for a in accounts]))))
     if obsolete:
         used = set()
         for col in (TimetableVersion.created_by, BookingRequest.created_by, BookingRequest.decided_by,
@@ -240,7 +247,8 @@ def load_new_dataset(db: Session, ds: Dataset, user: User) -> DatasetRow:
 
 
 def reset_demo(db: Session) -> Dataset:
-    """Back to a clean state: the starter dataset, no timetable, no requests, fresh demo accounts."""
+    """Back to a clean state: the starter dataset, no timetable, no requests, fresh demo accounts.
+    People's own accounts stay (their requests and proposals go with everyone else's)."""
     raw = json.loads(STARTER_DATASET.read_text(encoding="utf-8"))
     ds = load_dataset(raw)
     clear_runtime(db)

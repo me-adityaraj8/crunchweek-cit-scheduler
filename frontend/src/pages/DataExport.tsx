@@ -241,7 +241,7 @@ function DatasetCard() {
         </Button>
       </div>
       <Dialog open={confirm} onOpenChange={setConfirm}>
-        <DialogContent title="Reset the demo data?" description="This reloads the starter dataset and removes every timetable, exam schedule, venue request and change proposal. Demo accounts stay, but everyone is logged out.">
+        <DialogContent title="Reset the demo data?" description="This reloads the starter dataset and removes every timetable, exam schedule, venue request and change proposal, including ones made from people's own accounts. Every account stays; you'll log in again afterwards.">
           <div className="flex justify-end gap-2">
             <DialogClose asChild>
               <Button>Keep everything</Button>

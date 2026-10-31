@@ -19,3 +19,4 @@
 | 2026-10-31 | Aditya (Laptop 1) | Renamed the product to Velora (app, API title, export team name, docs); frontend served on Vercel at / |
 | 2026-10-31 | Aditya (Laptop 1) | Book a venue: mic button (browser WAV -> Gemini transcription -> message box), "guessed" badge reworded to "auto-filled, please check" |
 | 2026-10-31 | Aditya (Laptop 1) | Login page: bento layout; Admin tile plus Coordinator / Faculty / Club dropdowns; accounts for every department, faculty member and club in the dataset |
+| 2026-10-31 | Varun (Laptop 2) | Own accounts: sign-up (club/faculty), change password, Admin's People list for roles; login = Aditya's bento + Log in / Create account tabs + "Demo for judges" tiles; reset and demo-account sync never delete own accounts; 13 auth tests, API 67/67 |

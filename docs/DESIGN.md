@@ -86,7 +86,7 @@ Passwords for demo accounts are seeded from env and listed in the README.
 - "Explain in plain words" via LLM on top of computed reasons.
 
 **Mocked / not real — say so in the README:**
-- Login is seeded demo accounts with passwords, no sign-up, no password reset.
+- Login: seeded demo accounts with one shared password, plus sign-up for people's own club or faculty accounts (an Admin gives coordinator and admin). No email check and no password-reset email.
 - Nothing in the judged flows is mocked.
 
 ---
@@ -369,7 +369,7 @@ Sleep: stagger 2–3 hour naps between hours 9–15 so at least two lanes are al
 
 **Live bookings submitted in the app.** They join the same Week-7 priority pool as the dataset requests. When one is submitted, `fest.py` places it against the current decisions. An already-approved booking is bumped only if the new request outranks it (higher effective category, or same category and earlier `submitted_at`). The bumped booking is moved to an alternative or rejected, with reason "outranked by BR-xx", so the decision set stays inversion-free. Code makes the decision. A person approves only where the problem statement asks for it: the department coordinator for a booking of their department's lab (never their own request), and the Admin for any booking that displaces a class. Until then those bookings show `pending approval` with the decision the code has proposed. Live bookings are included in the exported `fest_week`.
 
-**Datasets.** Nothing is tied to `cit_public.json`. Any file in the starter-pack format can be loaded. Solver time limits come from env. Demo accounts are fixed (admin, club). Faculty and coordinator accounts are linked to an ID and a department when the dataset loads: the faculty account goes to the first faculty in the file, and coordinators go to the first two departments. LLM prompts never include room lists. Rooms and features are passed in as data on each call.
+**Datasets.** Nothing is tied to `cit_public.json`. Any file in the starter-pack format can be loaded. Solver time limits come from env. Demo accounts come from the loaded dataset: the Admin, one coordinator per department, one account per faculty member and one per club that makes requests. People's own accounts are never touched by a dataset load or reset. LLM prompts never include room lists. Rooms and features are passed in as data on each call.
 
 **Change files vs. Spectra week.** Approved bookings and Week-7 overrides are commitments. `repair.py` treats them as fixed hard constraints, and the `fest_week` block is carried into `schedule_after.json` unchanged. If a change makes an approved booking impossible, for example because its room closes, that booking is listed as a conflict in the proposal. It is not silently dropped.
 

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { errorMessage } from "@/api/client";
 import { usePutSettings, useSettings, useSummary } from "@/api/hooks";
+import { People } from "@/components/account/People";
 import { Code } from "@/components/board/signals";
 import { ErrorState, Loading, PageHeader, SectionTitle } from "@/components/states";
 import { Button } from "@/components/ui/button";
@@ -123,6 +124,7 @@ export default function Settings() {
           </ul>
         </section>
       </div>
+      <People />
     </div>
   );
 }

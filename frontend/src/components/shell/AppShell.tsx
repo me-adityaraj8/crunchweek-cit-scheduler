@@ -1,8 +1,9 @@
-import { LogOut, Menu as MenuIcon, MoonStar, Search, SunMedium } from "lucide-react";
+import { KeyRound, LogOut, Menu as MenuIcon, MoonStar, Search, SunMedium } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router";
 import { useDashboard } from "@/api/hooks";
+import { PasswordDialog } from "@/components/account/PasswordDialog";
 import { SplitFlap } from "@/components/board/SplitFlap";
 import { Drawer } from "@/components/ui/dialog";
 import { Tip } from "@/components/ui/overlay";
@@ -102,6 +103,7 @@ function RouteLine({ compact, onNavigate, scope = "rail" }: { compact?: boolean;
 function UserPlate({ compact }: { compact?: boolean }) {
   const user = useUser();
   const { logout } = useAuth();
+  const [password, setPassword] = useState(false);
   return (
     <div className={cn("flex items-center gap-3 rounded-[10px] bg-anthracite-2 p-2.5", compact && "flex-col p-2")}>
       <div className="grid size-8 shrink-0 place-items-center rounded-full bg-anthracite-3 text-[12px] font-bold text-on-anthracite">
@@ -111,11 +113,26 @@ function UserPlate({ compact }: { compact?: boolean }) {
         <div className="min-w-0 flex-1 leading-tight">
           <div className="truncate text-[13px] font-semibold text-on-anthracite">{user.name}</div>
           <div className="truncate text-[11.5px] text-on-anthracite-2">
-            {ROLE[user.role]}
+            {user.demo ? "Demo " : ""}
+            {user.demo ? ROLE[user.role].toLowerCase() : ROLE[user.role]}
             {user.department ? `, ${user.department}` : ""}
             {user.faculty_id ? `, ${user.faculty_id}` : ""}
           </div>
         </div>
+      )}
+      {!user.demo && (
+        <>
+          <Tip label="Change password" side={compact ? "right" : "top"}>
+            <button
+              onClick={() => setPassword(true)}
+              className="grid size-8 place-items-center rounded-[7px] text-on-anthracite-2 hover:bg-anthracite-3 hover:text-on-anthracite"
+              aria-label="Change password"
+            >
+              <KeyRound className="size-4" />
+            </button>
+          </Tip>
+          <PasswordDialog open={password} onOpenChange={setPassword} />
+        </>
       )}
       <Tip label="Log out" side={compact ? "right" : "top"}>
         <button onClick={() => logout()} className="grid size-8 place-items-center rounded-[7px] text-on-anthracite-2 hover:bg-anthracite-3 hover:text-on-anthracite" aria-label="Log out">
