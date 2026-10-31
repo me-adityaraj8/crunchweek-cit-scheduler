@@ -1,0 +1,23 @@
+# deps / builds
+node_modules/
+.next/
+dist/
+build/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# env / secrets
+.env
+.env.local
+.env.*.local
+
+# os / editor
+.DS_Store
+.vscode/
+.idea/
+
+# local-only
+*.zip
+CrunchWeek_StarterPack/
