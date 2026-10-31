@@ -9,7 +9,7 @@ from dataclasses import dataclass
 
 from ortools.sat.python import cp_model
 
-from ..core.model import Dataset, block
+from ..core.model import LAST_TEACHING, Dataset, block
 from .model_builder import candidates
 
 
@@ -27,8 +27,48 @@ def _cells_text(ds: Dataset, cells: set[tuple[str, int]]) -> str:
     return "; ".join(f"{d} P{min(ps)}–P{max(ps)}" if len(ps) > 1 else f"{d} P{ps[0]}" for d, ps in by_day.items())
 
 
+def quick_conflicts(ds: Dataset, blocked_groups=frozenset()) -> list[Conflict]:
+    """Counting arguments that prove a timetable impossible instantly and say why: a group or a
+    faculty member needs more hours than the week (or their daily limit) can hold."""
+    out = []
+    periods = range(1, LAST_TEACHING + 1)
+    need, basket_dur, basket_groups = defaultdict(int), defaultdict(int), defaultdict(set)
+    for s in ds.sessions.values():
+        if s.get("basket_slot"):
+            basket_dur[s["basket_slot"]] = max(basket_dur[s["basket_slot"]], s["duration"])
+            basket_groups[s["basket_slot"]].update(s["groups"])
+        else:
+            for g in s["groups"]:
+                need[g] += s["duration"]
+    for b, gs in basket_groups.items():
+        for g in gs:
+            need[g] += basket_dur[b]                 # electives in one basket share their periods
+    for g, h in sorted(need.items()):
+        free = sum(1 for d in ds.days for p in periods if (g, d, p) not in blocked_groups)
+        if h > free:
+            out.append(Conflict("group_clash", f"Group {g} needs {h} hours of classes a week, "
+                                               f"but only {free} periods are free"))
+    hours = defaultdict(int)
+    for s in ds.sessions.values():
+        hours[s["faculty_id"]] += s["duration"]
+    for f, h in sorted(hours.items()):
+        per_day = [sum(1 for p in periods if (d, p) not in ds.fac_un[f]) for d in ds.days]
+        limit = ds.faculty[f].get("max_hours_per_day", 4)
+        fits = sum(min(limit, x) for x in per_day)
+        if h > sum(per_day):
+            out.append(Conflict("fac_un", f"{_text(ds, 'fac_un', f)}; only {sum(per_day)} period(s) are left"))
+        elif h > fits:
+            if ds.fac_un[f]:
+                out.append(Conflict("fac_un", _text(ds, "fac_un", f)))
+            out.append(Conflict("daily", f"{_text(ds, 'daily', f)}, so at most {fits} of their {h} hours fit"))
+    return out
+
+
 def explain_infeasible(ds: Dataset, blocked=frozenset(), blocked_groups=frozenset(),
                        time_limit_s: float = 30) -> list[Conflict]:
+    quick = quick_conflicts(ds, blocked_groups)
+    if quick:
+        return quick
     m = cp_model.CpModel()
     lits: dict[tuple[str, str], cp_model.IntVar] = {}
 
@@ -40,6 +80,8 @@ def explain_infeasible(ds: Dataset, blocked=frozenset(), blocked_groups=frozense
     room_cells, fac_cells, grp_cells = defaultdict(list), defaultdict(list), defaultdict(list)
     fac_day = defaultdict(list)
     basket_start = defaultdict(lambda: defaultdict(list))
+    basket_cover = defaultdict(lambda: defaultdict(list))
+    basket_groups = defaultdict(set)
     out: list[Conflict] = []
 
     for sid, s in ds.sessions.items():
@@ -69,8 +111,19 @@ def explain_infeasible(ds: Dataset, blocked=frozenset(), blocked_groups=frozense
             fac_day[(f, day)].append(s["duration"] * v)
             if s.get("basket_slot"):
                 basket_start[s["basket_slot"]][(day, start)].append(v)
+                for p in per:
+                    basket_cover[s["basket_slot"]][(day, p)].append(v)
+                basket_groups[s["basket_slot"]].update(s["groups"])
     if out:
         return out
+    for b, cover in basket_cover.items():            # a basket occupies its groups once, as in the real model
+        for (day, p), vs in cover.items():
+            occ = m.NewBoolVar("")
+            for v in vs:
+                m.Add(occ >= v)
+            m.Add(occ <= sum(vs))
+            for g in basket_groups[b]:
+                grp_cells[(g, day, p)].append(occ)
 
     for (rid, day, p), vs in room_cells.items():
         if len(vs) > 1:

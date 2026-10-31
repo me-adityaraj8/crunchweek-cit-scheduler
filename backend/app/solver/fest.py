@@ -11,6 +11,8 @@ from ..core.model import MAX_PERIOD, Assign, Dataset, block
 from ..core.priority import effective_category, priority_key
 from .timetable import solve_timetable
 
+MAX_DISPLACE_ATTEMPTS = 3   # full re-solves tried per institute event before offering an alternative
+
 CAT_LABEL = {"institute_event": "institute event", "guest_lecture": "guest lecture",
              "department_event": "department event", "club_event": "club event"}
 
@@ -113,6 +115,7 @@ def _describe_holder(ds, all_reqs, h) -> str:
 def _try_displace(ds, st: _State, req, req_id, rooms, time_limit_s, all_reqs) -> Decision | None:
     """Institute events may move regular classes for Week 7. Pick the window slot whose only
     conflicts are classes, re-place those classes, and keep every earlier booking fixed."""
+    options = []
     for day, a, b in _window_starts(req):
         for r in rooms:
             errs = st.fits(req, r["id"], day, a, b)
@@ -121,30 +124,33 @@ def _try_displace(ds, st: _State, req, req_id, rooms, time_limit_s, all_reqs) ->
                 continue
             if any("already used by" not in e for e in errs):
                 continue
-            blocked = {(room, d, p) for room, d, x, y in list(st.placed.values()) + [(r["id"], day, a, b)]
-                       for p in range(x, y + 1)}
-            groups = {(g, d, p) for rq, (room, d, x, y) in list(st.placed.items()) + [(req_id, (r["id"], day, a, b))]
-                      for g in all_reqs[rq].get("mandatory_for_groups", []) for p in range(x, y + 1)}
-            res = solve_timetable(ds, time_limit_s, baseline=st.base, move_weight=1000, blocked=blocked,
-                                  blocked_groups=groups)
-            if res.assign is None:
-                continue
-            saved = (st.week, st.overrides)
-            st.week = res.assign
-            st.overrides = {sid: {"session_id": sid, "day": v[0], "start_period": v[1], "room_id": v[2],
-                                  "displaced_by": st.overrides.get(sid, {}).get("displaced_by", req_id)}
-                            for sid, v in res.assign.items() if tuple(v) != tuple(st.base[sid])}
+            options.append((len(holders), day, a, b, r, holders))
+    options.sort(key=lambda o: o[0])        # fewest classes to move first; ties keep window/room order
+    for _, day, a, b, r, holders in options[:MAX_DISPLACE_ATTEMPTS]:
+        blocked = {(room, d, p) for room, d, x, y in list(st.placed.values()) + [(r["id"], day, a, b)]
+                   for p in range(x, y + 1)}
+        groups = {(g, d, p) for rq, (room, d, x, y) in list(st.placed.items()) + [(req_id, (r["id"], day, a, b))]
+                  for g in all_reqs[rq].get("mandatory_for_groups", []) for p in range(x, y + 1)}
+        res = solve_timetable(ds, time_limit_s, baseline=st.base, move_weight=1000, blocked=blocked,
+                              blocked_groups=groups)
+        if res.assign is None:
+            continue
+        saved = (st.week, st.overrides)
+        st.week = res.assign
+        st.overrides = {sid: {"session_id": sid, "day": v[0], "start_period": v[1], "room_id": v[2],
+                              "displaced_by": st.overrides.get(sid, {}).get("displaced_by", req_id)}
+                        for sid, v in res.assign.items() if tuple(v) != tuple(st.base[sid])}
+        st.refresh()
+        if st.fits(req, r["id"], day, a, b):
+            st.week, st.overrides = saved
             st.refresh()
-            if st.fits(req, r["id"], day, a, b):
-                st.week, st.overrides = saved
-                st.refresh()
-                continue
-            st.take(req_id, r["id"], day, a, b)
-            moved = sorted(sid for sid, o in st.overrides.items() if o["displaced_by"] == req_id)
-            return Decision(req_id, "approved", day, a, b, r["id"],
-                            reason=f"Institute event: {r['id']} {_span(ds, day, a, b)}; "
-                                   f"{len(moved)} class(es) moved for Week 7 only",
-                            facts=[f"{h} was in {r['id']} at that time" for h in holders], displaces=moved)
+            continue
+        st.take(req_id, r["id"], day, a, b)
+        moved = sorted(sid for sid, o in st.overrides.items() if o["displaced_by"] == req_id)
+        return Decision(req_id, "approved", day, a, b, r["id"],
+                        reason=f"Institute event: {r['id']} {_span(ds, day, a, b)}; "
+                               f"{len(moved)} class(es) moved for Week 7 only",
+                        facts=[f"{h} was in {r['id']} at that time" for h in holders], displaces=moved)
     return None
 
 
@@ -165,7 +171,7 @@ def decide_fest(ds: Dataset, assign: Assign, extra_requests: list[dict] = (), ti
         facts = []
         if cat != req.get("requested_category"):
             facts.append(f"Asked for {CAT_LABEL.get(req.get('requested_category'), req.get('requested_category'))}; "
-                         f"a {req['role'].replace('_', ' ')} can claim at most {CAT_LABEL[cat]}")
+                         f"a {str(req.get('role', 'requester')).replace('_', ' ')} can claim at most {CAT_LABEL[cat]}")
         want = req.get("requested_room")
         if want and want not in ds.rooms:
             facts.append(f"Requested room {want} does not exist")

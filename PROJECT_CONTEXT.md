@@ -49,16 +49,17 @@ TBD.
 TBD.
 
 ## Dependencies
-None yet.
+- ortools 9.15.6755, pytest (engine). Full pinned list comes with Task 0's requirements.txt.
 
 ## Environment variables
 None yet (see `.env.example`).
 
 ## Completed features
 - Repo set up, starter pack committed.
+- Engine (Lane A): dataset loading + change files, checker that matches validator.py, CP-SAT timetable, exam scheduler, Spectra week decisions, export, minimal-move repair with infeasibility reasons, explanations. Numbers in HANDOFF.md.
 
 ## Pending features
-All of items 1–10 above, plus deployment, demo accounts, exports/, video.
+API, auth and roles, LLM assistant, frontend, deployment, demo accounts, exports/, video (Task 0, Lanes B and C in docs/PLAN.md).
 
 ## Known bugs
 None yet.

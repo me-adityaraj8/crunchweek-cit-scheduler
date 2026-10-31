@@ -13,10 +13,9 @@ def ds():
 
 
 @pytest.fixture(scope="module")
-def solved(ds):
-    r = solve_timetable(ds, 60)
-    assert r.status == "optimal"
-    return r.assign
+def solved(base_solve):
+    assert base_solve.status == "optimal"
+    return base_solve.assign
 
 
 def test_explain_early_session(ds, solved):

@@ -6,10 +6,9 @@ from backend.app.solver.timetable import solve_timetable
 from backend.tests.engine.conftest import DATA
 
 
-def test_full_pipeline_export_is_clean(raw, V):
+def test_full_pipeline_export_is_clean(raw, V, base_assign, base_fest, base_exams):
     ds = load_dataset(DATA)
-    tt = solve_timetable(ds, 60)
-    sched = build_schedule(ds, tt.assign, decide_fest(ds, tt.assign), solve_exams(ds, 30), team="CIT Scheduler")
+    sched = build_schedule(ds, base_assign, base_fest, base_exams, team="CIT Scheduler")
     assert set(sched) >= {"team", "dataset_id", "sessions", "fest_week", "exams"}
     assert sched["dataset_id"] == "cit-public-v1"
     rep = V.run(raw, sched)

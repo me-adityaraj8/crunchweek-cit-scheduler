@@ -15,10 +15,12 @@ def candidates(ds: Dataset, s: dict, blocked: frozenset | set = frozenset(), rel
     dur = s["duration"]
     fx = s.get("fixed_slot")
     use = KIND_USE.get(s["kind"], s["kind"])
-    rooms = [r for r in ds.rooms.values()
+    typed = [r for r in ds.rooms.values()
              if r["type"] in s["room_types"] and r["capacity"] >= s["size"]
-             and (r["accessible"] or not s.get("needs_accessible"))
-             and use in r.get("allowed_uses", [use])]
+             and (r["accessible"] or not s.get("needs_accessible"))]
+    # prefer rooms whose allowed_uses list this kind; if the data leaves none, the room type alone
+    # decides (that is all the validator checks), so the session still gets a room
+    rooms = [r for r in typed if use in r.get("allowed_uses", [use])] or typed
     out = []
     for day in ds.days:
         for start in range(1, LAST_TEACHING - dur + 2):
@@ -133,8 +135,9 @@ def build(ds: Dataset, blocked=frozenset(), baseline: Assign | None = None, move
     for (f, day), terms in fac_day.items():
         m.Add(sum(terms) <= ds.faculty[f].get("max_hours_per_day", 4))
 
-    # S2 gaps and S3 long days, per group-day
-    for g in ds.groups:
+    # S2 gaps and S3 long days, per group-day (also for groups a session names but the data doesn't declare)
+    all_groups = list(ds.groups) + sorted({g for (g, _, _) in grp_cells} - set(ds.groups))
+    for g in all_groups:
         for day in ds.days:
             o = [sum(grp_cells.get((g, day, p), [])) for p in range(1, LAST_TEACHING + 1)]
             if not any(grp_cells.get((g, day, p)) for p in range(1, LAST_TEACHING + 1)):

@@ -12,8 +12,8 @@ def ds():
 
 
 @pytest.fixture(scope="module")
-def solved(ds):
-    return solve_timetable(ds, time_limit_s=60)
+def solved(base_solve):
+    return base_solve
 
 
 def test_zero_hard_on_public_dataset(ds, raw, V, solved):

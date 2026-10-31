@@ -132,7 +132,7 @@ def soft_score(ds: Dataset, assign: Assign) -> tuple[dict[str, int], int]:
     seen_basket = set()
     for sid, (day, start, rid) in assign.items():
         s, r = ds.sessions.get(sid), ds.rooms.get(rid)
-        if s is None or r is None:
+        if s is None or r is None or not isinstance(start, int):
             continue
         per = block(start, s["duration"])
         for pref in ds.faculty.get(s["faculty_id"], {}).get("preferences", []):
@@ -174,7 +174,7 @@ def _room_busy(ds: Dataset, view: Assign) -> dict[tuple[str, str, int], list[str
     busy = defaultdict(list)
     for sid, (day, start, rid) in view.items():
         s = ds.sessions.get(sid)
-        if s:
+        if s and isinstance(start, int):   # a non-int start is reported as H9 and occupies nothing
             for p in block(start, s["duration"]):
                 busy[(rid, day, p)].append(sid)
     return busy

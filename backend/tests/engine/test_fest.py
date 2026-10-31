@@ -15,13 +15,13 @@ def ds():
 
 
 @pytest.fixture(scope="module")
-def base(ds):
-    return solve_timetable(ds, 60).assign
+def base(base_assign):
+    return base_assign
 
 
 @pytest.fixture(scope="module")
-def fest(ds, base):
-    return decide_fest(ds, base)
+def fest(base_fest):
+    return base_fest
 
 
 def _by(f, rid):

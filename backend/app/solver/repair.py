@@ -11,7 +11,7 @@ from typing import Literal
 from ..core.checker import check_fest, soft_score
 from ..core.model import Assign, Dataset
 from .fest import Decision, FestResult, decide_fest
-from .infeasible import Conflict, explain_infeasible
+from .infeasible import Conflict, explain_infeasible, quick_conflicts
 from .timetable import solve_timetable
 
 MOVE_WEIGHT = 1000
@@ -36,6 +36,7 @@ class RepairResult:
     soft_after: int = 0
     conflicts: list[Conflict] = field(default_factory=list)
     fest: FestResult | None = None      # Week-7 decisions re-run on the new timetable
+    proven_minimal: bool = False        # the solver proved no fix moves fewer sessions
 
     @property
     def overrides(self) -> list[dict]:
@@ -81,6 +82,9 @@ def repair(ds_after: Dataset, baseline: Assign, fest: FestResult | None, time_li
            extra_requests: list[dict] = ()) -> RepairResult:
     base = {s: v for s, v in baseline.items() if s in ds_after.sessions}
     soft_before = soft_score(ds_after, base)[1]
+    quick = quick_conflicts(ds_after)
+    if quick:
+        return RepairResult("infeasible", None, soft_before=soft_before, conflicts=quick)
     rooms, groups = commitments(ds_after, fest, extra_requests)
     res = solve_timetable(ds_after, time_limit_s, baseline=base, move_weight=MOVE_WEIGHT,
                           blocked=rooms, blocked_groups=groups)
@@ -90,11 +94,11 @@ def repair(ds_after: Dataset, baseline: Assign, fest: FestResult | None, time_li
         rooms, groups = set(), set()
         res = solve_timetable(ds_after, time_limit_s, baseline=base, move_weight=MOVE_WEIGHT)
     if res.assign is None:
-        if res.status == "timeout":
+        conflicts = explain_infeasible(ds_after, rooms, groups, time_limit_s)
+        if res.status == "timeout" and all(c.code == "unknown" for c in conflicts):
             return RepairResult("timeout", None, soft_before=soft_before, conflicts=[
                 Conflict("timeout", f"No fix found within {int(time_limit_s)}s; try again with a longer limit")])
-        return RepairResult("infeasible", None, soft_before=soft_before,
-                            conflicts=explain_infeasible(ds_after, rooms, groups, time_limit_s))
+        return RepairResult("infeasible", None, soft_before=soft_before, conflicts=conflicts)
 
     new = res.assign
     diff = [Move(s, tuple(baseline[s]) if s in baseline else None, tuple(new[s]) if s in new else None)
@@ -108,8 +112,11 @@ def repair(ds_after: Dataset, baseline: Assign, fest: FestResult | None, time_li
                                                          "Spectra booking, so bookings were decided again"))
         conflicts += _booking_changes(fest, new_fest)
         viol, _, _ = check_fest(ds_after, new, [asdict(d) for d in new_fest.decisions], new_fest.overrides)
-        conflicts += [Conflict("booking", v.detail) for v in viol]
+        if viol:   # never hand back something that fails the final check
+            return RepairResult("infeasible", None, soft_before=soft_before, conflicts=[
+                Conflict("booking", v.detail) for v in viol] + [
+                Conflict("internal", "The re-decided Spectra bookings failed the final check; nothing was changed")])
     return RepairResult("ok", new, diff, len(moved),
                         sum(1 for m in moved if m.before[:2] != m.after[:2]),
                         sum(1 for m in moved if m.before[:2] == m.after[:2]),
-                        soft_before, res.soft_total, conflicts, new_fest)
+                        soft_before, res.soft_total, conflicts, new_fest, res.status == "optimal")
