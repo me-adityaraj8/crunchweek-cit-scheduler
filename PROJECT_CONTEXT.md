@@ -40,26 +40,34 @@ Modular monolith. See docs/DESIGN.md (diagram, data model, API, folder structure
 See README.md. `starter_pack/` is organiser material and must not be modified.
 
 ## Database schema
-TBD.
+SQLAlchemy models in `backend/app/models.py`, created at startup (no migrations). Scheduling state is JSON next to the row it belongs to:
+- `users`: demo accounts (email, role admin/coordinator/faculty/club, department, faculty_id, bcrypt hash)
+- `datasets`: starter-pack JSON with changes applied, `applied_changes`, `parent_id`, one `active`
+- `timetable_versions`: `assignments` {session: [day, start, room]}, `fest` {decisions, overrides, cache}, soft, kind generated/change/manual, status active/archived
+- `exam_schedules`, `booking_requests` (app requests `APP-0001`…, dataset shape in `data`, status, decision, approver, confirmed placement)
+- `change_proposals` (payload change file or manual move, proposed assignment, diff, counts, conflicts, status pending/approved/rejected/infeasible)
+- `audit_log`, `settings` (priority_order, lab_owners)
 
 ## API routes
-TBD.
+All under `/api`; table in README.md, live docs at `/api/docs`. Response shapes in `backend/app/schemas.py`.
 
 ## Authentication
-TBD.
+Seeded demo accounts (README), password from `DEMO_PASSWORD`, bcrypt. `POST /api/auth/login` returns a 12h HS256 JWT (`JWT_SECRET`); send `Authorization: Bearer`. Role guards in `backend/app/auth.py`; "not your own request" checks in the services.
 
 ## Dependencies
-- ortools 9.15.6755, pytest (engine). Full pinned list comes with Task 0's requirements.txt.
+`requirements.txt` (runtime, pinned) and `requirements-dev.txt` (+ pytest). Licences in THIRD_PARTY.md.
 
 ## Environment variables
-None yet (see `.env.example`).
+`DATABASE_URL`, `JWT_SECRET`, `DEMO_PASSWORD`, `GEMINI_API_KEY`, `GEMINI_MODEL`, `LLM_TIMEOUT_S`, `SOLVER_TIME_LIMIT_S`, `SOLVER_WORKERS`, `TEAM_NAME`. Meanings and defaults in `.env.example`; read in `backend/app/config.py`.
 
 ## Completed features
 - Repo set up, starter pack committed.
+- API + AI (Lane B): auth and roles, dataset upload/reset, timetable generate/views/manual moves/explain, dashboard, free rooms, exams, Spectra bookings (check, submit, cancel, lab approvals), change proposals with approval and stale/self-approval guards, Gemini assistant with keyword fallback, export, `scripts/make_exports.py`. 44 API tests.
 - Engine (Lane A): dataset loading + change files, checker that matches validator.py, CP-SAT timetable, exam scheduler, Spectra week decisions, export, minimal-move repair with infeasibility reasons, explanations. Numbers in HANDOFF.md.
 
 ## Pending features
-API, auth and roles, LLM assistant, frontend, deployment, demo accounts, exports/, video (Task 0, Lanes B and C in docs/PLAN.md).
+Frontend (Lane C), deployment + hour-1 hosting check (Task 0), `exports/` from the deployed app, live LLM eval (`scripts/eval_llm.py` not written), video.
 
 ## Known bugs
-None yet.
+- Approving a change re-decides Spectra week only when app requests changed since the proposal; otherwise it reuses the repair's decisions. If displacement re-solves are needed, approval can take tens of seconds.
+- Two engine QA tests are timing-sensitive on slower machines (see HANDOFF).

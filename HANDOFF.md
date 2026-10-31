@@ -1,6 +1,6 @@
 # Handoff
 
-_Last updated: 2026-10-31 by Aditya (Laptop 1)_
+_Last updated: 2026-10-31 by Varun (Laptop 2)_
 
 ## Current state
 - Design: docs/DESIGN.md. Build plan: docs/PLAN.md.
@@ -10,7 +10,8 @@ _Last updated: 2026-10-31 by Aditya (Laptop 1)_
   - Spectra week: booking score 67/70, 0 priority inversions. BR-09 is impossible (1,200 people, biggest venue seats 800); BR-17 asks for P13–14, so it gets an alternative.
   - Sample disruption: 13–14 sessions moved (exactly the ones hit by CR-102 closing and F07's Mondays), 0 hard violations under the official validator.
   - Full pipeline export passes `validator.py` with 0 hard violations.
-- Task 0 (Vercel check), Lane B (API + AI) and Lane C (frontend) are not started.
+- **Lane B (API + AI) is built and tested locally** (Laptop 2): see the Lane B section below.
+- Task 0 (deploy + hosting check) and Lane C (frontend) are not started.
 
 ## Engine API for Lane B (see PLAN.md Interfaces blocks)
 - `core.dataset`: `load_dataset(path|dict)`, `apply_changes(ds, change_file)` → raise `DatasetError` with a readable message for bad JSON, missing fields, wrong types or unknown faculty/room/session ids. Map it to HTTP 400.
@@ -57,14 +58,36 @@ Risks this points to:
 1. **Hosting CPU.** Timetable quality depends on cores (soft ~201 after 30s on 1 thread vs 3 on 8). Judges generate in our app, so measure on the real host before choosing it.
 2. **Infeasibility on a slow host.** `explain_infeasible` is single-threaded. If it times out, judges get "timeout" instead of a named conflict (rescheduling marks). A counting check in `quick_conflicts` would catch "every room of the type a session needs is closed" instantly: compare the hours sessions need per room type with the free room-hours of that type.
 
+## Lane B — API + AI (2026-10-31, Varun, Laptop 2)
+Run: `python -m uvicorn backend.app.main:app --port 8000`, then `/api/docs`. No env needed locally (SQLite `local.db`, demo password `demo1234`, no LLM key → keyword fallback). Every route and demo account: README.md. Shapes: `backend/app/schemas.py`, which is the contract for Lane C. Generate TS types with `npx openapi-typescript http://localhost:8000/api/openapi.json -o frontend/src/api/types.ts`.
+
+Layout: `routers/` (HTTP only) → `services/` (`state.py` dataset/versions/reset/settings, `bookings.py` Spectra requests, `proposals.py` changes) → engine. `llm/` = Gemini client, `prompts/*.md`, parsers.
+
+What it does (all checked by tests in `backend/tests/api/`, 44 passing):
+- Auth: JWT + bcrypt, role guards. Reset keeps account ids, so the Admin stays logged in. Dataset upload: bad JSON or bad data → 400 and the old data stays.
+- Generate: saves only checker-clean timetables, then decides Spectra week straight away. Views by group/faculty/room/all, regular or Spectra week (with overrides and bookings). Faculty may only open their own faculty view.
+- Manual move: `check-move` dry run (violations + valid suggestions) and `manual` (a 422 with rule + suggestions, or a pending proposal).
+- Bookings: live requests `APP-xxxx` join the dataset pool and everything is re-decided by `decide_fest`. The role cap is applied. `submitted_at` is never earlier than the dataset's requests, so a new request can't win ties. Bookings of lab rooms wait for the owning department's coordinator (`settings.lab_owners`, default by room type), or the Admin if that coordinator made it. Owner cancel. Every decision set is re-verified with `check_fest` over dataset + app requests before saving.
+- Changes: change file / ChangeIntent / faculty leave → `repair` → proposal (pending or infeasible with named conflicts). Approve = Admin only; 409 if stale or already decided; re-checked before applying. Self-approval is blocked for requests (kinds `request`, `unavailability`); the Admin's own change files and manual moves are reviewed and applied by the Admin (otherwise a single Admin could never apply a change file).
+- Assistant: Gemini JSON-schema extraction, then code: role cap, kal/parso, times → periods from the calendar, "mic" → pa_system, named room that fails a need dropped with a note, attendance from mandatory groups, follow-up questions. Without a key or on any failure: keyword rules (13/25 dataset texts exact, the rest partly). Change assistant picks the best valid slot when no target is given.
+- Export `?after=0|1`. `scripts/make_exports.py --base-url ... [--out dir]` drives the API (reset → generate → exams → decide → export → sample disruption → approve → export) and runs the validator.
+
+Verified end to end through a real uvicorn server on Laptop 2: schedule.json 0 hard, soft 3 (optimal, 18.5s), exams 0, bookings 67/70, 0 inversions, 2 overrides. schedule_after.json 0 hard, 17 moved (9 time, 8 room only). `exports/` is **not** committed: produce it from the deployed app at the end.
+
+Engine change (Lane A file, small): `solver/fest.py` `decide_fest(..., cache=None)`. Week-7 displacement re-solves are cached per timetable version (kept in `version.fest["cache"]`). Without it, every booking submit re-ran up to 3 CP-SAT solves (~20s each), and the non-deterministic solver reshuffled Week-7 overrides. The engine fest/repair/export tests still pass.
+
+Not done in Lane B: Task 0 deploy check (needs Vercel/Neon/Gemini accounts), `scripts/eval_llm.py` live LLM eval, `vercel.json` frontend build (add when `frontend/` exists). `vercel.json` currently routes `/api/*` only and is untested on Vercel.
+
 ## Next steps
-1. Task 0: Vercel project + Neon + Gemini key, deploy the health check. **Measure CP-SAT on Vercel's CPU** — quality depends on cores; raise `SOLVER_TIME_LIMIT_S` if only 1 core.
-2. Lane B (API + AI) and Lane C (frontend) per docs/PLAN.md.
+1. Task 0: Vercel project + Neon + Gemini key; deploy and open `/api/health` (add `?deep=1` to test the LLM). **Measure a real `POST /api/timetable/generate` on the host**: quality depends on cores. If ortools is too big for the function or too slow, move the backend to Railway/Fly (`uvicorn backend.app.main:app`) and keep the SPA on Vercel with a `/api` rewrite.
+2. Lane C (frontend) against `schemas.py` / `/api/openapi.json`, per docs/PLAN.md C1–C6.
+3. Then `scripts/make_exports.py` against the deployed URL and commit `exports/`.
 
 ## Before you start
 ```
 git pull origin main
-python3.13 -m venv .venv && .venv/bin/pip install ortools pytest
-.venv/bin/python -m pytest backend/tests/engine -q   # ~6 min, solver-heavy
+python3.13 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt   # Windows: .venv/Scripts/pip
+.venv/bin/python -m pytest backend/tests/api -q      # ~3 min
+.venv/bin/python -m pytest backend/tests/engine -q   # ~6 min, solver-heavy (run the two folders separately)
 ```
 Read PROJECT_CONTEXT.md, this file, and `starter_pack/README.md`.
