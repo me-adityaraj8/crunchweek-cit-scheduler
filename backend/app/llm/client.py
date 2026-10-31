@@ -83,6 +83,54 @@ def transcribe(audio: bytes, mime: str) -> str:
     return " ".join(str(out or "").split())
 
 
+def _post_tts(text: str, voice: str) -> tuple[str, str]:
+    """Gemini text-to-speech: returns (mime type, base64 audio) from the first audio part."""
+    body = {"contents": [{"parts": [{"text": text}]}],
+            "generationConfig": {"responseModalities": ["AUDIO"],
+                                 "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": voice}}}}}
+    r = httpx.post(URL.format(model=settings.gemini_tts_model), json=body, timeout=max(settings.llm_timeout_s, 20),
+                   headers={"x-goog-api-key": settings.gemini_api_key})
+    r.raise_for_status()
+    for part in r.json()["candidates"][0]["content"].get("parts", []):
+        if "inlineData" in part:
+            return part["inlineData"].get("mimeType", ""), part["inlineData"].get("data", "")
+    return "", ""
+
+
+# tests replace this with a fake; signature (text, voice) -> (mime, base64 audio)
+tts_transport = _post_tts
+
+
+def _wav(pcm: bytes, rate: int, channels: int = 1, bits: int = 16) -> bytes:
+    block = channels * bits // 8
+    return (b"RIFF" + (36 + len(pcm)).to_bytes(4, "little") + b"WAVEfmt " + (16).to_bytes(4, "little")
+            + (1).to_bytes(2, "little") + channels.to_bytes(2, "little") + rate.to_bytes(4, "little")
+            + (rate * block).to_bytes(4, "little") + block.to_bytes(2, "little") + bits.to_bytes(2, "little")
+            + b"data" + len(pcm).to_bytes(4, "little") + pcm)
+
+
+def speak(text: str) -> bytes:
+    """Velo's reply as speech, as a WAV. Raises LLMUnavailable on any failure, including empty audio:
+    the browser then uses its own voice or shows text, and never plays silence as if it were speech."""
+    if not settings.gemini_api_key and tts_transport is _post_tts:
+        raise LLMUnavailable("No GEMINI_API_KEY configured")
+    try:
+        mime, data = tts_transport(text, settings.gemini_tts_voice)
+        audio = base64.b64decode(data or "")
+    except Exception as e:
+        raise LLMUnavailable(f"{type(e).__name__}: {e}"[:200]) from e
+    if not audio:
+        raise LLMUnavailable("The voice model returned no audio")
+    if audio[:4] == b"RIFF":
+        return audio
+    rate = 24000          # Gemini speaks 16-bit mono PCM; the mime type names the rate ("...;rate=24000")
+    for piece in (mime or "").split(";"):
+        key, _, value = piece.strip().partition("=")
+        if key == "rate" and value.isdigit():
+            rate = int(value)
+    return _wav(audio, rate)
+
+
 def status() -> str:
     if not settings.gemini_api_key:
         return "not configured (assistant falls back to rule-based parsing)"

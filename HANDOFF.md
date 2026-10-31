@@ -170,3 +170,8 @@ Read PROJECT_CONTEXT.md, this file, and `starter_pack/README.md`.
 - Frontend: `components/velo/` (provider with a per-user thread in session storage, launcher, panel, cards, context chips). Pages set what they have open with `useVeloFocus` (timetable drawer, Book a venue `?request=`, change detail). Phones open Velo from the top bar.
 - Tests: `backend/tests/api/test_velo.py` (27), `components/velo/context.test.ts` (6).
 
+## Velo alive: orb and voice mode (2026-11-01, Aditya)
+
+- Design: `docs/VELO.md` section 8. Code: `frontend/src/components/velo/live/` (VeloOrb + shaders, expression controller, OrbView with a still fallback, voice/ machine + engine + session hook, VeloVoicePanel, AudioVisualizer, LiveTranscript, VoiceControls). three.js is lazy-loaded (own chunk).
+- Voice: browser SpeechRecognition (en-IN, live words) or record-until-silence → `/assistant/transcribe`; replies via `POST /api/assistant/speak` (Gemini TTS, `GEMINI_TTS_MODEL`, `GEMINI_TTS_VOICE`) played through Web Audio, else the browser's speechSynthesis. The Gemini TTS model is unverified until deployed with the key; if it fails, the browser voice is used and the screen says which.
+- Not verified here: real mic and speech (the in-app browser blocks the microphone); that path shows its "microphone blocked" state correctly.

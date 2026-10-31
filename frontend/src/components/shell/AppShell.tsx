@@ -14,6 +14,7 @@ import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import { CommandPalette, usePaletteHotkey } from "./CommandPalette";
 import { VeloLauncher, VeloPanel, VeloPhoneButton } from "@/components/velo/Velo";
+import { VeloVoicePanel } from "@/components/velo/live/VeloVoicePanel";
 import { VeloProvider } from "@/components/velo/VeloProvider";
 
 function useApprovalsCount() {
@@ -306,6 +307,7 @@ export function AppShell() {
         <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
         <VeloLauncher />
         <VeloPanel />
+        <VeloVoicePanel />
       </div>
     </VeloProvider>
   );

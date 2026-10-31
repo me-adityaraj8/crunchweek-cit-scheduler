@@ -76,6 +76,30 @@ export async function request<T>(path: string, opts: RequestOptions = {}): Promi
   return data as T;
 }
 
+/** POST JSON and get audio bytes back (Velo's voice). Errors arrive as ApiError, like request(). */
+export async function requestAudio(path: string, body: unknown, signal?: AbortSignal): Promise<ArrayBuffer> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  let res: Response;
+  try {
+    res = await fetch(url(path), { method: "POST", headers, body: JSON.stringify(body), signal });
+  } catch (e) {
+    if ((e as Error).name === "AbortError") throw e;
+    throw new ApiError(0, "network", "Can't reach the server.");
+  }
+  if (!res.ok) {
+    let err: { code?: string; message?: string } | undefined;
+    try {
+      err = (await res.json()).error;
+    } catch {
+      /* not JSON */
+    }
+    if (res.status === 401) onUnauthorized?.();
+    throw new ApiError(res.status, err?.code ?? "http_error", err?.message ?? `Request failed (${res.status})`);
+  }
+  return res.arrayBuffer();
+}
+
 /** Download a file the API serves (export). Uses the bearer token, so a plain link won't do. */
 export async function download(path: string, query: Query, filename: string) {
   const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};

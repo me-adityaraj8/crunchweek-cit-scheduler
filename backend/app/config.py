@@ -43,6 +43,9 @@ class Settings:
     demo_password: str = os.environ.get("DEMO_PASSWORD") or "demo1234"
     gemini_api_key: str = os.environ.get("GEMINI_API_KEY", "")
     gemini_model: str = os.environ.get("GEMINI_MODEL") or "gemini-3.5-flash-lite"
+    # Velo's spoken replies (voice mode). Unset or unavailable: the browser's own voice is used instead.
+    gemini_tts_model: str = os.environ.get("GEMINI_TTS_MODEL") or "gemini-2.5-flash-preview-tts"
+    gemini_tts_voice: str = os.environ.get("GEMINI_TTS_VOICE") or "Kore"
     solver_time_limit_s: float = float(os.environ.get("SOLVER_TIME_LIMIT_S") or 60)
     solver_workers: int = int(os.environ.get("SOLVER_WORKERS") or 8)
     llm_timeout_s: float = float(os.environ.get("LLM_TIMEOUT_S") or 8)

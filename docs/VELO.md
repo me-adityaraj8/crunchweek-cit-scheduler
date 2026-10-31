@@ -81,3 +81,42 @@ Panel opens from the launcher's corner (scale 0.96 → 1, fade, 200 ms, ease-out
 ## 7. Context sent with each message
 
 `page` (the path), `focus` (an open session, request or proposal, when there is one), the current booking `draft` (so a reply can fill it), the last `intent` and `today`. The thread itself stays in the browser (session storage, per user) and is never sent to the model.
+
+## 8. Velo, alive: the orb and voice mode
+
+The app around Velo stays Signal & Concrete. Velo itself gets one thing the app doesn't have: colour that moves. It is a small living orb, pink through violet and purple with a little amber, with two eyes.
+
+### The orb
+
+- **Form.** A sphere whose surface is pushed in and out by flowing noise, so it is never quite round and never still. Colour is a field that flows across it (pink, violet, deep purple, amber on the lower edge), lit from the upper left with a soft highlight and a bright rim, and a coloured glow behind it.
+- **Eyes.** Two rounded shapes on the front. They blink every few seconds (sometimes twice), glance around when idle, and change shape with the mood: wider when listening, curved like a smile when happy, one squinted and tilted when confused, flat lines on an error.
+- **Moods.** Every value (surface movement, speed, glow, colour, eye shape, gaze, float) eases toward the mood's target, so moods blend into each other instead of switching.
+
+| Mood | When | Body | Eyes |
+| --- | --- | --- | --- |
+| Idle | Nothing happening | Slow float and breathing | Blinks, small glances |
+| Listening | Mic on | Pulses with your voice level | Wide, looking at you |
+| Thinking | Velo is working | Faster swirl, more energy | Look up and scan |
+| Speaking | Velo's voice is playing | Moves with the actual audio | Open, small bounce |
+| Happy | An answer that found something | Brief brighter glow | Smile arcs |
+| Confused | Velo needs one more detail | Slower, slight tilt | One squints, head tilts |
+| Error | Something failed | Colour drains a little, one small shake | Flat lines |
+
+- **Where it lives.** The launcher, the panel header, and large on the empty thread with a "Hello!" bubble. Message avatars stay a still gradient dot, so a long thread costs nothing.
+- **Cost.** One small canvas at a time outside voice mode, pixel ratio capped, mesh detail by size, rendering paused when the tab is hidden. The 3D code loads only when Velo is first shown. Without WebGL, a still gradient orb with the same eyes is used. With reduced motion the orb is still and the moods change colour and eyes only.
+
+### Voice mode
+
+The mic button in Velo opens voice mode: the chat steps back and the orb takes the stage.
+
+- **Stage.** A dark room lit by the orb, with three thin energy rings turning on different axes, a slow field of particles that drift outward when sound arrives, and a waveform of the live audio below. On a computer it floats over the dimmed app; on a phone it fills the screen.
+- **Transcript.** What you say appears as you say it (grey while it is still being heard, white once final), then Velo's reply.
+- **States**, always named on screen: *Listening*, *Thinking*, *Speaking*, *Paused*, *Error*.
+- **Controls.** Mute Velo's voice, the main mic button (pause or resume listening; while Velo speaks it interrupts), and End. Space toggles the mic, Escape ends.
+- **Conversation.** After Velo speaks, it listens again, until you end. Every turn also goes into the chat thread with its cards. Anything that would change data is only shown as a preview: voice mode says so and the confirm stays in the chat.
+
+### What is real
+
+- **Hearing.** The browser's speech recognition where it exists (live words as you speak). Elsewhere, Velo records, waits for you to stop talking, and sends the recording to the server's transcription. If neither works, it says so and offers typing.
+- **Speaking.** The server's Gemini voice when it is configured; its audio is played through the Web Audio API and the orb moves with that audio. Otherwise the browser's own voice, where the orb follows the real word timings it reports. If there is no voice at all, replies are shown as text and the screen says so.
+- **Never faked.** No transcript appears unless a recogniser produced it, no speaking animation runs unless audio is actually playing, and denied permission, unsupported browsers and network failures are named plainly.
