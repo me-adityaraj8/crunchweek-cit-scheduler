@@ -26,15 +26,15 @@ Full brief: `Problem statement.pdf`. Data + export format: `starter_pack/README.
 Admin, Department coordinator, Faculty, Club representative. Nobody approves their own request. Demo accounts for all four + Admin "reset demo data" button.
 
 ## Technology stack
-Proposed, not yet confirmed by the team:
+See docs/DESIGN.md section 3.2 for reasons. Summary:
 - Backend: Python + FastAPI, Google OR-Tools CP-SAT for timetable / exams / repair
-- Frontend: Next.js + TypeScript + Tailwind + shadcn/ui
-- DB: Postgres (Supabase or Neon)
-- Deploy: Vercel (frontend), Render/Railway (backend)
-- LLM: one provider, for parsing and explanations only
+- Frontend: React + Vite + TypeScript + Tailwind + shadcn/ui
+- DB: Postgres on Neon
+- Deploy: Vercel for both (Python function under /api); Render as fallback
+- LLM: Gemini 2.5 Flash, for parsing and wording explanations only
 
 ## Architecture
-TBD.
+Modular monolith. See docs/DESIGN.md (diagram, data model, API, folder structure).
 
 ## Folder structure
 See README.md. `starter_pack/` is organiser material and must not be modified.
