@@ -34,10 +34,13 @@ SCHEMA = {"type": "OBJECT", "properties": {
     "needs": {"type": "ARRAY", "items": {"type": "STRING", "enum": FEATURES}},
     "requested_room": {"type": "STRING", "nullable": True},
     "mandatory_for_groups": {"type": "ARRAY", "items": {"type": "STRING"}},
-    "requested_category": {"type": "STRING", "enum": CATEGORIES},
+    "requested_category": {"type": "STRING", "enum": CATEGORIES, "nullable": True},
     "conditions": {"type": "ARRAY", "items": {"type": "STRING"}},
     "notes": {"type": "ARRAY", "items": {"type": "STRING"}}},
-    "required": ["title", "windows", "needs", "room_types", "requested_category"]}
+    "required": ["title", "windows", "needs", "room_types"]}
+# what a request is when the message doesn't say: the usual kind of event for the account's role
+ROLE_DEFAULT = {"admin": "institute_event", "coordinator": "department_event", "faculty": "guest_lecture",
+                "club": "club_event"}
 
 
 def reference(ds: Dataset) -> str:
@@ -84,7 +87,7 @@ def rules(ds: Dataset, text: str) -> dict:
     t = " " + text.lower() + " "
     evening = bool(re.search(r"\b(evening|shaam|night|raat|pm)\b", t))
     out = {"title": "", "attendance": None, "duration_hours": None, "windows": [], "repeat_days": [], "room_types": [],
-           "needs": [], "requested_room": None, "mandatory_for_groups": [], "requested_category": "club_event",
+           "needs": [], "requested_room": None, "mandatory_for_groups": [], "requested_category": None,
            "conditions": [], "notes": ["Filled in by simple keyword rules (the AI assistant is unavailable)"]}
     m = re.search(r"(\d{1,5})\s*\+?\s*(people|persons|log|logon|students|participants|attendees|members|guests|"
                   r"audience|visitors|spectators|dancers)", t) or re.search(r"\b(?:around|about|approx\.?|maybe|for)\s+(\d{1,5})\b", t)
@@ -137,6 +140,12 @@ def rules(ds: Dataset, text: str) -> dict:
         m = re.search(r"\b([a-z]{2,4}-\d{1,3})\b", t)
         if m:
             out["requested_room"] = m.group(1).upper()
+        else:      # "the auditorium" when there is only one room of that type
+            for typ in out["room_types"]:
+                only = [r["id"] for r in ds.rooms.values() if r["type"] == typ and "event" in r["allowed_uses"]]
+                if len(only) == 1:
+                    out["requested_room"] = only[0]
+                    break
     if re.search(r"\b(compulsory|mandatory|must attend|zaroori|required for)\b", t):
         for g in ds.groups.values():
             if re.search(rf"\b{re.escape(g['id'].lower())}\b", t):
@@ -212,17 +221,23 @@ def finish(ds: Dataset, raw: dict, text: str, role: str, today: str) -> dict:
             duration = duration or (b - a + 1)
         elif a:
             if not duration:
-                duration = 2
+                duration = 1
                 guessed.append("duration_periods")
-                notes.append("No length given; assumed 2 hours")
+                notes.append("No length given; assumed 1 hour")
             b = a + duration - 1
         elif w.get("time_hint") in HINTS:
             a, b = HINTS[w["time_hint"]]
             guessed.append("windows")
             notes.append(f"\"{w['time_hint'].replace('_', ' ')}\" read as P{a}–P{b}")
-        else:
-            questions.append(f"What time on {day}, and for how long?")
+        elif w.get("start_time"):      # a time, but none of the bookable periods
+            last = ds.calendar.get("periods", [{}])[-1].get("end", "22:00")
+            questions.append(f"Rooms can be booked until {last}, so {w['start_time']} is too late. Pick an earlier time.")
             continue
+        else:      # a day but no time: any teaching hour that day, and ask
+            a, b = 1, 9
+            guessed.append("windows")
+            notes.append(f"No time given; any time on {day} between 08:00 and 18:00")
+            questions.append(f"Is any time on {day} fine? If not, say when.")
         a, b = max(1, a), min(MAX_PERIOD, b)
         windows.append({"day": day, "from_period": a, "to_period": max(a, b)})
     if not windows and not questions:
@@ -277,7 +292,11 @@ def finish(ds: Dataset, raw: dict, text: str, role: str, today: str) -> dict:
             guessed.append("room_types")
             notes.append("No room type named; showing every type that fits")
 
-    asked = raw.get("requested_category") if raw.get("requested_category") in CATEGORIES else "club_event"
+    asked = raw.get("requested_category")
+    if asked not in CATEGORIES:
+        asked = ROLE_DEFAULT[role]
+        guessed.append("requested_category")
+        notes.append(f"No event type given; set to {CAT_LABEL[asked]}, the usual one for your account")
     cat = effective_category(ds, {"role": DATASET_ROLE[role], "requested_category": asked})
     if cat != asked:
         notes.append(f"Asked for {CAT_LABEL[asked]}; a {DATASET_ROLE[role].replace('_', ' ')} account can book at most "

@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 
 from ..core.model import Dataset
 
-HINTS = {"morning": (1, 5), "afternoon": (6, 9), "after_lunch": (6, 9), "evening": (10, 13), "night": (11, 13)}
+HINTS = {"morning": (1, 5), "afternoon": (6, 9), "after_lunch": (6, 9), "evening": (10, 13), "night": (10, 13)}
 WEEK = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
 IST = timezone(timedelta(hours=5, minutes=30))
 
