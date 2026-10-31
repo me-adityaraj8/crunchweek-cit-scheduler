@@ -31,11 +31,11 @@ function Brand({ compact }: { compact?: boolean }) {
   return (
     <div className="flex items-center gap-3">
       <div className="grid size-10 shrink-0 place-items-center rounded-[9px] bg-signal text-signal-ink shadow-[inset_0_-2px_0_oklch(0_0_0/0.14)]">
-        <span className="text-[15px] font-black tracking-[-0.02em] [font-stretch:75%]">CIT</span>
+        <span className="text-[15px] font-black tracking-[-0.02em] [font-stretch:75%]">V</span>
       </div>
       {!compact && (
         <div className="leading-tight">
-          <div className="text-[14.5px] font-bold text-on-anthracite [font-stretch:88%]">Campus Scheduler</div>
+          <div className="text-[14.5px] font-bold text-on-anthracite [font-stretch:88%]">Velora</div>
           <div className="text-[12px] text-on-anthracite-2">Chilika Institute of Technology</div>
         </div>
       )}
@@ -148,7 +148,7 @@ function TopBar({ onSearch, onMenu }: { onSearch: () => void; onMenu: () => void
           <MenuIcon className="size-5" />
         </button>
         <div className="flex min-w-0 items-center gap-2 text-[13.5px] md:hidden">
-          <span className="grid size-7 place-items-center rounded-[6px] bg-signal text-[11px] font-black text-signal-ink [font-stretch:75%]">CIT</span>
+          <span className="grid size-7 place-items-center rounded-[6px] bg-signal text-[11px] font-black text-signal-ink [font-stretch:75%]">V</span>
           <span className="truncate font-semibold">{stop?.label}</span>
         </div>
         <button

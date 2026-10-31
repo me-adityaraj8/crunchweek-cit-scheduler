@@ -32,7 +32,7 @@ _SERVERLESS = bool(os.environ.get("VERCEL"))
 
 def _default_db() -> str:
     folder = Path(tempfile.gettempdir()) if _SERVERLESS else REPO_ROOT
-    return f"sqlite:///{folder / ('cit-scheduler.db' if _SERVERLESS else 'local.db')}"
+    return f"sqlite:///{folder / ('velora.db' if _SERVERLESS else 'local.db')}"
 
 
 @dataclass(frozen=True)
@@ -46,7 +46,7 @@ class Settings:
     solver_time_limit_s: float = float(os.environ.get("SOLVER_TIME_LIMIT_S") or 60)
     solver_workers: int = int(os.environ.get("SOLVER_WORKERS") or 8)
     llm_timeout_s: float = float(os.environ.get("LLM_TIMEOUT_S") or 8)
-    team_name: str = os.environ.get("TEAM_NAME") or "CIT Scheduler"
+    team_name: str = os.environ.get("TEAM_NAME") or "Velora"
 
 
 def require_production_secrets(s: Settings, env=os.environ) -> None:

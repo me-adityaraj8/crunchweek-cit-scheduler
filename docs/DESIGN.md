@@ -1,4 +1,4 @@
-# Design — CIT Campus Scheduler
+# Design — Velora
 
 Status: draft for team approval. Nothing here is built yet.
 

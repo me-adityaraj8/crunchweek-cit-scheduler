@@ -1,6 +1,6 @@
 # Frontend design: "Signal"
 
-The visual identity and design system for the CIT Campus Scheduler web app. Product scope and API live in `docs/DESIGN.md`; this file covers how the app looks, moves and reads.
+The visual identity and design system for the Velora web app. Product scope and API live in `docs/DESIGN.md`; this file covers how the app looks, moves and reads.
 
 ## 1. Research
 

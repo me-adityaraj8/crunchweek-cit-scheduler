@@ -54,7 +54,7 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="CIT Campus Scheduler", version="1.0", docs_url="/api/docs", openapi_url="/api/openapi.json",
+app = FastAPI(title="Velora", version="1.0", docs_url="/api/docs", openapi_url="/api/openapi.json",
               redoc_url=None, lifespan=lifespan)
 errors.install(app)
 

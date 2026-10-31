@@ -41,9 +41,9 @@ function ServiceBoard() {
     <div className="overflow-hidden rounded-[14px] bg-anthracite text-on-anthracite shadow-float">
       <div className="flex items-center justify-between gap-4 border-b border-anthracite-2 px-5 py-4">
         <div className="flex items-center gap-3">
-          <span className="grid size-9 place-items-center rounded-[8px] bg-signal text-[13px] font-black text-signal-ink [font-stretch:75%]">CIT</span>
+          <span className="grid size-9 place-items-center rounded-[8px] bg-signal text-[13px] font-black text-signal-ink [font-stretch:75%]">V</span>
           <div>
-            <div className="text-[15px] font-bold [font-stretch:88%]">Campus Scheduler</div>
+            <div className="text-[15px] font-bold [font-stretch:88%]">Velora</div>
             <div className="text-[12px] text-on-anthracite-2">Services today</div>
           </div>
         </div>

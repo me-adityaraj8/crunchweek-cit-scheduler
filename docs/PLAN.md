@@ -1,4 +1,4 @@
-# CIT Campus Scheduler — Implementation Plan
+# Velora — Implementation Plan
 
 **Goal:** Ship the platform in `docs/DESIGN.md` on one Vercel URL: CP-SAT timetable, exams, Spectra week decisions, minimal-move repair with approval, an English/Hinglish booking assistant, and role-based views. All of it must pass `starter_pack/validator.py` with 0 hard violations.
 

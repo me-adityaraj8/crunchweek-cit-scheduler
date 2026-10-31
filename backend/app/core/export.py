@@ -11,7 +11,7 @@ def _booking_row(d) -> dict:
     return row
 
 
-def build_schedule(ds: Dataset, assign: Assign, fest=None, exams=None, team: str = "CIT Scheduler",
+def build_schedule(ds: Dataset, assign: Assign, fest=None, exams=None, team: str = "Velora",
                    request_ids: set[str] | None = None) -> dict:
     """fest: FestResult or None; exams: ExamResult or None. All decisions are exported (live app bookings
     too; the validator skips ids it doesn't know) unless request_ids narrows them."""

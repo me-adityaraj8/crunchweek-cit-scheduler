@@ -1,6 +1,6 @@
 # Frontend
 
-The web app for the CIT Campus Scheduler. Design system and research: [DESIGN.md](DESIGN.md).
+The web app for Velora. Design system and research: [DESIGN.md](DESIGN.md).
 
 ```bash
 npm ci

@@ -8,7 +8,7 @@ from backend.tests.engine.conftest import DATA
 
 def test_full_pipeline_export_is_clean(raw, V, base_assign, base_fest, base_exams):
     ds = load_dataset(DATA)
-    sched = build_schedule(ds, base_assign, base_fest, base_exams, team="CIT Scheduler")
+    sched = build_schedule(ds, base_assign, base_fest, base_exams, team="Velora")
     assert set(sched) >= {"team", "dataset_id", "sessions", "fest_week", "exams"}
     assert sched["dataset_id"] == "cit-public-v1"
     rep = V.run(raw, sched)

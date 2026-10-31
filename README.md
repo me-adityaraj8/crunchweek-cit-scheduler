@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🗓️ CIT Campus Scheduler
+# 🗓️ Velora
 
 ### Crunch Week — Chilika Institute of Technology
 
