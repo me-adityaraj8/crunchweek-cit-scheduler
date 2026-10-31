@@ -1,12 +1,41 @@
-# CIT Campus Scheduler — Crunch Week
+<div align="center">
 
-Timetable generation, midsem exam scheduling, Spectra-week venue booking and disruption handling for Chilika Institute of Technology.
+# 🗓️ CIT Campus Scheduler
 
-> Work in progress: the engine and the API are built; the web frontend and the deployment are next. Live link and screenshots will be added here.
+### Crunch Week — Chilika Institute of Technology
 
-## How it works
+**Timetable generation · Midsem exam scheduling · Spectra-week venue booking · Disruption handling**
 
-The LLM talks, the solver decides, and every decision has a reason you can check.
+![Python](https://img.shields.io/badge/Python-3.12+-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.162-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![OR‑Tools](https://img.shields.io/badge/OR--Tools-CP--SAT-4285F4?style=for-the-badge&logo=google&logoColor=white)
+![Postgres](https://img.shields.io/badge/Postgres-Neon-336791?style=for-the-badge&logo=postgresql&logoColor=white)
+![Gemini](https://img.shields.io/badge/Gemini_2.5-Flash-8E75B2?style=for-the-badge&logo=google&logoColor=white)
+
+> 🚧 **Work in progress** — The engine and API are built; the web frontend and deployment are next.  
+> Live link and screenshots will be added here.
+
+</div>
+
+---
+
+## 📑 Table of Contents
+
+- [How It Works](#-how-it-works)
+- [Tech Stack](#-tech-stack)
+- [Getting Started](#-getting-started)
+- [Demo Accounts](#-demo-accounts)
+- [API Overview](#-api-overview)
+- [Rules Worth Knowing](#-rules-worth-knowing)
+- [Known Limitations](#-known-limitations)
+- [Repo Layout](#-repo-layout)
+- [Running the Validator](#-running-the-validator)
+
+---
+
+## ⚙️ How It Works
+
+> **The LLM talks, the solver decides, and every decision has a reason you can check.**
 
 ```mermaid
 flowchart LR
@@ -30,31 +59,74 @@ flowchart LR
   SVC --> DB
 ```
 
-- `core/checker.py` decides validity. It mirrors `starter_pack/validator.py` rule for rule (tests compare the two). Solver output, manual moves, AI drafts and approvals all pass through it before anything is saved.
-- The LLM only fills in forms and rewords reasons. Its output has no status or approval field. If it is down, slow or returns junk, the assistant falls back to keyword rules and the manual forms work unchanged.
-- Disruptions (change files, faculty leave, requests) become **proposals**. The repair solver moves as few sessions as possible and the diff is shown. Nothing changes until the Admin approves, and approval re-checks against the timetable that is active at that moment.
+### Key Design Principles
 
-## Tech stack
+| Principle | Details |
+|-----------|---------|
+| **Checker is the single source of truth** | `core/checker.py` mirrors `starter_pack/validator.py` rule-for-rule (tests compare the two). Solver output, manual moves, AI drafts, and approvals all pass through it before anything is saved. |
+| **LLM is a helper, not the authority** | The LLM only fills in forms and rewords reasons — its output has no status or approval field. If it's down, slow, or returns junk, the assistant falls back to keyword rules and manual forms work unchanged. |
+| **Proposals, not surprises** | Disruptions (change files, faculty leave, requests) become **proposals**. The repair solver moves as few sessions as possible and shows the diff. Nothing changes until the Admin approves, and approval re-checks against the timetable active at that moment. |
 
-Python 3.12+ · FastAPI · SQLAlchemy 2 · Pydantic 2 · Google OR-Tools CP-SAT · Postgres (Neon) or SQLite locally · PyJWT + bcrypt · Gemini 2.5 Flash (optional). Frontend: React + Vite + TypeScript + Tailwind (in progress). Full list with licences: [THIRD_PARTY.md](THIRD_PARTY.md).
+---
 
-## Run it locally
+## 🧰 Tech Stack
+
+| Layer | Technologies |
+|-------|-------------|
+| **Backend** | Python 3.12+ · FastAPI · SQLAlchemy 2 · Pydantic 2 |
+| **Solver** | Google OR-Tools CP-SAT |
+| **Database** | Postgres (Neon) — or SQLite locally |
+| **Auth** | PyJWT + bcrypt |
+| **AI Assistant** | Gemini 2.5 Flash *(optional)* |
+| **Frontend** | React + Vite + TypeScript + Tailwind *(in progress)* |
+
+> 📄 Full list with licences → [THIRD_PARTY.md](THIRD_PARTY.md)
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- **Python 3.12+**
+- *(Optional)* A Postgres database URL or a `GEMINI_API_KEY`
+
+### 1. Clone & set up the environment
 
 ```bash
+# Create a virtual environment
 python -m venv .venv
+
+# Install dependencies
 .venv/bin/pip install -r requirements-dev.txt        # Windows: .venv\Scripts\pip
-cp .env.example .env                                  # optional; every variable has a local default
+```
+
+### 2. Configure (optional)
+
+```bash
+cp .env.example .env       # every variable has a sensible local default
+```
+
+### 3. Start the server
+
+```bash
 .venv/bin/python -m uvicorn backend.app.main:app --port 8000
 ```
 
-Open http://localhost:8000/api/docs for the interactive API. With no `DATABASE_URL` the app uses a local SQLite file (`local.db`) and seeds the demo data on first start.
+> 🌐 Open **http://localhost:8000/api/docs** for the interactive Swagger UI.  
+> Without a `DATABASE_URL`, the app uses a local SQLite file (`local.db`) and seeds demo data on first start.
 
-Tests:
+### 4. Run the tests
 
 ```bash
-.venv/bin/python -m pytest backend/tests/api -q                     # API, ~3 min
-.venv/bin/python -m pytest backend/tests/engine -q -m "not slow"     # engine, ~7 min
+# API tests (~3 min)
+.venv/bin/python -m pytest backend/tests/api -q
+
+# Engine tests (~7 min)
+.venv/bin/python -m pytest backend/tests/engine -q -m "not slow"
 ```
+
+### 5. Export & validate
 
 Produce the two export files from a running app (local or deployed) and check them with the official validator:
 
@@ -62,78 +134,145 @@ Produce the two export files from a running app (local or deployed) and check th
 .venv/bin/python scripts/make_exports.py --base-url http://localhost:8000
 ```
 
-Score the booking/change assistant on tricky requests (Gemini if `GEMINI_API_KEY` is set, else the keyword fallback):
+### 6. Evaluate the AI assistant
+
+Score the booking/change assistant on tricky requests (uses Gemini if `GEMINI_API_KEY` is set, otherwise the keyword fallback):
 
 ```bash
 .venv/bin/python scripts/eval_llm.py
 ```
 
-On a PaaS host (Railway, Render, Fly), the `Procfile` starts the API with `uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT`.
+### Deploying to a PaaS
 
-## Demo accounts
+On Railway, Render, or Fly, the included `Procfile` starts the API with:
 
-Every account uses the password in `DEMO_PASSWORD` (default `demo1234` locally). The Admin's "reset demo data" (`POST /api/admin/reset`) restores the starter dataset, removes every timetable, request and proposal, and keeps the accounts.
+```
+uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
+```
+
+---
+
+## 👥 Demo Accounts
+
+All accounts use the password in `DEMO_PASSWORD` (default: **`demo1234`** locally).  
+The Admin's **"Reset Demo Data"** (`POST /api/admin/reset`) restores the starter dataset, removes every timetable, request, and proposal, and keeps the accounts.
 
 | Email | Role | What to try |
-| --- | --- | --- |
-| `admin@cit.demo` | Admin (Dean's office) | Generate the timetable and exams, decide Spectra week, upload a change file, approve proposals, export, reset |
-| `cse.coord@cit.demo` | Department coordinator (CSE) | Book rooms for CSE events, approve bookings of CSE labs, move CSE sessions |
-| `ece.coord@cit.demo` | Department coordinator (ECE) | Same for ECE; shows that a coordinator can't approve their own request |
-| `faculty@cit.demo` | Faculty (F01, Dr. Ananya Mishra) | Own timetable, mark unavailability, ask the assistant to move a class |
-| `club@cit.demo` | Club representative (Robotics Club) | Submit venue requests in plain English or Hinglish, cancel them, see each status and reason |
+|-------|------|-------------|
+| `admin@cit.demo` | 🔑 **Admin** (Dean's office) | Generate timetable & exams, decide Spectra week, upload change files, approve proposals, export, reset |
+| `cse.coord@cit.demo` | 🏫 **Dept. Coordinator** (CSE) | Book rooms for CSE events, approve CSE lab bookings, move CSE sessions |
+| `ece.coord@cit.demo` | 🏫 **Dept. Coordinator** (ECE) | Same for ECE; shows that a coordinator can't approve their own request |
+| `faculty@cit.demo` | 👨‍🏫 **Faculty** (F01, Dr. Ananya Mishra) | Own timetable, mark unavailability, ask the assistant to move a class |
+| `club@cit.demo` | 🎭 **Club Rep** (Robotics Club) | Submit venue requests in plain English or Hinglish, cancel them, see status & reason |
 
-The faculty and coordinator accounts follow the loaded dataset: the first faculty member and the first two teaching departments.
+> The faculty and coordinator accounts follow the loaded dataset: the first faculty member and the first two teaching departments.
 
-## API overview
+---
 
-All routes are under `/api` and need `Authorization: Bearer <token>` except login, the demo-account list and health. Errors always look like `{"error": {"code", "message", "details"}}`.
+## 🔌 API Overview
+
+All routes live under `/api` and require `Authorization: Bearer <token>` except login, the demo-account list, and health.  
+Errors always return: `{"error": {"code", "message", "details"}}`.
+
+<details>
+<summary><strong>📋 Click to expand full route table</strong></summary>
 
 | Area | Routes |
-| --- | --- |
-| Auth | `POST /auth/login`, `GET /me`, `GET /auth/demo-accounts` |
-| Data | `POST /data/dataset` (Admin; JSON file), `GET /data/summary`, `GET/PUT /settings` (priority order, lab owners), `POST /admin/reset` |
-| Timetable | `POST /timetable/generate`, `GET /timetable?view=group\|faculty\|room\|all&id=&week=regular\|spectra`, `POST /timetable/check-move`, `POST /timetable/manual`, `GET /explain/session/{id}` |
-| Views | `GET /dashboard`, `GET /rooms/free?day&from&to&capacity&needs&types&week` |
-| Exams | `POST /exams/generate`, `GET /exams` |
-| Spectra week | `POST /bookings/check`, `POST /bookings`, `GET /bookings?mine=1`, `POST /bookings/{id}/cancel`, `POST /bookings/{id}/decide`, `POST /fest/decide-all`, `GET /fest`, `GET /explain/booking/{id}` |
-| Changes | `POST /changes/file`, `POST /changes`, `POST /faculty/unavailability`, `GET /changes`, `GET /changes/{id}`, `POST /changes/{id}/approve`, `POST /changes/{id}/reject` |
-| Assistant | `POST /assistant/booking`, `POST /assistant/change` |
-| Export | `GET /export/schedule.json?after=0\|1` |
-| Health | `GET /health?deep=1` |
+|------|--------|
+| **Auth** | `POST /auth/login` · `GET /me` · `GET /auth/demo-accounts` |
+| **Data** | `POST /data/dataset` *(Admin; JSON file)* · `GET /data/summary` · `GET/PUT /settings` *(priority order, lab owners)* · `POST /admin/reset` |
+| **Timetable** | `POST /timetable/generate` · `GET /timetable?view=group\|faculty\|room\|all&id=&week=regular\|spectra` · `POST /timetable/check-move` · `POST /timetable/manual` · `GET /explain/session/{id}` |
+| **Views** | `GET /dashboard` · `GET /rooms/free?day&from&to&capacity&needs&types&week` |
+| **Exams** | `POST /exams/generate` · `GET /exams` |
+| **Spectra Week** | `POST /bookings/check` · `POST /bookings` · `GET /bookings?mine=1` · `POST /bookings/{id}/cancel` · `POST /bookings/{id}/decide` · `POST /fest/decide-all` · `GET /fest` · `GET /explain/booking/{id}` |
+| **Changes** | `POST /changes/file` · `POST /changes` · `POST /faculty/unavailability` · `GET /changes` · `GET /changes/{id}` · `POST /changes/{id}/approve` · `POST /changes/{id}/reject` |
+| **Assistant** | `POST /assistant/booking` · `POST /assistant/change` |
+| **Export** | `GET /export/schedule.json?after=0\|1` |
+| **Health** | `GET /health?deep=1` |
 
-## Rules worth knowing
+</details>
 
-- **Priority.** Exams > classes > institute events > guest lectures > department events > club events, ties to the earlier submission. A role can't claim more than its cap (a club asking for "institute event" is a club event, and the reason says so). The Admin can reorder the list in settings.
-- **Who approves what.** Code decides every booking. A booking of a department's lab waits for that department's coordinator; if the coordinator made it, it waits for the Admin. Timetable changes wait for the Admin. Nobody approves their own request. The Admin's own change files and manual moves are shown as proposals and the Admin applies them after reviewing the diff.
-- **App bookings never move classes.** Only the dataset's approved institute events may displace a class, and then only for Week 7 (`session_overrides`).
+---
 
-## Known limitations
+## 📏 Rules Worth Knowing
 
-- Login is seeded demo accounts only: no sign-up, no password reset.
-- Long solves run inside the request (no job queue); the solver time limit is set by `SOLVER_TIME_LIMIT_S`.
-- Solution quality depends on CPU cores. With one core the timetable is valid but less optimised in the same time.
-- Without `GEMINI_API_KEY` the assistant uses keyword rules: fine for plain requests, weaker on vague or conditional ones.
+### Priority Order
 
-## Repo layout
+> **Exams > Classes > Institute Events > Guest Lectures > Department Events > Club Events**
+
+Ties go to the earlier submission. A role can't claim more than its cap (e.g. a club asking for "institute event" is treated as a club event, and the reason says so). The Admin can reorder the list in settings.
+
+### Approval Flow
+
+- **Code decides every booking** — a booking of a department's lab waits for that coordinator; if the coordinator made it, it waits for the Admin.
+- **Timetable changes** wait for the Admin.
+- **Nobody approves their own request.**
+- The Admin's own change files and manual moves are shown as proposals — the Admin applies them after reviewing the diff.
+
+### App Bookings & Classes
+
+App bookings **never** move classes. Only the dataset's approved institute events may displace a class, and then only for Week 7 (`session_overrides`).
+
+---
+
+## ⚠️ Known Limitations
+
+| Limitation | Details |
+|-----------|---------|
+| **Auth** | Login is seeded demo accounts only — no sign-up, no password reset. |
+| **Long solves** | Solves run inside the request (no job queue); the solver time limit is set by `SOLVER_TIME_LIMIT_S`. |
+| **CPU-dependent quality** | Solution quality depends on CPU cores. With one core the timetable is valid but less optimised in the same time. |
+| **AI fallback** | Without `GEMINI_API_KEY`, the assistant uses keyword rules — fine for plain requests, weaker on vague or conditional ones. |
+
+---
+
+## 📁 Repo Layout
 
 ```
-backend/app/core/      dataset loading, checker (mirrors the validator), explanations, export
-backend/app/solver/    CP-SAT timetable, exams, Spectra-week decisions, repair, infeasibility
-backend/app/services/  state, bookings, proposals: what the routers call
-backend/app/routers/   HTTP endpoints
-backend/app/llm/       Gemini client, prompts/, parsers with keyword fallback
-backend/tests/         engine/ (solver + checker vs validator), api/ (HTTP flows)
-api/index.py           Vercel function entry; vercel.json routes /api/* to it
-scripts/make_exports.py  drives the app's API to produce exports/
-starter_pack/          organisers' starter pack: dataset, validator, examples (never edited)
-exports/               schedule.json and schedule_after.json produced by the app
-docs/                  DESIGN.md (product + system design), PLAN.md (build plan)
+📦 crunchweek-cit-scheduler
+├── 🔧 backend/
+│   ├── app/
+│   │   ├── core/          # Dataset loading, checker (mirrors validator), explanations, export
+│   │   ├── solver/        # CP-SAT timetable, exams, Spectra-week, repair, infeasibility
+│   │   ├── services/      # State, bookings, proposals — what the routers call
+│   │   ├── routers/       # HTTP endpoints
+│   │   └── llm/           # Gemini client, prompts/, parsers with keyword fallback
+│   └── tests/
+│       ├── engine/        # Solver + checker vs validator
+│       └── api/           # HTTP flow tests
+├── 🌐 api/
+│   └── index.py           # Vercel function entry; vercel.json routes /api/* to it
+├── 📜 scripts/
+│   └── make_exports.py    # Drives the app's API to produce exports/
+├── 📦 starter_pack/       # Organisers' starter pack: dataset, validator, examples (never edited)
+├── 📤 exports/            # schedule.json and schedule_after.json produced by the app
+└── 📖 docs/               # DESIGN.md (product + system design), PLAN.md (build plan)
 ```
 
-## Validator
+---
+
+## ✅ Running the Validator
+
+Validate the generated schedules against the official starter-pack validator:
 
 ```bash
-python starter_pack/validator.py --data starter_pack/data/cit_public.json --schedule exports/schedule.json
-python starter_pack/validator.py --data starter_pack/data/cit_public.json --schedule exports/schedule_after.json \
-    --disruption starter_pack/examples/sample_disruption.json --baseline exports/schedule.json
+# Validate the base schedule
+python starter_pack/validator.py \
+  --data starter_pack/data/cit_public.json \
+  --schedule exports/schedule.json
+
+# Validate the post-disruption schedule
+python starter_pack/validator.py \
+  --data starter_pack/data/cit_public.json \
+  --schedule exports/schedule_after.json \
+  --disruption starter_pack/examples/sample_disruption.json \
+  --baseline exports/schedule.json
 ```
+
+---
+
+<div align="center">
+
+**Built for the CIT Crunch Week Hackathon** 🏗️
+
+</div>
