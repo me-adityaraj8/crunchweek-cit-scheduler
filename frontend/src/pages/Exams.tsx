@@ -7,12 +7,13 @@ import { useExams, useGenerateExams, useSummary } from "@/api/hooks";
 import type { Exam } from "@/api/types";
 import { Code } from "@/components/board/signals";
 import { TrackProgress } from "@/components/board/TrackProgress";
+import { DotRow, MetricCard, MiniColumns, RingMeter } from "@/components/dashboard/Metrics";
 import { Empty, ErrorState, Loading, PageHeader, RuleList } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { Drawer } from "@/components/ui/dialog";
 import { Select } from "@/components/ui/select";
 import { useUser } from "@/lib/auth";
-import { dayName, dayShort } from "@/lib/time";
+import { dayName, dayShort, EXAM_DAYS } from "@/lib/time";
 import { cn, plural } from "@/lib/utils";
 
 function SeatBar({ size, seats }: { size: number; seats: number }) {
@@ -101,23 +102,27 @@ export default function Exams() {
         </Empty>
       ) : (
         <>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <MetricCard hero label="Exams placed" value={data.exams.length} unit={`of ${data.total}`} note={data.hard_count ? `${plural(data.hard_count, "hard-rule violation")} to fix.` : "No group sits two exams at once, every room fits its sitting."}>
+              <DotRow done={data.exams.length} total={data.total} label="exams placed" />
+            </MetricCard>
+            <MetricCard label="Exams by day" value={EXAM_DAYS.length} unit="days" note="Exams in each day's two sittings. The busiest day is marked.">
+              <MiniColumns
+                mark
+                columns={EXAM_DAYS.map((d) => {
+                  const n = data.exams.filter((e) => e.day === d).length;
+                  return { key: d, label: dayShort(d).slice(0, 2), value: n, detail: `${dayName(d)}: ${plural(n, "exam")}` };
+                })}
+              />
+            </MetricCard>
+            <MetricCard label="Same-day penalty" value={data.penalty} unit="points" note="Two exams for one group on one day add a point. Seats are filled to half capacity at most.">
+              <div className="flex items-center gap-4">
+                <RingMeter value={data.exams.reduce((n, e) => n + e.size, 0)} max={data.exams.reduce((n, e) => n + e.seats, 0)} caption="seats" />
+                <p className="text-[12.5px] leading-[17px] text-ink-2">Share of the exam seats taken by students across the week.</p>
+              </div>
+            </MetricCard>
+          </div>
           <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-            <dl className="flex flex-wrap gap-x-6 gap-y-2 text-[13px]">
-              <div>
-                <dt className="text-ink-3">Placed</dt>
-                <dd className="text-[18px] font-bold tabular-nums">
-                  {data.exams.length} of {data.total}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-ink-3">Hard violations</dt>
-                <dd className={cn("text-[18px] font-bold tabular-nums", data.hard_count ? "text-stop" : "")}>{data.hard_count}</dd>
-              </div>
-              <div>
-                <dt className="text-ink-3">Same-day penalty</dt>
-                <dd className="text-[18px] font-bold tabular-nums">{data.penalty}</dd>
-              </div>
-            </dl>
             {summary && (
               <Select
                 aria-label="Show exams for"

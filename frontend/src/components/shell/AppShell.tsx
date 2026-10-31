@@ -1,6 +1,6 @@
 import { KeyRound, LogOut, Menu as MenuIcon, MoonStar, Search, SunMedium } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router";
 import { useDashboard } from "@/api/hooks";
 import { PasswordDialog } from "@/components/account/PasswordDialog";
@@ -226,34 +226,42 @@ export function AppShell() {
   const wide = useMediaQuery("(min-width: 1024px)");
   const tablet = useMediaQuery("(min-width: 768px)");
 
-  useEffect(() => setMoreOpen(false), [location.pathname]);
+  const scroller = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    setMoreOpen(false);
+    scroller.current?.scrollTo({ top: 0 });
+  }, [location.pathname]);
+
+  // From tablet up the app is one framed canvas on a deeper concrete page; the canvas scrolls inside.
   return (
-    <div className="platform-bg min-h-dvh">
-      {tablet && (
-        <aside className="fixed inset-y-0 left-0 z-40 flex w-[76px] flex-col gap-5 border-r-2 border-rule-strong bg-sheet px-3 py-4 lg:w-[252px] lg:px-4">
-          <Brand compact={!wide} />
-          <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1">
-            <RouteLine compact={!wide} />
-          </div>
-          <UserPlate compact={!wide} />
-        </aside>
-      )}
+    <div className="min-h-dvh bg-platform-2 md:h-dvh md:p-3">
+      <div className="md:flex md:h-full md:overflow-hidden md:rounded-[8px] md:border-2 md:border-rule-strong md:shadow-float">
+        {tablet && (
+          <aside className="z-40 flex w-[76px] shrink-0 flex-col gap-5 border-r-2 border-rule-strong bg-sheet px-3 py-4 lg:w-[248px] lg:px-4">
+            <Brand compact={!wide} />
+            <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1">
+              <RouteLine compact={!wide} />
+            </div>
+            <UserPlate compact={!wide} />
+          </aside>
+        )}
 
-      <div className="md:pl-[76px] lg:pl-[252px]">
-        <TopBar onSearch={() => setPaletteOpen(true)} onMenu={() => setMoreOpen(true)} />
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.main
-            key={location.pathname}
-            initial={reduce ? { opacity: 0 } : { opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, transition: { duration: 0.08 } }}
-            transition={{ duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}
-            className="mx-auto w-full max-w-[1440px] px-4 pb-28 pt-6 sm:px-6 md:pb-12"
-          >
-            <Outlet />
-          </motion.main>
-        </AnimatePresence>
+        <div ref={scroller} className="platform-bg min-h-dvh min-w-0 flex-1 md:min-h-0 md:overflow-y-auto">
+          <TopBar onSearch={() => setPaletteOpen(true)} onMenu={() => setMoreOpen(true)} />
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.main
+              key={location.pathname}
+              initial={reduce ? { opacity: 0 } : { opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, transition: { duration: 0.08 } }}
+              transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
+              className="mx-auto w-full max-w-[1440px] px-4 pb-28 pt-6 sm:px-6 md:pb-12 lg:px-8 lg:pt-8"
+            >
+              <Outlet />
+            </motion.main>
+          </AnimatePresence>
+        </div>
       </div>
 
       {!tablet && <PhoneBar onMore={() => setMoreOpen(true)} />}

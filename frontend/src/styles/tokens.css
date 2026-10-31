@@ -1,13 +1,16 @@
 /* Signal & Concrete: neo-brutalist operations theme. Ink outlines draw the structure, hard offset
    shadows mark what can be pressed, one yellow means "act here", and pastels name session kinds
-   (always with a LEC/TUT/LAB letter, never colour alone). Dark mode is "Night Shift". */
+   (always with a LEC/TUT/LAB letter, never colour alone). The app is a framed canvas (platform) on a
+   deeper page (platform-2); cards are white sheets and tiles inside cards a step deeper (sheet-2).
+   Dark mode is "Graphite": blue-grey surfaces, slate outlines, concrete-white plates where daylight
+   has yellow, and the same pastel session fills with dark type. */
 
 :root {
   color-scheme: light;
 
   /* surfaces */
   --platform: #e3e5e1;
-  --platform-2: #d9dbd6;
+  --platform-2: #d0d3cd;
   --dot: #cbcec8;
   --sheet: #ffffff;
   --sheet-2: #f4f5f2;
@@ -39,6 +42,11 @@
   --stop-soft: #ffe1dd;
   --wait: oklch(0.55 0.012 250);
   --wait-soft: #eceeea;
+  /* caution is a status, kept apart from the action colour so a theme can change one without the other */
+  --caution: #ffd23f;
+  --caution-soft: #fff3bf;
+  /* the one highlighted mark in a chart (the busiest period, the costliest rule) */
+  --mark: #ffd23f;
 
   /* session kinds: a pastel fill with ink text, a darker line colour for the letter chip */
   --k-lecture: #1f5faf;
@@ -62,58 +70,67 @@
   --shade: #111111;
   --mount: 2px 2px 0 var(--shade);
   --float: 4px 4px 0 var(--shade);
+  --glow: var(--mount);
 }
 
 .dark {
   color-scheme: dark;
 
-  --platform: #131313;
-  --platform-2: #0e0e0e;
-  --dot: #262624;
-  --sheet: #1d1d1b;
-  --sheet-2: #252523;
-  --anthracite: #0b0b0b;
-  --anthracite-2: #1d1d1b;
-  --anthracite-3: #33332f;
+  /* Graphite: cool blue-grey surfaces (never pure black), slate outlines, and concrete white for the
+     plates that are yellow by day. Colour comes from the pastel session fills and the status lamps. */
+  --platform: #15181d;
+  --platform-2: #0b0d10;
+  --dot: #232831;
+  --sheet: #1c2027;
+  --sheet-2: #252a32;
+  --anthracite: #0f1216;
+  --anthracite-2: #1c2027;
+  --anthracite-3: #2d343e;
 
-  --ink: #f1efe8;
-  --ink-2: #cfccc2;
-  --ink-3: #a9a69c;
-  --on-anthracite: #f1efe8;
-  --on-anthracite-2: #b9b6ac;
+  --ink: #e9edf2;
+  --ink-2: #b6bfca;
+  --ink-3: #8b95a3;
+  --on-anthracite: #e9edf2;
+  --on-anthracite-2: #a3acb8;
 
-  --rule: #33332f;
-  --rule-strong: #f1efe8;
+  --rule: #2b313a;
+  --rule-strong: #566170;
 
-  --signal-soft: #3a3216;
-  --signal-edge: #f1efe8;
+  --signal: #e4e7e2;
+  --signal-ink: #111418;
+  --signal-soft: #2a3039;
+  --signal-edge: #6b7686;
 
-  --clear: oklch(0.78 0.15 152);
-  --clear-soft: #173b26;
-  --stop: oklch(0.72 0.18 27);
-  --stop-soft: #3e1b18;
-  --wait: oklch(0.66 0.012 250);
-  --wait-soft: #262624;
+  --clear: oklch(0.78 0.14 152);
+  --clear-soft: #15302a;
+  --stop: oklch(0.72 0.17 25);
+  --stop-soft: #3b1f23;
+  --wait: oklch(0.7 0.015 250);
+  --wait-soft: #252a32;
+  --caution: #f0c850;
+  --caution-soft: #3a3318;
+  --mark: #8fc3ee;
 
-  --k-lecture: #7cc6ff;
-  --k-lecture-tint: #17324a;
-  --k-lecture-edge: #7cc6ff;
-  --k-tutorial: #ffa66b;
-  --k-tutorial-tint: #3d2513;
-  --k-tutorial-edge: #ffa66b;
-  --k-lab: #b9a2ff;
-  --k-lab-tint: #2a2148;
-  --k-lab-edge: #b9a2ff;
-  --k-exam: #ff9eb5;
-  --k-exam-tint: #3d1d26;
-  --k-exam-edge: #ff9eb5;
-  --k-event: #c6f06b;
-  --k-event-tint: #2a3512;
-  --k-event-edge: #c6f06b;
-  --k-on: #111111;
+  /* the same pastels as daylight, a touch softer; inside them type turns dark (see index.css) */
+  --k-lecture: #1f5faf;
+  --k-lecture-tint: #8fc3ee;
+  --k-lecture-edge: #0b0d10;
+  --k-tutorial: #a34a12;
+  --k-tutorial-tint: #f0ae80;
+  --k-tutorial-edge: #0b0d10;
+  --k-lab: #6a3fc2;
+  --k-lab-tint: #bea9f2;
+  --k-lab-edge: #0b0d10;
+  --k-exam: #b2365a;
+  --k-exam-tint: #ee9bb0;
+  --k-exam-edge: #0b0d10;
+  --k-event: #4d6a00;
+  --k-event-tint: #b9dc6c;
+  --k-event-edge: #0b0d10;
+  --k-on: #ffffff;
 
-  /* Night Shift: the hard shadows are signal light */
-  --shade: #ffd23f;
+  --shade: #07090b;
   --mount: 2px 2px 0 var(--shade);
   --float: 4px 4px 0 var(--shade);
+  --glow: var(--mount);
 }

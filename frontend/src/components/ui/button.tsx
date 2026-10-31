@@ -8,8 +8,8 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: "press bg-signal text-signal-ink shadow-mount",
-        signal: "press bg-signal text-signal-ink shadow-mount",
+        primary: "press glow bg-signal text-signal-ink shadow-mount",
+        signal: "press glow bg-signal text-signal-ink shadow-mount",
         outline: "press bg-sheet text-ink shadow-mount hover:bg-sheet-2",
         ghost: "border-transparent text-ink-2 transition-colors hover:bg-ink/[0.06] hover:text-ink",
         danger: "press bg-stop text-sheet shadow-mount",

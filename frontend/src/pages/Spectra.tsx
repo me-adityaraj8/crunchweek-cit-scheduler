@@ -10,6 +10,7 @@ import { Code, StatusChip } from "@/components/board/signals";
 import { SplitFlap, type FlapTone } from "@/components/board/SplitFlap";
 import { TrackProgress } from "@/components/board/TrackProgress";
 import { GenerateCard } from "@/components/dashboard/GenerateCard";
+import { MetricCard, RingMeter, StackBar } from "@/components/dashboard/Metrics";
 import { Empty, ErrorState, Loading, PageHeader, SectionTitle } from "@/components/states";
 import { fromEntries } from "@/components/timetable/layout";
 import { RoomDayGrid } from "@/components/timetable/RoomDayGrid";
@@ -100,7 +101,7 @@ function RequestDrawer({ b, onClose, onShow, summary }: { b: Booking | null; onC
             </div>
           </section>
           {(d?.lost_to || ex.data?.lost_to) && (
-            <section className="rounded-[6px] border border-stop/40 bg-stop-soft p-3">
+            <section className="rounded-[4px] border-2 border-rule-strong bg-stop-soft p-3">
               <p className="text-[13.5px]">
                 Lost its first choice to <b>{d?.lost_to ?? ex.data?.lost_to}</b>, which ranks higher.
               </p>
@@ -256,24 +257,42 @@ export default function Spectra() {
       ) : (
         <>
           {sum && (
-            <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-[6px] border border-rule bg-rule sm:grid-cols-3 lg:grid-cols-6">
-              {[
-                ["Approved", sum.approved, "clear"],
-                ["Another slot offered", sum.alternatives, "caution"],
-                ["Rejected", sum.rejected, "stop"],
-                ["Waiting for approval", sum.pending, "wait"],
-                ["Booking score", `${sum.booking_score} of ${sum.booking_score_max}`, null],
-                ["Priority inversions", sum.priority_inversions.length, sum.priority_inversions.length ? "stop" : "clear"],
-              ].map(([label, value, aspect]) => (
-                <div key={label as string} className="flex flex-col gap-1 bg-sheet px-4 py-3">
-                  <dt className="flex items-center gap-1.5 text-[12px] text-ink-2">
-                    {aspect && <span className={cn("size-2 rounded-full", { clear: "bg-clear", caution: "bg-signal ring-1 ring-signal-ink/40", stop: "bg-stop", wait: "ring-[1.5px] ring-inset ring-wait" }[aspect as string])} />}
-                    {label}
-                  </dt>
-                  <dd className="text-[20px] font-bold tabular-nums leading-6">{value}</dd>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <MetricCard hero label="Booking score" value={sum.booking_score} unit={`of ${sum.booking_score_max} points`} note="Each request scores by its priority and how close it got to what it asked for.">
+                <div className="flex items-center gap-4">
+                  <RingMeter value={sum.booking_score} max={sum.booking_score_max} caption="score" />
+                  <p className="text-[12.5px] leading-[17px] text-signal-ink/80">The ring is the share of the best possible score.</p>
                 </div>
-              ))}
-            </dl>
+              </MetricCard>
+              <MetricCard label="Decisions" value={sum.approved + sum.alternatives + sum.rejected + sum.pending} unit="requests" note="Every request, by what the code decided.">
+                <StackBar
+                  parts={[
+                    { key: "approved", label: "Approved", value: sum.approved, fill: "bg-clear" },
+                    { key: "alt", label: "Another slot", value: sum.alternatives, fill: "bg-caution" },
+                    { key: "rejected", label: "Rejected", value: sum.rejected, fill: "bg-stop" },
+                    { key: "pending", label: "Waiting", value: sum.pending, fill: "bg-wait" },
+                  ]}
+                />
+              </MetricCard>
+              <MetricCard
+                label="Priority inversions"
+                value={sum.priority_inversions.length}
+                unit={sum.priority_inversions.length ? "to check" : "found"}
+                note={sum.priority_inversions.length ? "A lower-priority request took a slot a higher one wanted." : "No lower-priority request took a slot a higher one wanted."}
+              >
+                <dl className="grid grid-cols-2 gap-2">
+                  {[
+                    ["Overrides", sum.overrides],
+                    ["Hard violations", sum.hard_count],
+                  ].map(([label, v]) => (
+                    <div key={label} className="inset-tile px-3 py-2.5">
+                      <dt className="eyebrow truncate">{label}</dt>
+                      <dd className="text-[24px] font-black leading-7">{v}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </MetricCard>
+            </div>
           )}
 
           <div className="flex flex-wrap items-center gap-3">

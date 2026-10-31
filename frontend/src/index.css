@@ -31,6 +31,9 @@
   --color-stop-soft: var(--stop-soft);
   --color-wait: var(--wait);
   --color-wait-soft: var(--wait-soft);
+  --color-caution: var(--caution);
+  --color-caution-soft: var(--caution-soft);
+  --color-mark: var(--mark);
 
   --color-k-lecture: var(--k-lecture);
   --color-k-lecture-tint: var(--k-lecture-tint);
@@ -125,6 +128,24 @@
   * { scrollbar-width: thin; scrollbar-color: var(--rule-strong) transparent; }
 }
 
+@layer base {
+  /* Graphite: a pastel session fill, or a light plate such as the hero card, keeps daylight's dark
+     type, white chips and ink outline inside it */
+  .dark [class*="-tint"],
+  .dark .hatch-event,
+  .dark .on-light {
+    --ink: #111111;
+    --ink-2: #33373d;
+    --ink-3: #50565f;
+    --sheet: #ffffff;
+    --sheet-2: #f2f3f1;
+    --rule: #c9cdd2;
+    --rule-strong: #111111;
+    --shade: #0b0d10;
+    color: var(--ink);
+  }
+}
+
 @layer components {
   /* the platform: a faint dot grid like timetable paper under glass */
   .platform-bg {
@@ -139,21 +160,19 @@
     border-radius: var(--radius-sheet);
     box-shadow: var(--float);
   }
-  /* tactile press: lift a pixel on hover, sink by the shadow when pressed */
-  .press {
-    transition: transform 140ms var(--ease-arrive), box-shadow 140ms var(--ease-arrive), background-color 120ms ease-out;
+  /* a tile inside a card: one step deeper and no outline, so cards stay calm */
+  .inset-tile {
+    background: var(--sheet-2);
+    border-radius: 4px;
   }
-  .press:hover:not(:disabled) {
-    transform: translate(-1px, -1px);
-    box-shadow: 3px 3px 0 var(--shade);
-  }
-  .press:active:not(:disabled) {
-    transform: translate(2px, 2px);
-    box-shadow: 0 0 0 var(--shade);
-    transition-duration: 80ms;
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .press, .press:hover, .press:active { transform: none !important; transition: none; }
+  /* small, precise caps above a title or a figure */
+  .eyebrow {
+    font-size: 11px;
+    line-height: 14px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
   }
   /* hatching marks event bookings (not teaching) on any grid */
   .hatch-event {
@@ -239,7 +258,7 @@
 }
 .flap[data-tone="clear"] { --flap-fg: oklch(0.82 0.17 152); }
 .flap[data-tone="stop"] { --flap-fg: oklch(0.72 0.19 27); }
-.flap[data-tone="caution"] { --flap-fg: var(--signal); }
+.flap[data-tone="caution"] { --flap-fg: var(--caution); }
 .flap[data-tone="wait"] { --flap-fg: var(--on-anthracite-2); }
 .flap[data-tone="ink"] { --flap-bg: var(--sheet-2); --flap-fg: var(--ink); }
 .flap[data-tone="ink"]::after { background: var(--rule-strong); }
@@ -254,4 +273,29 @@
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Tactile press, outside the layers so it beats the shadow utilities: lift a pixel on hover, sink
+   onto the shadow when pressed. In Night Shift the main action glows instead of casting a block. */
+.press {
+  transition: transform 140ms var(--ease-arrive), box-shadow 140ms var(--ease-arrive), background-color 120ms ease-out;
+}
+.press:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--shade);
+}
+.press:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 var(--shade);
+  transition-duration: 80ms;
+}
+.dark .glow,
+.dark .glow:hover:not(:disabled) {
+  box-shadow: var(--glow);
+}
+.dark .glow:active:not(:disabled) {
+  box-shadow: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .press, .press:hover, .press:active { transform: none !important; transition: none; }
 }

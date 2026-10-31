@@ -4,10 +4,11 @@ import { ApiError, errorMessage } from "@/api/client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-export function PageHeader({ title, lede, actions, className }: { title: ReactNode; lede?: ReactNode; actions?: ReactNode; className?: string }) {
+export function PageHeader({ title, lede, eyebrow, actions, className }: { title: ReactNode; lede?: ReactNode; eyebrow?: ReactNode; actions?: ReactNode; className?: string }) {
   return (
     <header className={cn("flex flex-wrap items-end justify-between gap-x-6 gap-y-3", className)}>
       <div className="min-w-0 max-w-[68ch]">
+        {eyebrow && <p className="eyebrow mb-2">{eyebrow}</p>}
         <h1 className="text-[26px] font-black uppercase leading-[30px] tracking-[-0.015em] [font-stretch:112%] sm:text-[30px] sm:leading-[34px]">{title}</h1>
         {lede && <p className="mt-1 text-[14px] leading-[21px] text-ink-2">{lede}</p>}
       </div>

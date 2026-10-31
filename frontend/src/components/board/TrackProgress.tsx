@@ -21,31 +21,28 @@ export function TrackProgress({ running, label, limit, className }: { running: b
   if (!running) return null;
   const used = limit ? Math.min(elapsed / limit, 1) : null;
   return (
-    <div className={cn("flex flex-col gap-2", className)} role="status" aria-live="polite">
-      <div className="flex items-baseline justify-between gap-3 text-[13px]">
-        <span className="font-semibold">{label}</span>
-        <span className="tabular-nums text-ink-2">
-          {Math.floor(elapsed)} s{limit ? ` of up to ${limit} s` : ""}
+    <div className={cn("inset-tile flex flex-col gap-2.5 p-3", className)} role="status" aria-live="polite">
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="eyebrow">{label}</span>
+        <span className="text-[13px] text-ink-2">
+          <b className="text-[20px] font-black text-ink">{Math.floor(elapsed)}</b> s{limit ? ` of up to ${limit} s` : ""}
         </span>
       </div>
-      <div className="relative h-4 overflow-hidden rounded-[4px] bg-platform-2">
+      <div className="relative h-5 overflow-hidden rounded-[4px] border-2 border-rule-strong bg-sheet">
         {/* sleepers */}
         <div
-          className="absolute inset-0 opacity-70"
-          style={{ backgroundImage: "repeating-linear-gradient(90deg, var(--rule-strong) 0 3px, transparent 3px 14px)" }}
+          className="absolute inset-0 opacity-40"
+          style={{ backgroundImage: "repeating-linear-gradient(90deg, var(--rule-strong) 0 2px, transparent 2px 12px)" }}
         />
-        {/* rails */}
-        <div className="absolute inset-x-0 top-[4px] h-px bg-ink-3/60" />
-        <div className="absolute inset-x-0 bottom-[4px] h-px bg-ink-3/60" />
         {used != null && <div className="absolute inset-y-0 left-0 bg-signal-soft" style={{ width: `${used * 100}%` }} />}
         {reduce ? (
-          <div className="absolute inset-y-[3px] left-0 w-full rounded-[3px] bg-signal/50" />
+          <div className="absolute inset-y-[2px] left-[2px] w-1/3 rounded-[2px] bg-signal" />
         ) : (
           <motion.div
-            className="absolute inset-y-[2px] w-16 rounded-[3px] bg-signal shadow-[inset_0_-2px_0_oklch(0_0_0/0.15)]"
+            className="absolute inset-y-[2px] w-16 rounded-[2px] border-2 border-rule-strong bg-signal"
             initial={{ left: "-20%" }}
             animate={{ left: "105%" }}
-            transition={{ duration: 1.6, ease: "easeInOut", repeat: Infinity, repeatDelay: 0.15 }}
+            transition={{ duration: 1.6, ease: [0.65, 0, 0.35, 1], repeat: Infinity, repeatDelay: 0.15 }}
           />
         )}
       </div>

@@ -8,13 +8,14 @@ import { useApproveChange, useChange, useRejectChange, useSummary } from "@/api/
 import type { Proposal, Summary } from "@/api/types";
 import { Code, Stamp, StatusChip } from "@/components/board/signals";
 import { DiffView, MoveBoard } from "@/components/changes/DiffView";
+import { CompareBars, MetricCard, StackBar } from "@/components/dashboard/Metrics";
 import { ErrorState, Loading, PageHeader, RuleList, SectionTitle } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/field";
 import { useUser } from "@/lib/auth";
 import { PROPOSAL_KIND, proposalStatus } from "@/lib/format";
 import { dayShort, periodLabel } from "@/lib/time";
-import { cn, fmtDateTime, plural } from "@/lib/utils";
+import { fmtDateTime, plural } from "@/lib/utils";
 
 function daysText(days: string[], all: string[]) {
   return days.length === all.length ? "every day" : days.map(dayShort).join(", ");
@@ -63,38 +64,46 @@ function WhatChanged({ p, summary }: { p: Proposal; summary?: Summary }) {
   );
 }
 
-/** The repair in numbers. Each figure is a separate plate so nothing hides in a sentence. */
+/** The repair in numbers: how much moved, what it cost in soft penalty, and whether every hard rule still holds. */
 function Figures({ p }: { p: Proposal }) {
-  const items: [string, string | number, boolean?][] = [
-    ["Sessions moved", p.moved, true],
-    ["New time", p.time_changed],
-    ["Room only", p.room_only],
-    ["Added", p.added],
-    ["Removed", p.removed],
-    ["Hard violations", p.status === "infeasible" ? "—" : p.hard_count],
-    ["Soft penalty", p.status === "infeasible" ? "—" : `${p.soft_before} → ${p.soft_after}`],
-  ];
+  const infeasible = p.status === "infeasible";
   return (
-    <div className="flex flex-col gap-2">
-      <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-[6px] border border-rule bg-rule sm:grid-cols-4 lg:grid-cols-7">
-        {items.map(([label, value, strong]) => (
-          <div key={label} className={cn("flex flex-col gap-0.5 bg-sheet px-4 py-3", strong && "bg-signal text-signal-ink")}>
-            <dt className={cn("text-[12px]", strong ? "font-semibold" : "text-ink-2")}>{label}</dt>
-            <dd className="text-[20px] font-bold tabular-nums leading-6">{value}</dd>
-          </div>
-        ))}
-      </dl>
-      {p.status !== "infeasible" && (
-        <p className="flex items-center gap-2 text-[12.5px] text-ink-2">
-          {p.proven_minimal ? (
-            <>
-              <Check className="size-4 text-clear" /> Minimal, proven: the solver showed no valid fix moves fewer sessions.
-            </>
-          ) : (
-            "The fewest moves the solver found in its time limit."
-          )}
-        </p>
-      )}
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <MetricCard
+        hero
+        label="Sessions moved"
+        value={p.moved}
+        unit={p.moved === 1 ? "session" : "sessions"}
+        note={infeasible ? "No valid fix exists for this change." : p.proven_minimal ? "Proven minimal: no valid fix moves fewer sessions." : "The fewest moves the solver found in its time limit."}
+      >
+        <StackBar
+          parts={[
+            { key: "time", label: "New time", value: p.time_changed, fill: "bg-signal-ink" },
+            { key: "room", label: "Room only", value: p.room_only, fill: "bg-signal-ink/40" },
+          ]}
+        />
+      </MetricCard>
+      <MetricCard label="Soft penalty" value={infeasible ? "—" : p.soft_after} unit={infeasible ? undefined : `was ${p.soft_before}`} note="Before and after the repair. Lower is better.">
+        {!infeasible && <CompareBars before={p.soft_before} after={p.soft_after} unit="Soft penalty" />}
+      </MetricCard>
+      <MetricCard
+        label="Hard violations"
+        value={infeasible ? "—" : p.hard_count}
+        unit={infeasible ? undefined : "after the repair"}
+        note={infeasible ? "The solver proved no arrangement satisfies every rule." : p.hard_count ? "The repaired week still breaks a hard rule." : "The repaired week breaks no hard rule."}
+      >
+        <dl className="grid grid-cols-2 gap-2">
+          {[
+            ["Added", p.added],
+            ["Removed", p.removed],
+          ].map(([label, v]) => (
+            <div key={label} className="inset-tile px-3 py-2.5">
+              <dt className="eyebrow">{label}</dt>
+              <dd className="text-[24px] font-black leading-7">{v}</dd>
+            </div>
+          ))}
+        </dl>
+      </MetricCard>
     </div>
   );
 }
