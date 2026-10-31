@@ -201,7 +201,7 @@ export const useTranscribe = () =>
   });
 
 /** Velo answers from the same code the pages use and never changes anything itself. */
-export const useAskVelo = () => useMutation({ mutationFn: (body: VeloIn) => request<VeloOut>("/velo", { body }) });
+export const useAskVelo = () => useMutation({ mutationFn: (body: VeloIn) => request<VeloOut>("/velo", { body, timeoutMs: 45000 }) });
 
 /** Run a change Velo prepared (once; the server refuses expired or stale ones), then refresh every page. */
 export const useConfirmVeloAction = () =>

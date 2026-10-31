@@ -32,7 +32,18 @@ export interface RequestOptions {
   query?: Query;
   form?: FormData;
   signal?: AbortSignal;
+  /** give up after this long with ApiError("timeout"), so nothing waits forever on a stuck server */
+  timeoutMs?: number;
 }
+
+/** The caller's signal plus an optional deadline. */
+function deadline(signal?: AbortSignal, ms?: number): AbortSignal | undefined {
+  if (!ms) return signal;
+  const t = AbortSignal.timeout(ms);
+  return signal ? AbortSignal.any([signal, t]) : t;
+}
+
+const TIMEOUT_MESSAGE = "The server took too long to answer. Try again.";
 
 function url(path: string, query?: Query) {
   const qs = new URLSearchParams();
@@ -54,8 +65,9 @@ export async function request<T>(path: string, opts: RequestOptions = {}): Promi
   }
   let res: Response;
   try {
-    res = await fetch(url(path, opts.query), { method: opts.method ?? (body ? "POST" : "GET"), headers, body, signal: opts.signal });
+    res = await fetch(url(path, opts.query), { method: opts.method ?? (body ? "POST" : "GET"), headers, body, signal: deadline(opts.signal, opts.timeoutMs) });
   } catch (e) {
+    if ((e as Error).name === "TimeoutError") throw new ApiError(0, "timeout", TIMEOUT_MESSAGE);
     if ((e as Error).name === "AbortError") throw e;
     throw new ApiError(0, "network", "Can't reach the server. Check that the API is running, then try again.");
   }
@@ -77,13 +89,14 @@ export async function request<T>(path: string, opts: RequestOptions = {}): Promi
 }
 
 /** POST JSON and get audio bytes back (Velo's voice). Errors arrive as ApiError, like request(). */
-export async function requestAudio(path: string, body: unknown, signal?: AbortSignal): Promise<ArrayBuffer> {
+export async function requestAudio(path: string, body: unknown, signal?: AbortSignal, timeoutMs?: number): Promise<ArrayBuffer> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (token) headers.Authorization = `Bearer ${token}`;
   let res: Response;
   try {
-    res = await fetch(url(path), { method: "POST", headers, body: JSON.stringify(body), signal });
+    res = await fetch(url(path), { method: "POST", headers, body: JSON.stringify(body), signal: deadline(signal, timeoutMs) });
   } catch (e) {
+    if ((e as Error).name === "TimeoutError") throw new ApiError(0, "timeout", TIMEOUT_MESSAGE);
     if ((e as Error).name === "AbortError") throw e;
     throw new ApiError(0, "network", "Can't reach the server.");
   }

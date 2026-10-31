@@ -27,7 +27,7 @@ from .velo import PAGE_LABEL, chip
 
 WINDOW = 8
 RESULT_CHARS = 6000
-MEMORY_KEYS = ("room_id", "day", "from_period", "to_period", "attendance", "course_id", "session_id", "request_id",
+MEMORY_KEYS = ("draft", "room_id", "day", "from_period", "to_period", "attendance", "course_id", "session_id", "request_id",
                "group_id", "faculty_id", "proposal_id")
 LABEL = {"get_my_timetable": "Your timetable", "get_faculty_schedule": "Faculty timetable",
          "get_group_schedule": "Group timetable", "find_available_rooms": "Room availability",
@@ -103,6 +103,8 @@ def system_prompt(db: Session, user: User, body: VeloIn, c: VeloConversation) ->
     feats = sorted({f for r in ds.rooms.values() for f in r["features"]})
     groups = ", ".join(ds.groups)
     mem = {k: v for k, v in (c.memory or {}).items() if not k.startswith("_")}
+    if body.draft_text and body.last_intent == "book_venue" and "draft" not in mem:
+        mem["draft_text"] = body.draft_text      # a booking the keyword router drafted on the person's screen
     memory = ("Earlier: " + c.summary + "\n" if c.summary else "") + \
              ("Currently discussing: " + json.dumps(mem) if mem else "Nothing yet.")
     focus = ""
@@ -245,6 +247,8 @@ def run(db: Session, user: User, body: VeloIn) -> dict | None:
         reply = reply or "I couldn't work that out. Could you say it another way?"
 
     c.memory = {**(c.memory or {}), **memory}
+    if "draft" in memory:
+        c.memory.pop("draft_text", None)
     db.add(VeloMessage(conversation_id=c.id, role="user", content=body.text, payload={"page": body.page}))
     db.add(VeloMessage(conversation_id=c.id, role="assistant", content=reply,
                        payload={"tools": used, "cards": cards, "errors": errors}))
@@ -256,6 +260,23 @@ def run(db: Session, user: User, body: VeloIn) -> dict | None:
     return {"intent": used[0] if used else "chat", "understood": chips, "reply": reply, "cards": cards,
             "suggestions": [], "draft_text": None, "navigate": nav, "mode": "agent", "conversation_id": c.id,
             "tools": used, "latency_ms": int((time.monotonic() - t0) * 1000)}
+
+
+def record(db: Session, user: User, body: VeloIn, out: dict) -> str:
+    """Keep a turn the keyword router answered (no model, or the model was down) in the conversation, so the
+    next follow-up sees it rather than an older turn. Returns the conversation id."""
+    c = conversation(db, user, body.conversation_id)
+    if out.get("draft_text"):       # its booking draft, in words: the agent picks it up on the next turn
+        mem = {k: v for k, v in (c.memory or {}).items() if k != "draft"}
+        c.memory = {**mem, "draft_text": out["draft_text"]}
+    db.add(VeloMessage(conversation_id=c.id, role="user", content=body.text, payload={"page": body.page}))
+    db.add(VeloMessage(conversation_id=c.id, role="assistant", content=out["reply"],
+                       payload={"tools": [], "cards": out.get("cards", []), "errors": [], "mode": out.get("mode")}))
+    db.flush()
+    _summarise(db, c)
+    c.updated_at = _now()
+    db.commit()
+    return c.id
 
 
 def messages_of(db: Session, user: User, cid: str) -> list[dict]:

@@ -4,6 +4,44 @@
 // measured, every word comes from a recogniser, and "speaking" means audio is actually playing.
 import { ApiError, request, requestAudio } from "@/api/client";
 import { downsample, encodeWav, SPEECH_RATE } from "@/lib/wav";
+import { speechChunks, speechText } from "./speech";
+
+/** how long to wait for the first piece of the server voice before the browser's speaks instead, and for later pieces */
+const FIRST_VOICE_MS = 9000;
+const NEXT_VOICE_MS = 25000;
+/** a transcription gets this long */
+const TRANSCRIBE_TIMEOUT_MS = 25000;
+
+// ---------------------------------------------------------------- audio unlock
+// iOS Safari (and other browsers' autoplay rules) only let audio start inside a tap. The audio context is
+// made and resumed here, called from the tap that opens voice mode; the mic and Velo's voice then use it.
+let unlocked: AudioContext | null = null;
+
+export function unlockAudio() {
+  try {
+    if (!unlocked || unlocked.state === "closed") unlocked = new AudioContext();
+    void unlocked.resume().catch(() => undefined);
+    const src = unlocked.createBufferSource(); // a silent sample: what iOS needs to count the context as started
+    src.buffer = unlocked.createBuffer(1, 1, unlocked.sampleRate);
+    src.connect(unlocked.destination);
+    src.start();
+  } catch {
+    /* no Web Audio: Mic.open reports it */
+  }
+  const synth = typeof window !== "undefined" ? window.speechSynthesis : undefined;
+  if (synth) {
+    // the browser's voice is unlocked the same way: an empty utterance, spoken inside the tap
+    const u = new SpeechSynthesisUtterance("");
+    u.volume = 0;
+    synth.speak(u);
+  }
+}
+
+function audioContext(): AudioContext {
+  const ctx = unlocked && unlocked.state !== "closed" ? unlocked : new AudioContext();
+  unlocked = null; // the mic owns it now and closes it when voice mode ends
+  return ctx;
+}
 
 // ---------------------------------------------------------------- microphone
 export class MicError extends Error {}
@@ -36,7 +74,7 @@ export class Mic {
       if (name === "NotFoundError" || name === "OverconstrainedError") throw new MicError("No microphone was found. Plug one in, or type to Velo instead.");
       throw new MicError("The microphone couldn't be started. Another app may be using it.");
     }
-    const ctx = new AudioContext();
+    const ctx = audioContext();
     if (ctx.state === "suspended") await ctx.resume().catch(() => undefined);
     return new Mic(ctx, stream);
   }
@@ -193,7 +231,7 @@ export async function transcribe(wav: Blob): Promise<string> {
   const form = new FormData();
   form.append("audio", wav, "voice.wav");
   try {
-    return (await request<{ text: string }>("/assistant/transcribe", { form })).text;
+    return (await request<{ text: string }>("/assistant/transcribe", { form, timeoutMs: TRANSCRIBE_TIMEOUT_MS })).text;
   } catch (e) {
     if (e instanceof ApiError && e.code === "no_speech") return "";
     throw e;
@@ -208,11 +246,15 @@ export class Speaker {
   private analyser: AnalyserNode;
   private buf: Uint8Array<ArrayBuffer>;
   private source: AudioBufferSourceNode | null = null;
-  private serverVoice: "unknown" | "yes" | "no" = "unknown";
+  /** after the server voice fails, the browser's is used until then (ms since epoch) */
+  private serverVoiceAfter = 0;
   private wordAt = 0;
   private playing: VoiceKind | null = null;
   private abort: AbortController | null = null;
   private utter: SpeechSynthesisUtterance | null = null;
+  private watchdog = 0;
+  /** bumped by stop(): async work from an older reply sees it changed and does nothing */
+  private turn = 0;
 
   constructor(private ctx: AudioContext) {
     this.analyser = ctx.createAnalyser();
@@ -221,67 +263,129 @@ export class Speaker {
     this.analyser.connect(ctx.destination);
   }
 
-  /** Speak `text`. Resolves with the voice used once playback has started, and calls `ended` when it stops. */
+  /**
+   * Speak `text`. Resolves with the voice used once sound has actually started ("none" if none could), and
+   * calls `ended` exactly once when it stops on its own. The server voice is fetched a piece at a time, the
+   * next while the current one plays; if it is slow or fails, the browser's voice says the rest.
+   */
   async say(text: string, ended: () => void): Promise<VoiceKind> {
     this.stop();
-    if (this.serverVoice !== "no") {
-      try {
-        this.abort = new AbortController();
-        const bytes = await requestAudio("/assistant/speak", { text: text.slice(0, 1200) }, this.abort.signal);
-        const audio = await this.ctx.decodeAudioData(bytes);
-        if (this.ctx.state === "suspended") await this.ctx.resume();
-        const src = this.ctx.createBufferSource();
-        src.buffer = audio;
-        src.connect(this.analyser);
-        src.onended = () => {
-          if (this.source === src) {
-            this.source = null;
-            this.playing = null;
-            ended();
-          }
-        };
-        this.source = src;
-        this.playing = "gemini";
-        this.serverVoice = "yes";
-        src.start();
-        return "gemini";
-      } catch (e) {
-        if ((e as Error).name === "AbortError") return "none";
-        // the server voice isn't available (no key, model down, network): use the browser's for this session
-        this.serverVoice = "no";
+    const turn = this.turn;
+    const parts = speechChunks(speechText(text));
+    if (!parts.length) {
+      ended();
+      return "none";
+    }
+    let started: VoiceKind = "none";
+    let resolveStart!: (k: VoiceKind) => void;
+    const firstSound = new Promise<VoiceKind>((r) => (resolveStart = r));
+    const begin = (k: VoiceKind) => {
+      if (started === "none") {
+        started = k;
+        resolveStart(k);
       }
-    }
+    };
+    void (async () => {
+      // the server voice: a short first piece so sound starts soon, then the rest, both asked for at once
+      // (two calls per reply at most: the voice model's quota is small)
+      const pieces = [parts[0], parts.slice(1).join(" ")].filter(Boolean);
+      let i = 0;
+      if (Date.now() >= this.serverVoiceAfter) {
+        this.abort = new AbortController();
+        const signal = this.abort.signal;
+        const fetched = pieces.map((t, n) =>
+          requestAudio("/assistant/speak", { text: t }, signal, n === 0 ? FIRST_VOICE_MS : NEXT_VOICE_MS).then((b) => this.ctx.decodeAudioData(b)),
+        );
+        fetched.forEach((f) => f.catch(() => undefined));
+        try {
+          for (; i < pieces.length; i++) {
+            const audio = await fetched[i];
+            if (turn !== this.turn) return;
+            if (this.ctx.state === "suspended") await this.ctx.resume();
+            await this.play(audio, () => begin("gemini"));
+            if (turn !== this.turn) return;
+          }
+        } catch (e) {
+          if (turn !== this.turn || (e as Error).name === "AbortError") return;
+          // the server voice is unavailable or too slow (no key, quota, network): the browser's says the rest
+          this.abort.abort();
+          this.serverVoiceAfter = Date.now() + 60_000;
+        }
+      }
+      // the browser's voice, a sentence or so at a time (Chrome cuts long utterances off)
+      for (const part of speechChunks(pieces.slice(i).join(" "))) {
+        const ok = await this.browserSay(part, () => begin("browser"));
+        if (turn !== this.turn) return;
+        if (!ok) break;
+      }
+      this.playing = null;
+      begin("none");
+      ended();
+    })();
+    return firstSound;
+  }
+
+  /** Play one decoded piece; resolves when it ends or is stopped. */
+  private play(audio: AudioBuffer, onStart: () => void): Promise<void> {
+    return new Promise((resolve) => {
+      const src = this.ctx.createBufferSource();
+      src.buffer = audio;
+      src.connect(this.analyser);
+      src.onended = () => {
+        if (this.source === src) this.source = null;
+        resolve();
+      };
+      this.source = src;
+      this.playing = "gemini";
+      src.start();
+      onStart();
+    });
+  }
+
+  /**
+   * One piece in the browser's voice. Resolves true when it was spoken, false when it couldn't be. A watchdog
+   * ends it if the browser never reports start or end (Chrome sometimes drops both), so voice mode never hangs.
+   */
+  private browserSay(text: string, onStart: () => void): Promise<boolean> {
     const synth = typeof window !== "undefined" ? window.speechSynthesis : undefined;
-    if (synth) {
-      return new Promise<VoiceKind>((resolve) => {
-        const u = new SpeechSynthesisUtterance(text);
-        const voices = synth.getVoices();
-        u.voice = voices.find((v) => v.lang === "en-IN") ?? voices.find((v) => v.lang.startsWith("en-GB")) ?? voices.find((v) => v.lang.startsWith("en")) ?? null;
-        u.rate = 1.02;
-        u.onstart = () => {
-          this.playing = "browser";
-          this.wordAt = performance.now();
-          resolve("browser");
-        };
-        u.onboundary = () => {
-          this.wordAt = performance.now();
-        };
-        // ended either way, so voice mode never stays on "Speaking"; resolve("none") only if it never started
-        const finish = () => {
-          const started = this.playing === "browser";
-          this.playing = null;
-          this.utter = null;
-          ended();
-          if (!started) resolve("none");
-        };
-        u.onend = finish;
-        u.onerror = finish;
-        this.utter = u;
-        synth.speak(u);
-      });
-    }
-    ended();
-    return "none";
+    if (!synth) return Promise.resolve(false);
+    return new Promise<boolean>((resolve) => {
+      const u = new SpeechSynthesisUtterance(text);
+      const voices = synth.getVoices();
+      u.voice = voices.find((v) => v.lang === "en-IN") ?? voices.find((v) => v.lang.startsWith("en-GB")) ?? voices.find((v) => v.lang.startsWith("en")) ?? null;
+      u.rate = 1.02;
+      let began = false;
+      const finish = (ok: boolean) => {
+        window.clearTimeout(this.watchdog);
+        if (this.utter !== u) return;
+        this.utter = null;
+        this.playing = null;
+        resolve(ok);
+      };
+      const arm = (ms: number, ok: boolean) => {
+        window.clearTimeout(this.watchdog);
+        this.watchdog = window.setTimeout(() => {
+          synth.cancel();
+          finish(ok);
+        }, ms);
+      };
+      u.onstart = () => {
+        began = true;
+        this.playing = "browser";
+        this.wordAt = performance.now();
+        onStart();
+        arm(3000 + text.split(/\s+/).length * 600, true);
+      };
+      u.onboundary = () => {
+        this.wordAt = performance.now();
+      };
+      u.onend = () => finish(began);
+      u.onerror = () => finish(began);
+      this.utter = u;
+      synth.cancel(); // a stuck queue would hold this one back forever
+      synth.speak(u);
+      arm(4000, false);
+    });
   }
 
   /** Output loudness 0..1: measured from the audio for the server voice, from real word boundaries for the browser's. */
@@ -310,6 +414,8 @@ export class Speaker {
   }
 
   stop() {
+    this.turn++;
+    window.clearTimeout(this.watchdog);
     this.abort?.abort();
     this.abort = null;
     if (this.source) {

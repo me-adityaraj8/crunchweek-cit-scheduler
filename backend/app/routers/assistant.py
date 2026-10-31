@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, File, Response, UploadFile
 from sqlalchemy.orm import Session
 
@@ -12,6 +14,7 @@ from ..schemas import AssistantIn, BookingParseOut, ChangeParseOut, SpeakIn, Tra
 from ..services import proposals, state
 
 router = APIRouter(tags=["assistant"])
+log = logging.getLogger("cit")
 
 MAX_AUDIO_BYTES = 4 * 1024 * 1024        # ~2 minutes of 16 kHz mono WAV; also under Vercel's request limit
 
@@ -28,7 +31,8 @@ async def transcribe(audio: UploadFile = File(...), user: User = Depends(current
         raise ApiError(413, "too_large", "That recording is too long. Keep it under two minutes.")
     try:
         text = llm.transcribe(data, mime)
-    except llm.LLMUnavailable:
+    except llm.LLMUnavailable as e:
+        log.warning("transcribe failed: %s", e)
         raise ApiError(503, "llm_unavailable", "Voice input needs the AI assistant, which isn't available right "
                                                "now. Type your request instead.")
     if not text:
@@ -43,7 +47,8 @@ def speak(body: SpeakIn, user: User = Depends(current_user)):
     use its own voice; never an empty or made-up sound."""
     try:
         wav = llm.speak(body.text)
-    except llm.LLMUnavailable:
+    except llm.LLMUnavailable as e:
+        log.warning("speak failed: %s", e)
         raise ApiError(503, "tts_unavailable", "Velo's voice isn't available right now.")
     return Response(content=wav, media_type="audio/wav", headers={"Cache-Control": "no-store"})
 

@@ -1,5 +1,5 @@
 import { MessageSquareText } from "lucide-react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "motion/react";
 import { useEffect } from "react";
 import { useMediaQuery } from "@/lib/hooks";
 import { cn } from "@/lib/utils";
@@ -22,10 +22,13 @@ const DOT: Record<string, string> = {
 };
 
 function Stage({ onEnd, onChat }: { onEnd: () => void; onChat: () => void }) {
-  const v = useVoiceSession(true);
+  // the mic, recognition and voice stop the moment voice mode is ended, not when its exit animation finishes
+  const v = useVoiceSession(useIsPresent());
   const reduce = useReducedMotion();
   const wide = useMediaQuery("(min-width: 768px)");
   const { phase } = v.state;
+  // waiting for Velo's voice to be ready reads as thinking, not as speaking in silence
+  const shown = phase === "speaking" && !v.audible ? "processing" : phase;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -61,8 +64,8 @@ function Stage({ onEnd, onChat }: { onEnd: () => void; onChat: () => void }) {
       <header className="flex w-full max-w-[1100px] items-center gap-3 px-5 pb-2 pt-[calc(16px+env(safe-area-inset-top))]">
         <span className="text-[12px] font-black tracking-[0.18em] text-white/80">VELO</span>
         <span className="flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-3 py-1 text-[12.5px] font-semibold" aria-live="polite">
-          <span className={cn("size-2 rounded-full", DOT[phase] ?? "bg-white/40", (phase === "listening" || phase === "processing") && !reduce && "animate-pulse")} />
-          {PHASE_LABEL[phase]}
+          <span className={cn("size-2 rounded-full", DOT[shown] ?? "bg-white/40", (shown === "listening" || shown === "processing") && !reduce && "animate-pulse")} />
+          {PHASE_LABEL[shown]}
         </span>
         <span className="ml-auto hidden text-right text-[11.5px] leading-4 text-white/45 sm:block">
           {hearing}

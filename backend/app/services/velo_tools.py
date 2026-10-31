@@ -777,7 +777,8 @@ def create_booking_draft(ctx: Ctx, a: DraftArgs) -> Out:
             "would_be": place.get("status"), "placed": {k: place.get(k) for k in ("room_id", "when", "reason")},
             "violations": chk["violations"], "alternatives": [{k: x[k] for k in ("room_id", "when")} for x in chk["alternatives"]]}
     mem = {"day": d["windows"][0]["day"], "from_period": a.from_period, "to_period": a.to_period,
-           "attendance": a.attendance, "room_id": d["requested_room"]}
+           "attendance": a.attendance, "room_id": d["requested_room"],
+           "draft": a.model_dump(exclude_defaults=True)}      # the whole draft, so "add a projector" can change it
     if not chk["valid"] or not place.get("room_id"):
         data["sendable"] = False
         return Out(data, [card("preview", draft=d, guessed=[], notes=[], check=chk)], memory=mem)

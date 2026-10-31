@@ -20,7 +20,7 @@ def velo(body: VeloIn, db: Session = Depends(get_db), user: User = Depends(curre
     out = velo_agent.run(db, user, body) if chat.available() else None
     if out is None:
         out = answer(db, user, body)
-        out["conversation_id"] = body.conversation_id
+        out["conversation_id"] = velo_agent.record(db, user, body, out)
     return out
 
 

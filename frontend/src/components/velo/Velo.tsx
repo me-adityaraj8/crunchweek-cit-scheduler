@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { VeloCards } from "./cards";
 import { contextChips, contextLabel, starters } from "./context";
 import { OrbView, StillOrb } from "./live/OrbView";
+import { unlockAudio } from "./live/voice/engine";
 import { useVelo, type Msg } from "./VeloProvider";
 
 const EASE = [0.23, 1, 0.32, 1] as const;
@@ -238,7 +239,10 @@ function Composer({ chips }: { chips: string[] }) {
         />
         <button
           type="button"
-          onClick={() => setVoiceOpen(true)}
+          onClick={() => {
+            unlockAudio();
+            setVoiceOpen(true);
+          }}
           aria-label="Talk to Velo"
           title="Talk to Velo"
           className="press grid size-11 shrink-0 place-items-center rounded-[4px] border-2 border-rule-strong bg-[radial-gradient(circle_at_35%_30%,#ffb3d8,#ff4fa3_45%,#8b5cf6)] text-white shadow-mount"
@@ -267,11 +271,12 @@ export function VeloPanel() {
   }, [open, messages.length, pending, reduce]);
 
   useEffect(() => {
-    if (!open) return;
+    // while voice mode is up, Esc ends voice mode only, so the chat (and its mic button) stays open
+    if (!open || voiceOpen) return;
     const onKey = (e: globalThis.KeyboardEvent) => e.key === "Escape" && setOpen(false);
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, setOpen]);
+  }, [open, setOpen, voiceOpen]);
 
   return (
     <AnimatePresence>

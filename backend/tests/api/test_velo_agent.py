@@ -268,6 +268,19 @@ def test_model_down_falls_back_to_rules(client, heads, gen, model):
     assert out["mode"] == "keywords" and out["intent"] == "find_rooms"
 
 
+def test_a_turn_answered_by_keywords_stays_in_the_conversation(client, heads, gen, model):
+    # the model is rate limited for one turn: the next follow-up must still see that turn, not an older one
+    first = ask(client, heads, "admin", "is LH-13 free on monday?") if model(say("There's no LH-13.")) else None
+    cid = first["conversation_id"]
+    model(RuntimeError("429 rate limit"))
+    second = ask(client, heads, "admin", "is LH-1 free on monday morning?", conversation_id=cid)
+    assert second["mode"] == "keywords" and second["conversation_id"] == cid
+    s = model(say("On Tuesday LH-1 is busy in period 4."))
+    ask(client, heads, "admin", "what about tuesday?", conversation_id=cid)
+    said = [m["content"] for m in s.seen[0]["messages"] if m["role"] in ("user", "assistant")]
+    assert "is LH-1 free on monday morning?" in said and second["reply"] in said
+
+
 def test_model_down_after_a_tool_keeps_the_cards(client, heads, gen, model):
     model(call("find_available_rooms", day="TUE", from_period=3, to_period=4), RuntimeError("timeout"))
     out = ask(client, heads, "faculty", "free rooms tuesday 10 to 12")
@@ -339,3 +352,27 @@ def test_rejected_key_falls_back_to_the_other(monkeypatch):
         return {"content": "from gemini"}
     monkeypatch.setattr(chat, "_ask", fake)
     assert chat._post([], []) == {"content": "from gemini"}
+
+
+# ---------------------------------------------------------------- an open draft stays the subject
+def _system(s):
+    return s.seen[0]["messages"][0]["content"]
+
+
+def test_a_follow_up_changes_the_open_draft(client, heads, gen, model):
+    out, _ = _book(client, heads, model)
+    s = model(say("Which room?"))
+    ask(client, heads, "club", "add a projector", conversation_id=out["conversation_id"])
+    sys = _system(s)
+    assert "Robo demo" in sys and '"attendance": 40' in sys and "THU" in sys
+
+
+def test_a_draft_from_the_keyword_router_is_kept_for_the_agent(client, heads, gen, model):
+    model(RuntimeError("429 rate limit"))
+    first = ask(client, heads, "faculty", "book LH-4 tuesday 2 to 3 pm for 50 people for a lecture")
+    assert first["mode"] == "keywords" and first["draft_text"]
+    s = model(say("Added."))
+    ask(client, heads, "faculty", "add a projector", conversation_id=first["conversation_id"],
+        draft_text=first["draft_text"], last_intent=first["intent"])
+    sys = _system(s)
+    assert "LH-4" in sys and "50 people" in sys

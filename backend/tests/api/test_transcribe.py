@@ -50,3 +50,33 @@ def test_silence_is_a_clear_error(client, heads, monkeypatch):
 def test_needs_login(client):
     r = client.post("/api/assistant/transcribe", files={"audio": ("voice.wav", WAV, "audio/wav")})
     assert r.status_code == 401
+
+
+def _wav(samples: list[int], rate: int = 16000) -> bytes:
+    import io
+    import wave
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(rate)
+        w.writeframes(b"".join(int(s).to_bytes(2, "little", signed=True) for s in samples))
+    return buf.getvalue()
+
+
+def test_a_silent_recording_never_reaches_the_model(client, heads, monkeypatch):
+    # speech models invent words for silence; a recording with no voice in it is "no speech", decided here
+    import random
+    called = []
+    monkeypatch.setattr(llm, "audio_transport", lambda *a: called.append(1) or "Main auditorium book karna hai")
+    hiss = [random.randint(-60, 60) for _ in range(16000 * 2)]
+    r = _post(client, heads, data=_wav(hiss))
+    assert r.status_code == 422 and r.json()["error"]["code"] == "no_speech" and not called
+
+
+def test_a_recording_with_a_voice_is_transcribed(client, heads, monkeypatch):
+    import math
+    monkeypatch.setattr(llm, "audio_transport", lambda *a: "is LH-1 free on Monday")
+    tone = [6000 * math.sin(2 * math.pi * 220 * i / 16000) for i in range(16000)]
+    r = _post(client, heads, data=_wav([0] * 8000 + tone + [0] * 8000))
+    assert r.status_code == 200 and r.json()["text"] == "is LH-1 free on Monday"

@@ -3,7 +3,7 @@ import { errorMessage } from "@/api/client";
 import type { VeloOut } from "@/api/types";
 import { useVelo } from "../../VeloProvider";
 import { moodFor, type Mood } from "../expression";
-import { browserRecognizer, listenOnce, Mic, MicError, Speaker, transcribe, type VoiceKind } from "./engine";
+import { browserRecognizer, listenOnce, Mic, MicError, Speaker, transcribe, unlockAudio, type VoiceKind } from "./engine";
 import { initial, voice } from "./machine";
 
 export type Hearing = "browser" | "server";
@@ -17,6 +17,8 @@ export function useVoiceSession(active: boolean) {
   const [state, dispatch] = useReducer(voice, initial);
   const [hearing, setHearing] = useState<Hearing>(() => (browserRecognizer() ? "browser" : "server"));
   const [voiceKind, setVoiceKind] = useState<VoiceKind | null>(null);
+  // "speaking" starts when the reply arrives; sound starts once the voice is ready. Until then it's still thinking.
+  const [audible, setAudible] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [last, setLast] = useState<VeloOut | null>(null);
   const [moment, setMoment] = useState<Mood | null>(null);
@@ -66,23 +68,8 @@ export function useVoiceSession(active: boolean) {
   const [round, setRound] = useState(0);
   useEffect(() => {
     if (state.phase !== "listening" || !mic.current) return;
-    const Ctor = browserRecognizer();
-    if (hearing === "browser" && Ctor) {
-      const stop = listenOnce(Ctor, {
-        interim: (t) => dispatch({ type: "HEARD", text: t }),
-        final: (t) => dispatch({ type: "FINAL", text: t }),
-        ended: () => window.setTimeout(() => phase.current === "listening" && setRound((n) => n + 1), 200),
-        failed: (kind, message) => {
-          // the browser's recogniser needs its own online service; the server can transcribe instead
-          if (kind === "network") setHearing("server");
-          else dispatch({ type: "FAIL", message });
-        },
-      });
-      return stop;
-    }
     const m = mic.current;
-    m.captureUtterance((wav) => {
-      if (!wav) return setRound((n) => n + 1);
+    const viaServer = (wav: Blob) => {
       setTranscribing(true);
       transcribe(wav).then(
         (text) => {
@@ -93,10 +80,49 @@ export function useVoiceSession(active: boolean) {
         },
         (e) => {
           setTranscribing(false);
-          dispatch({ type: "FAIL", message: `${errorMessage(e)} You can type to Velo instead.` });
+          if (phase.current === "listening") dispatch({ type: "FAIL", message: `${errorMessage(e)} You can type to Velo instead.` });
         },
       );
-    });
+    };
+    const Ctor = browserRecognizer();
+    if (hearing === "browser" && Ctor) {
+      let words = false;
+      let backup = 0;
+      let stopRec: (() => void) | null = listenOnce(Ctor, {
+        interim: (t) => {
+          words = true;
+          dispatch({ type: "HEARD", text: t });
+        },
+        final: (t) => {
+          words = true;
+          dispatch({ type: "FINAL", text: t });
+        },
+        ended: () => window.setTimeout(() => phase.current === "listening" && setRound((n) => n + 1), 200),
+        failed: (kind, message) => {
+          // the browser's recogniser needs its own online service; the server can transcribe instead
+          if (kind === "network") setHearing("server");
+          else dispatch({ type: "FAIL", message });
+        },
+      });
+      // the recording is a backup: some browsers' recognisers give no words and no error (no speech service,
+      // or iOS sharing the mic). If the mic heard someone speak and the recogniser didn't, the server transcribes it.
+      m.captureUtterance((wav) => {
+        if (!wav) return;
+        backup = window.setTimeout(() => {
+          if (words || phase.current !== "listening") return;
+          stopRec?.();
+          stopRec = null;
+          setHearing("server");
+          viaServer(wav);
+        }, 1500);
+      });
+      return () => {
+        window.clearTimeout(backup);
+        stopRec?.();
+        m.stopCapture();
+      };
+    }
+    m.captureUtterance((wav) => (wav ? viaServer(wav) : setRound((n) => n + 1)));
     return () => m.stopCapture();
   }, [state.phase, hearing, round]);
 
@@ -123,8 +149,17 @@ export function useVoiceSession(active: boolean) {
   useEffect(() => {
     if (state.phase !== "speaking" || !state.reply || !speaker.current) return;
     const s = speaker.current;
-    s.say(state.reply, () => dispatch({ type: "SPOKEN" })).then(setVoiceKind);
-    return () => s.stop();
+    let live = true;
+    setAudible(false);
+    s.say(state.reply, () => dispatch({ type: "SPOKEN" })).then((k) => {
+      if (!live) return;
+      setVoiceKind(k);
+      setAudible(k !== "none");
+    });
+    return () => {
+      live = false;
+      s.stop();
+    };
   }, [state.phase, state.reply]);
 
   // after a reply: a moment of the reply's mood (happy when something was found, confused when Velo asks)
@@ -138,7 +173,7 @@ export function useVoiceSession(active: boolean) {
   }, [state.phase, last]);
 
   const mood: Mood =
-    state.phase === "error" ? "error" : state.phase === "processing" || state.phase === "starting" ? "thinking" : state.phase === "speaking" ? "speaking" : state.phase === "listening" ? (moment ?? "listening") : "idle";
+    state.phase === "error" ? "error" : state.phase === "processing" || state.phase === "starting" || (state.phase === "speaking" && !audible) ? "thinking" : state.phase === "speaking" ? "speaking" : state.phase === "listening" ? (moment ?? "listening") : "idle";
 
   const level = useCallback(() => {
     if (phase.current === "speaking") return speaker.current?.level() ?? 0;
@@ -161,6 +196,7 @@ export function useVoiceSession(active: boolean) {
     level,
     spectrum,
     last,
+    audible,
     hearing,
     voiceKind,
     transcribing,
@@ -181,6 +217,9 @@ export function useVoiceSession(active: boolean) {
         }
       }
     },
-    retry: () => dispatch({ type: "RETRY" }),
+    retry: () => {
+      unlockAudio(); // the retry tap opens a new mic, so its audio needs unlocking too
+      dispatch({ type: "RETRY" });
+    },
   };
 }
