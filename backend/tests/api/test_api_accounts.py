@@ -46,3 +46,19 @@ def test_api_lists_them_with_departments_and_every_one_can_log_in(client):
         assert r.status_code == 200, (email, r.text)
     me = client.get("/api/me", headers={"Authorization": f"Bearer {r.json()['token']}"}).json()
     assert me["name"] == "Dramatics Society" and me["role"] == "club"
+
+
+def test_startup_adds_demo_accounts_missing_from_an_older_database(client):
+    from sqlalchemy import delete, select
+
+    from backend.app.db import SessionLocal
+    from backend.app.models import User
+    from backend.app.services import state
+
+    with SessionLocal() as db:
+        db.execute(delete(User).where(User.email == "f12@cit.demo"))
+        db.commit()
+        state.ensure_seeded(db)
+        assert db.scalar(select(User).where(User.email == "f12@cit.demo")) is not None
+    r = client.post("/api/auth/login", json={"email": "f12@cit.demo", "password": PW})
+    assert r.status_code == 200, r.text

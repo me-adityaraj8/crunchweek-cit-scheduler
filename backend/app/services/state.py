@@ -248,3 +248,13 @@ def ensure_seeded(db: Session) -> None:
             reset_demo(db)
         except IntegrityError:      # two fresh instances seeding at once: the other one won
             db.rollback()
+        return
+    # a database seeded by an older version may lack some demo accounts: add them, touch nothing else
+    _, ds = active_dataset(db)
+    have = set(db.scalars(select(User.email)))
+    if any(a["email"] not in have for a in demo_accounts(ds)):
+        try:
+            upsert_demo_users(db, ds)
+            db.commit()
+        except IntegrityError:
+            db.rollback()
