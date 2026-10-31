@@ -1,15 +1,39 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, File, UploadFile
 from sqlalchemy.orm import Session
 
 from ..auth import current_user, require_roles
 from ..db import get_db
+from ..errors import ApiError
+from ..llm import client as llm
 from ..llm.parse_booking import parse_booking
 from ..llm.parse_change import parse_change
 from ..models import User
-from ..schemas import AssistantIn, BookingParseOut, ChangeParseOut
+from ..schemas import AssistantIn, BookingParseOut, ChangeParseOut, TranscribeOut
 from ..services import proposals, state
 
 router = APIRouter(tags=["assistant"])
+
+MAX_AUDIO_BYTES = 4 * 1024 * 1024        # ~2 minutes of 16 kHz mono WAV; also under Vercel's request limit
+
+
+@router.post("/assistant/transcribe", response_model=TranscribeOut)
+async def transcribe(audio: UploadFile = File(...), user: User = Depends(current_user)):
+    """Voice input for the assistant: a short recording in, its text out. The text is put in the message
+    box for the person to read and send, so it goes through exactly the same checks as typed text."""
+    mime = (audio.content_type or "").split(";")[0].strip().lower()
+    if not mime.startswith("audio/"):
+        raise ApiError(415, "unsupported_media", "Send an audio recording (WAV)")
+    data = await audio.read(MAX_AUDIO_BYTES + 1)
+    if len(data) > MAX_AUDIO_BYTES:
+        raise ApiError(413, "too_large", "That recording is too long. Keep it under two minutes.")
+    try:
+        text = llm.transcribe(data, mime)
+    except llm.LLMUnavailable:
+        raise ApiError(503, "llm_unavailable", "Voice input needs the AI assistant, which isn't available right "
+                                               "now. Type your request instead.")
+    if not text:
+        raise ApiError(422, "no_speech", "I couldn't hear any words. Try again a little closer to the mic.")
+    return {"text": text}
 
 
 @router.post("/assistant/booking", response_model=BookingParseOut)

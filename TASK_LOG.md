@@ -17,3 +17,4 @@
 | 2026-10-31 | Aditya (Laptop 1) | Deployed API to Vercel (project velora); 2 CPUs there, SOLVER_WORKERS=2 gives optimal soft 3 in 49 s |
 | 2026-10-31 | Aditya (Laptop 1) | Neon connected; SOLVER_TIME_LIMIT_S=120; live end-to-end check at velora-campus.vercel.app: soft 3, exams 0, bookings 67/70, disruption 12 moved, validator 0 hard |
 | 2026-10-31 | Aditya (Laptop 1) | Renamed the product to Velora (app, API title, export team name, docs); frontend served on Vercel at / |
+| 2026-10-31 | Aditya (Laptop 1) | Book a venue: mic button (browser WAV -> Gemini transcription -> message box), "guessed" badge reworded to "auto-filled, please check" |

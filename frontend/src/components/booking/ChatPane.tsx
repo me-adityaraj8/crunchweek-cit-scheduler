@@ -1,12 +1,13 @@
-import { Bot, CornerDownLeft, Loader2, TriangleAlert } from "lucide-react";
+import { Bot, CornerDownLeft, Loader2, Mic, Square, TriangleAlert } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { errorMessage } from "@/api/client";
-import { useParseBooking } from "@/api/hooks";
+import { useParseBooking, useTranscribe } from "@/api/hooks";
 import type { BookingParse } from "@/api/types";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { dayName } from "@/lib/time";
+import { canRecord, useRecorder } from "@/lib/wav";
 import { cn } from "@/lib/utils";
 
 interface Message {
@@ -32,6 +33,8 @@ const EXAMPLES = [
  */
 export function ChatPane({ days, onDraft }: { days: string[]; onDraft: (r: BookingParse) => void }) {
   const parse = useParseBooking();
+  const voice = useTranscribe();
+  const rec = useRecorder(transcribe);
   const [text, setText] = useState("");
   const [today, setToday] = useState(() => {
     const d = new Date().getDay();
@@ -58,7 +61,7 @@ export function ChatPane({ days, onDraft }: { days: string[]; onDraft: (r: Booki
           const summary = r.follow_up
             ? "I filled what I could. One thing is missing:"
             : r.guessed_fields.length
-              ? "Done. Check the fields marked in yellow: I guessed those."
+              ? "Done. I filled in the fields marked in yellow from your message; please check them."
               : "Done. The form is filled; check it and submit.";
           setMessages((m) => [
             ...m,
@@ -69,6 +72,32 @@ export function ChatPane({ days, onDraft }: { days: string[]; onDraft: (r: Booki
           setMessages((m) => [...m, { id: ++seq.current, role: "assistant", text: `${errorMessage(e)} You can fill the form yourself.`, error: true }]),
       },
     );
+  }
+
+  function say(t: string) {
+    setMessages((m) => [...m, { id: ++seq.current, role: "assistant", text: t, error: true }]);
+  }
+
+  // voice goes into the box, not straight to the assistant, so the person can read and fix it first
+  function transcribe(wav: Blob) {
+    voice.mutate(wav, {
+      onSuccess: (r) => setText((t) => (t.trim() ? `${t.trimEnd()} ` : "") + r.text),
+      onError: (e) => say(errorMessage(e)),
+    });
+  }
+
+  async function toggleMic() {
+    if (rec.recording) {
+      const wav = rec.stop();
+      if (wav) transcribe(wav);
+      else say("I didn't catch any sound. Try again, or type your request.");
+      return;
+    }
+    try {
+      await rec.start();
+    } catch {
+      say("The microphone is blocked. Allow mic access for this site in your browser, or type your request.");
+    }
   }
 
   function submit(e: FormEvent) {
@@ -146,6 +175,20 @@ export function ChatPane({ days, onDraft }: { days: string[]; onDraft: (r: Booki
         </AnimatePresence>
       </div>
 
+      {(rec.recording || voice.isPending) && (
+        <p className="flex items-center gap-2 border-t border-rule px-4 pt-2.5 text-[12.5px] font-semibold text-ink-2" aria-live="polite">
+          {rec.recording ? (
+            <>
+              <span className="size-2 animate-pulse rounded-full bg-stop" />
+              Listening… {Math.floor(rec.seconds / 60)}:{String(rec.seconds % 60).padStart(2, "0")}. Press stop when you're done.
+            </>
+          ) : (
+            <>
+              <Loader2 className="size-3.5 animate-spin" /> Turning your voice into text
+            </>
+          )}
+        </p>
+      )}
       <form onSubmit={submit} className="flex items-end gap-2 border-t border-rule p-3">
         <label htmlFor="assistant-input" className="sr-only">
           Describe your request
@@ -162,9 +205,23 @@ export function ChatPane({ days, onDraft }: { days: string[]; onDraft: (r: Booki
           }}
           rows={2}
           maxLength={2000}
-          placeholder="e.g. auditorium Friday 6 pm, 300 people, stage and mic"
+          placeholder="e.g. auditorium Friday 6 pm, 300 people, stage and mic. Or press the mic and say it."
           className="min-h-[44px] flex-1 resize-none rounded-[8px] border border-rule-strong bg-sheet px-3 py-2 text-[14px] leading-5 placeholder:text-ink-3 focus-visible:border-ink focus-visible:shadow-[0_0_0_3px_var(--signal)] focus-visible:outline-none"
         />
+        {canRecord() && (
+          <Button
+            type="button"
+            variant={rec.recording ? "danger" : "outline"}
+            size="icon"
+            onClick={toggleMic}
+            disabled={voice.isPending || parse.isPending}
+            aria-pressed={rec.recording}
+            aria-label={rec.recording ? "Stop recording" : "Speak your request"}
+            title={rec.recording ? "Stop recording" : "Speak your request (English or Hinglish)"}
+          >
+            {voice.isPending ? <Loader2 className="animate-spin" /> : rec.recording ? <Square /> : <Mic />}
+          </Button>
+        )}
         <Button type="submit" variant="primary" size="icon" disabled={!text.trim() || parse.isPending} aria-label="Send">
           {parse.isPending ? <Loader2 className="animate-spin" /> : <CornerDownLeft />}
         </Button>

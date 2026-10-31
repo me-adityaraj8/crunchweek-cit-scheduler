@@ -1,5 +1,6 @@
 """The one place the product calls an LLM (Gemini, JSON-schema output). Any failure raises
 LLMUnavailable, and every caller has a non-LLM fallback, so the app works without a key."""
+import base64
 import json
 from pathlib import Path
 
@@ -53,6 +54,33 @@ def ask(system: str, user_text: str, schema: dict | None = None) -> dict | str:
     if not isinstance(data, dict):
         raise LLMUnavailable("The model did not return a JSON object")
     return data
+
+
+def _post_audio(system: str, audio: bytes, mime: str) -> str:
+    body = {"systemInstruction": {"parts": [{"text": system}]},
+            "contents": [{"role": "user", "parts": [{"inlineData": {"mimeType": mime,
+                                                                    "data": base64.b64encode(audio).decode()}}]}],
+            "generationConfig": {"temperature": 0}}
+    r = httpx.post(URL.format(model=settings.gemini_model), json=body, timeout=max(settings.llm_timeout_s, 20),
+                   headers={"x-goog-api-key": settings.gemini_api_key})
+    r.raise_for_status()
+    parts = r.json()["candidates"][0]["content"].get("parts", [])
+    return "".join(p.get("text", "") for p in parts)
+
+
+# tests replace this with a fake; signature (system, audio, mime) -> str
+audio_transport = _post_audio
+
+
+def transcribe(audio: bytes, mime: str) -> str:
+    """Speech to text for the assistant's mic button. Returns "" when no words were heard."""
+    if not settings.gemini_api_key and audio_transport is _post_audio:
+        raise LLMUnavailable("No GEMINI_API_KEY configured")
+    try:
+        out = audio_transport(prompt("transcribe"), audio, mime)
+    except Exception as e:
+        raise LLMUnavailable(f"{type(e).__name__}: {e}"[:200]) from e
+    return " ".join(str(out or "").split())
 
 
 def status() -> str:

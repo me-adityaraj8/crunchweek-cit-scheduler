@@ -166,6 +166,15 @@ export const usePutSettings = () => useStateMutation((body: Settings) => request
 export const useParseBooking = () =>
   useMutation({ mutationFn: (body: { text: string; today?: string }) => request<BookingParse>("/assistant/booking", { body }) });
 
+export const useTranscribe = () =>
+  useMutation({
+    mutationFn: (wav: Blob) => {
+      const form = new FormData();
+      form.append("audio", wav, "voice.wav");
+      return request<{ text: string }>("/assistant/transcribe", { form });
+    },
+  });
+
 export const useParseChange = () =>
   useMutation({ mutationFn: (body: { text: string; today?: string }) => request<ChangeParse>("/assistant/change", { body }) });
 

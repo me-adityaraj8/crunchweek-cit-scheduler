@@ -44,7 +44,7 @@ export function Field({
           {label}
           {guessed && (
             <span className="rounded-[4px] bg-signal px-1.5 py-px text-[11px] font-bold text-signal-ink [font-stretch:85%]">
-              guessed, check it
+              auto-filled, please check
             </span>
           )}
         </Label>

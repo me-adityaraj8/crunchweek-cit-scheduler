@@ -4,7 +4,7 @@
 
 | Model | Called from | Used for |
 | --- | --- | --- |
-| Google Gemini 2.5 Flash (`GEMINI_MODEL`), JSON-schema output | `backend/app/llm/client.py` | Turning plain English/Hinglish venue requests into booking form fields (`parse_booking.py`); turning faculty/coordinator chat into a change request (`parse_change.py`); rewording reasons the code already computed into plain sentences (`reword.py`, only when the user asks) |
+| Google Gemini 2.5 Flash (`GEMINI_MODEL`), JSON-schema output | `backend/app/llm/client.py` | Turning plain English/Hinglish venue requests into booking form fields (`parse_booking.py`); turning faculty/coordinator chat into a change request (`parse_change.py`); rewording reasons the code already computed into plain sentences (`reword.py`, only when the user asks); transcribing voice input from the assistant's mic button (`transcribe()`, prompt `prompts/transcribe.md`). The transcript only fills the message box: the person reads it and sends it like typed text |
 
 If the key is missing, the call fails, times out (`LLM_TIMEOUT_S`) or returns anything but valid JSON, the app uses keyword rules in the same files instead and tells the user. The manual booking form never needs the LLM.
 
@@ -14,7 +14,7 @@ If the key is missing, the call fails, times out (`LLM_TIMEOUT_S`) or returns an
 
 ## Where prompts are kept
 
-`backend/app/llm/prompts/`: `booking.md`, `change.md`, `reword.md`. Room, group and course lists are passed in as data on each call, never written into the prompts.
+`backend/app/llm/prompts/`: `booking.md`, `change.md`, `reword.md`, `transcribe.md`. Room, group and course lists are passed in as data on each call, never written into the prompts.
 
 ## How the assistant is tested
 

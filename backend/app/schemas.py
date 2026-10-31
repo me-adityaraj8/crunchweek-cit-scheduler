@@ -497,6 +497,10 @@ class SettingsOut(BaseModel):
     lab_owners: dict[str, list[str]]
 
 
+class TranscribeOut(BaseModel):
+    text: str
+
+
 class Health(BaseModel):
     ok: bool
     ortools: str
