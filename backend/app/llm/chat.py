@@ -10,6 +10,7 @@ from .client import LLMUnavailable
 URLS = {"groq": "https://api.groq.com/openai/v1/chat/completions",
         "gemini": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"}
 RETRY_STATUS = {429, 500, 502, 503, 504}
+NEXT_STATUS = RETRY_STATUS | {401, 403}     # a rejected key is worth trying the other provider for
 MAX_WAIT_S = 4.0
 
 
@@ -54,7 +55,7 @@ def _post(messages: list[dict], tools: list[dict]) -> dict:
             return _ask(name, key, model, messages, tools)
         except httpx.HTTPStatusError as e:
             last = e
-            if e.response.status_code not in RETRY_STATUS:
+            if e.response.status_code not in NEXT_STATUS:
                 raise
         except httpx.TransportError as e:       # timeout or connection failure: try the other provider
             last = e

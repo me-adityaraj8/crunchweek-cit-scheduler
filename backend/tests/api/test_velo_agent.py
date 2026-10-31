@@ -272,7 +272,16 @@ def test_model_down_after_a_tool_keeps_the_cards(client, heads, gen, model):
     model(call("find_available_rooms", day="TUE", from_period=3, to_period=4), RuntimeError("timeout"))
     out = ask(client, heads, "faculty", "free rooms tuesday 10 to 12")
     assert out["mode"] == "agent" and out["cards"][0]["kind"] == "rooms"
-    assert "couldn't finish" in out["reply"]
+    n = out["cards"][0]["data"]["total"]
+    assert out["reply"].startswith(f"{n} room") and "Tuesday" in out["reply"]      # answered from the tool result
+
+
+def test_model_down_after_occupancy_still_answers(client, heads, gen, model):
+    model(call("get_room_occupancy", room="cs lab 2", day="monday"), RuntimeError("429 tokens per minute"))
+    out = ask(client, heads, "admin", "monday ko cs lab 2 khali hai kya?")
+    card = out["cards"][0]["data"]
+    assert card["room"] == "CS-LAB-2"                      # not ELEC-LAB-2: "cs" is inside "electronics"
+    assert out["reply"].startswith("CS-LAB-2 on Monday:")
 
 
 def test_bad_arguments_and_unknown_tools_are_reported_to_the_model(client, heads, gen, model):
@@ -317,3 +326,16 @@ def test_rate_limited_provider_falls_back_to_the_other(monkeypatch):
         return {"content": "from gemini"}
     monkeypatch.setattr(chat, "_ask", fake)
     assert chat._post([], []) == {"content": "from gemini"} and tried == ["groq", "gemini"]
+
+
+def test_rejected_key_falls_back_to_the_other(monkeypatch):
+    import httpx
+    monkeypatch.setattr(chat, "providers", lambda: [("groq", "g", "gpt-oss"), ("gemini", "m", "flash")])
+
+    def fake(name, key, model, messages, tools):
+        if name == "groq":
+            raise httpx.HTTPStatusError("401", request=httpx.Request("POST", "http://x"),
+                                        response=httpx.Response(401))
+        return {"content": "from gemini"}
+    monkeypatch.setattr(chat, "_ask", fake)
+    assert chat._post([], []) == {"content": "from gemini"}

@@ -111,9 +111,16 @@ def _find(table: dict, key: str, what: str, name_key: str = "name") -> str:
     exact = [i for i, r in table.items() if str(r.get(name_key, "")).lower() == low]
     if len(exact) == 1:
         return exact[0]
-    words = [w for w in re.split(r"[\s.\-]+", low) if w and w not in ("dr", "prof", "the", "room", "hall")]
-    part = [i for i, r in table.items()
-            if words and all(w in f"{i} {r.get(name_key, '')}".lower() for w in words)]
+    squashed = re.sub(r"[^a-z0-9]", "", low)
+    same = [i for i in table if re.sub(r"[^a-z0-9]", "", i.lower()) == squashed]      # "cs lab 2" -> CS-LAB-2
+    if len(same) == 1:
+        return same[0]
+    words = [w for w in re.split(r"[^a-z0-9]+", low) if w and w not in ("dr", "prof", "the", "room")]
+
+    def fits(i: str, r: dict) -> bool:          # every word starts a word of the id or name ("comp" -> Computing)
+        tokens = re.split(r"[^a-z0-9]+", f"{i} {r.get(name_key, '')}".lower())
+        return all(any(t.startswith(w) for t in tokens) for w in words)
+    part = [i for i, r in table.items() if words and fits(i, r)]
     if len(part) == 1:
         return part[0]
     if part:

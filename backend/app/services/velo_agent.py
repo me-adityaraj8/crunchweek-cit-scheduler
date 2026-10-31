@@ -126,6 +126,58 @@ def _args(raw) -> dict | None:
     return v if isinstance(v, dict) else None
 
 
+def _hours(periods: list[int]) -> str:
+    """[1, 2, 3, 5] -> "P1–P3, P5"."""
+    out, run = [], []
+    for p in periods:
+        if run and p != run[-1] + 1:
+            out.append(run)
+            run = []
+        run.append(p)
+    if run:
+        out.append(run)
+    return ", ".join(f"P{r[0]}" if len(r) == 1 else f"P{r[0]}–P{r[-1]}" for r in out)
+
+
+def summary(results: list[tuple[str, dict]]) -> str:
+    """A plain answer built from the last tool result, for when the model can't write one. Only facts the tool
+    returned; the cards carry the detail."""
+    name, d = results[-1]
+    if "error" in d:
+        return d["error"]
+    if name == "get_room_occupancy":
+        busy = [p for p in d["periods"] if p["state"] != "free"]
+        head = f"{d['room']} on {d['day']}: " + (f"free {_hours(d['free_periods'])}" if d["free_periods"] else "no free period")
+        return head + (f"; busy {', '.join(sorted({p['label'] for p in busy}))[:160]}." if busy else ", nothing scheduled.")
+    if name == "find_available_rooms":
+        ids = ", ".join(r["id"] for r in d["rooms"][:5])
+        return f"{d['free_count']} room{'s' if d['free_count'] != 1 else ''} free {d['when']}" + (f": {ids}." if ids else ".")
+    if name == "get_room_details":
+        return f"{d['id']} {d['name']}: {d['type'].replace('_', ' ')}, {d['capacity']} seats ({d['exam_capacity']} in exams)."
+    if name in ("get_my_timetable", "get_faculty_schedule", "get_group_schedule"):
+        return f"{d.get('sessions', 0)} session{'s' if d.get('sessions') != 1 else ''} found; the table has the details."
+    if name == "create_booking_draft":
+        if d.get("sendable"):
+            return f"The checker would place it in {d['placed']['room_id']}, {d['placed']['when']}. Confirm below to send it."
+        return "This can't be sent as it is: " + "; ".join(d.get("violations") or ["no room fits"]) + "."
+    if d.get("pending_confirmation"):
+        return "Ready. Nothing changes until you press Confirm below."
+    if name == "navigate_to_page":
+        return f"Opening {d['opened']}."
+    if name == "get_exam_schedule":
+        return f"{d.get('count', 0)} exam{'s' if d.get('count') != 1 else ''} found." if "count" in d else d.get("note", "")
+    if name == "simulate_disruption":
+        return (f"It works: {d['moved']} session{'s' if d['moved'] != 1 else ''} would move, every hard rule kept. Nothing was saved."
+                if d["status"] == "feasible" else "There is no valid fix for that; the card lists why. Nothing was saved.")
+    if name == "get_pending_approvals":
+        return f"{d['count']} item{'s' if d['count'] != 1 else ''} waiting for you."
+    if name == "get_booking_status" and "count" in d:
+        return f"You have {d['count']} request{'s' if d['count'] != 1 else ''}."
+    if name == "get_booking_status":
+        return f"{d['id']} {d['title']}: {d['status_text']}." + (f" {d['reason']}" if d.get("reason") else "")
+    return "Here's what I found."
+
+
 def _raw(a) -> str:
     return a if isinstance(a, str) else json.dumps(a or {})
 
@@ -141,6 +193,7 @@ def run(db: Session, user: User, body: VeloIn) -> dict | None:
     ctx = velo_tools.Ctx(db, user, c.id, body.today)
 
     used, cards, errors, memory, nav = [], [], [], {}, None
+    results: list[tuple[str, dict]] = []
     seen: dict[str, str] = {}
     reply, failed = None, False
     for step in range(settings.agent_max_steps + 1):
@@ -176,6 +229,7 @@ def run(db: Session, user: User, body: VeloIn) -> dict | None:
                 content = json.dumps(out.data, default=str)[:RESULT_CHARS]
                 seen[key] = content
                 used.append(name)
+                results.append((name, out.data))
                 if "error" in out.data:
                     errors.append(out.data["error"])
                 cards += out.cards
@@ -184,12 +238,11 @@ def run(db: Session, user: User, body: VeloIn) -> dict | None:
             messages.append({"role": "tool", "tool_call_id": ids[i], "content": content})
 
     if not reply:
-        if failed:
-            reply = "I got the details below but couldn't finish writing the answer. Ask again if you need more."
-        elif errors and not cards:
-            reply = errors[-1]
-        else:
-            reply = "Here's what I found." if cards else "I couldn't work that out. Could you say it another way?"
+        # the model couldn't write the answer (rate limit, outage, step limit): answer from the tool results
+        reply = summary(results) if results else ""
+        if not reply and failed:
+            reply = "I couldn't reach the language model just now. Please try again in a moment."
+        reply = reply or "I couldn't work that out. Could you say it another way?"
 
     c.memory = {**(c.memory or {}), **memory}
     db.add(VeloMessage(conversation_id=c.id, role="user", content=body.text, payload={"page": body.page}))
