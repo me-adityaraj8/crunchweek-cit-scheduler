@@ -94,7 +94,7 @@ So the Vercel function may or may not fit. And CPU matters as much as size: judg
 - Parser changes from this: an event type not stated → the usual one for the role (admin institute, coordinator department, faculty guest lecture, club club), marked guessed. Start time without a length → 1 hour. A day without a time → any teaching hour that day plus a question. "The auditorium" → AUD when only one room has that type. A start past the last period → a question.
 
 ## Next steps
-1. Task 0: decide the host. Neon + Gemini key; deploy; open `/api/health` (add `?deep=1` to test the LLM). **Measure a real `POST /api/timetable/generate` on the host.** See Deploy prep above for the size and CPU numbers.
+1. Task 0: decide the host. **Set `JWT_SECRET` first** (32+ random chars, `python -c "import secrets; print(secrets.token_urlsafe(48))"`): a deployed app refuses to start without it, because the fallback secret is in this public repo. Neon + Gemini key; deploy; open `/api/health` (add `?deep=1` to test the LLM). **Measure a real `POST /api/timetable/generate` on the host.** See Deploy prep above for the size and CPU numbers.
 2. Lane C (frontend) is being built in `frontend/` by Varun's separate UI/UX session (on Laptop 2). Don't edit `frontend/` from another session meanwhile. When it lands, `vercel.json` needs the SPA build (`frontend/dist`) and an `index.html` fallback.
 3. Then `scripts/make_exports.py` against the deployed URL and commit `exports/`.
 

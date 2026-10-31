@@ -21,11 +21,14 @@ def _load_dotenv() -> None:
 
 _load_dotenv()
 
+DEV_SECRET = "dev-only-secret-set-JWT_SECRET-in-production"
+MIN_SECRET_LEN = 32
+
 
 @dataclass(frozen=True)
 class Settings:
     database_url: str = os.environ.get("DATABASE_URL") or f"sqlite:///{REPO_ROOT / 'local.db'}"
-    jwt_secret: str = os.environ.get("JWT_SECRET") or "dev-only-secret-set-JWT_SECRET-in-production"
+    jwt_secret: str = os.environ.get("JWT_SECRET") or DEV_SECRET
     demo_password: str = os.environ.get("DEMO_PASSWORD") or "demo1234"
     gemini_api_key: str = os.environ.get("GEMINI_API_KEY", "")
     gemini_model: str = os.environ.get("GEMINI_MODEL") or "gemini-2.5-flash"
@@ -35,4 +38,14 @@ class Settings:
     team_name: str = os.environ.get("TEAM_NAME") or "CIT Scheduler"
 
 
+def require_production_secrets(s: Settings, env=os.environ) -> None:
+    """A deployed app must not sign login tokens with the fallback secret, which is in this public repo:
+    anyone could forge an Admin token. Local SQLite runs may use it."""
+    deployed = bool(env.get("VERCEL")) or not s.database_url.startswith("sqlite")
+    if deployed and (s.jwt_secret == DEV_SECRET or len(s.jwt_secret) < MIN_SECRET_LEN):
+        raise RuntimeError(f"Set JWT_SECRET to a random string of at least {MIN_SECRET_LEN} characters "
+                           "in the host's environment variables before deploying")
+
+
 settings = Settings()
+require_production_secrets(settings)
