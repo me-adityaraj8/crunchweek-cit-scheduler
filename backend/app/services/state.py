@@ -1,6 +1,7 @@
 """Active dataset, timetable versions, settings, demo reset and the audit trail."""
 import copy
 import json
+import re
 from dataclasses import asdict
 
 from sqlalchemy import delete, select
@@ -172,29 +173,27 @@ def put_settings(db: Session, ds: Dataset, values: dict, user: User) -> dict:
 
 # ---------------------------------------------------------------- demo accounts and reset
 def demo_accounts(ds: Dataset) -> list[dict]:
-    """Fixed admin and club accounts; faculty and coordinators are tied to whatever dataset is loaded
-    (first faculty member, first two teaching departments)."""
-    fac = next(iter(ds.faculty.values()), None)
+    """Accounts the login page offers, derived from the loaded dataset: the Admin, one coordinator per
+    department, one account per faculty member and one per club that makes venue requests."""
     depts = []
-    for g in ds.groups.values():
-        d = g.get("department")
-        if d and d != "COMMON" and d not in depts:
+    for d in [g.get("department") for g in ds.groups.values()] + [f["department"] for f in ds.faculty.values()]:
+        if d and d not in ("COMMON", "ADMIN") and d not in depts:
             depts.append(d)
-    for f in ds.faculty.values():
-        if f["department"] not in depts and f["department"] != "ADMIN":
-            depts.append(f["department"])
     out = [{"email": "admin@cit.demo", "name": "Dean's Office", "role": "admin", "department": None,
             "faculty_id": None, "description": "Generates timetables, approves changes, decides Spectra week"}]
-    for d in depts[:2]:
+    for d in depts:
         out.append({"email": f"{d.lower()}.coord@cit.demo", "name": f"{d} Coordinator",
                     "role": "coordinator", "department": d, "faculty_id": None,
                     "description": f"Books rooms for {d} events, approves bookings of {d} labs"})
-    if fac:
-        out.append({"email": "faculty@cit.demo", "name": fac["name"], "role": "faculty",
-                    "department": fac["department"], "faculty_id": fac["id"],
-                    "description": f"Sees {fac['id']}'s timetable, marks leave, asks for changes"})
-    out.append({"email": "club@cit.demo", "name": "Robotics Club", "role": "club", "department": None,
-                "faculty_id": None, "description": "Submits and cancels venue requests"})
+    for f in ds.faculty.values():
+        out.append({"email": f"{f['id'].lower()}@cit.demo", "name": f["name"], "role": "faculty",
+                    "department": f["department"], "faculty_id": f["id"],
+                    "description": f"Sees {f['id']}'s timetable, marks leave, asks for changes"})
+    clubs = sorted({r["requester"] for r in ds.requests.values() if r.get("role") == "club" and r.get("requester")})
+    for name in clubs or ["Student Club"]:
+        slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+        out.append({"email": f"{slug}@cit.demo" if clubs else "club@cit.demo", "name": name, "role": "club",
+                    "department": None, "faculty_id": None, "description": "Submits and cancels venue requests"})
     return out
 
 

@@ -544,6 +544,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/assistant/transcribe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Transcribe
+         * @description Voice input for the assistant: a short recording in, its text out. The text is put in the message
+         *     box for the person to read and send, so it goes through exactly the same checks as typed text.
+         */
+        post: operations["transcribe_api_assistant_transcribe_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/assistant/booking": {
         parameters: {
             query?: never;
@@ -626,6 +647,11 @@ export interface components {
             text: string;
             /** Today */
             today?: string | null;
+        };
+        /** Body_transcribe_api_assistant_transcribe_post */
+        Body_transcribe_api_assistant_transcribe_post: {
+            /** Audio */
+            audio: string;
         };
         /** BookingCheckOut */
         BookingCheckOut: {
@@ -970,6 +996,8 @@ export interface components {
             name: string;
             /** Description */
             description: string;
+            /** Department */
+            department?: string | null;
         };
         /** Entry */
         Entry: {
@@ -1213,6 +1241,10 @@ export interface components {
             ok: boolean;
             /** Ortools */
             ortools: string;
+            /** Cpus */
+            cpus: number;
+            /** Solver Workers */
+            solver_workers: number;
             /** Solve Ms */
             solve_ms: number;
             /** Db */
@@ -1521,6 +1553,11 @@ export interface components {
              */
             bookings: components["schemas"]["BookingEntry"][];
         };
+        /** TranscribeOut */
+        TranscribeOut: {
+            /** Text */
+            text: string;
+        };
         /** UnavailabilityIn */
         UnavailabilityIn: {
             /** Days */
@@ -1670,9 +1707,7 @@ export interface operations {
     me_api_me_get: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -1685,15 +1720,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -1721,9 +1747,7 @@ export interface operations {
     upload_dataset_api_data_dataset_post: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -1738,23 +1762,12 @@ export interface operations {
                     "application/json": components["schemas"]["DatasetLoaded"];
                 };
             };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
         };
     };
     summary_api_data_summary_get: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -1769,23 +1782,12 @@ export interface operations {
                     "application/json": components["schemas"]["SummaryOut"];
                 };
             };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
         };
     };
     get_settings_api_settings_get: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -1800,23 +1802,12 @@ export interface operations {
                     "application/json": components["schemas"]["SettingsOut"];
                 };
             };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
         };
     };
     put_settings_api_settings_put: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -1849,9 +1840,7 @@ export interface operations {
     reset_api_admin_reset_post: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -1866,23 +1855,12 @@ export interface operations {
                     "application/json": unknown;
                 };
             };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
         };
     };
     generate_api_timetable_generate_post: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -1919,9 +1897,7 @@ export interface operations {
                 id?: string;
                 week?: "regular" | "spectra";
             };
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -1950,9 +1926,7 @@ export interface operations {
     manual_api_timetable_manual_post: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -1985,9 +1959,7 @@ export interface operations {
     check_move_only_api_timetable_check_move_post: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -2022,9 +1994,7 @@ export interface operations {
             query?: {
                 words?: boolean;
             };
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 session_id: string;
             };
@@ -2055,9 +2025,7 @@ export interface operations {
     dashboard_api_dashboard_get: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -2070,15 +2038,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DashboardOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -2094,9 +2053,7 @@ export interface operations {
                 types?: string;
                 week?: string;
             };
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -2125,9 +2082,7 @@ export interface operations {
     generate_api_exams_generate_post: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -2160,9 +2115,7 @@ export interface operations {
     get_exams_api_exams_get: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -2177,23 +2130,12 @@ export interface operations {
                     "application/json": components["schemas"]["ExamsOut"];
                 };
             };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
         };
     };
     check_api_bookings_check_post: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -2228,9 +2170,7 @@ export interface operations {
             query?: {
                 mine?: boolean;
             };
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -2259,9 +2199,7 @@ export interface operations {
     submit_api_bookings_post: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -2294,9 +2232,7 @@ export interface operations {
     cancel_api_bookings__request_id__cancel_post: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 request_id: string;
             };
@@ -2327,9 +2263,7 @@ export interface operations {
     decide_api_bookings__request_id__decide_post: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 request_id: string;
             };
@@ -2364,9 +2298,7 @@ export interface operations {
     decide_all_api_fest_decide_all_post: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -2381,23 +2313,12 @@ export interface operations {
                     "application/json": components["schemas"]["FestSummary"];
                 };
             };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
         };
     };
     fest_board_api_fest_get: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -2412,15 +2333,6 @@ export interface operations {
                     "application/json": components["schemas"]["FestOut"];
                 };
             };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
         };
     };
     explain_api_explain_booking__request_id__get: {
@@ -2428,9 +2340,7 @@ export interface operations {
             query?: {
                 words?: boolean;
             };
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 request_id: string;
             };
@@ -2461,9 +2371,7 @@ export interface operations {
     change_file_api_changes_file_post: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -2478,15 +2386,6 @@ export interface operations {
                     "application/json": components["schemas"]["ProposalOut"];
                 };
             };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
         };
     };
     list_changes_api_changes_get: {
@@ -2494,9 +2393,7 @@ export interface operations {
             query?: {
                 status?: string | null;
             };
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -2525,9 +2422,7 @@ export interface operations {
     request_change_api_changes_post: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -2560,9 +2455,7 @@ export interface operations {
     unavailability_api_faculty_unavailability_post: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -2595,9 +2488,7 @@ export interface operations {
     get_change_api_changes__pid__get: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 pid: number;
             };
@@ -2628,9 +2519,7 @@ export interface operations {
     approve_api_changes__pid__approve_post: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 pid: number;
             };
@@ -2665,9 +2554,7 @@ export interface operations {
     reject_api_changes__pid__reject_post: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 pid: number;
             };
@@ -2699,12 +2586,43 @@ export interface operations {
             };
         };
     };
+    transcribe_api_assistant_transcribe_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_transcribe_api_assistant_transcribe_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TranscribeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     booking_api_assistant_booking_post: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -2737,9 +2655,7 @@ export interface operations {
     change_api_assistant_change_post: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -2776,9 +2692,7 @@ export interface operations {
                 version?: number | null;
                 report?: boolean;
             };
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };

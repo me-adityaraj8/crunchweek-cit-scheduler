@@ -198,15 +198,14 @@ If the deploy fails on function size, or the solver is too slow, move the backen
 All accounts use the password in `DEMO_PASSWORD` (default: **`demo1234`** locally).  
 The Admin's **"Reset Demo Data"** (`POST /api/admin/reset`) restores the starter dataset, removes every timetable, request, and proposal, and keeps the accounts.
 
-| Email | Role | What to try |
-|-------|------|-------------|
-| `admin@cit.demo` | 🔑 **Admin** (Dean's office) | Generate timetable & exams, decide Spectra week, upload change files, approve proposals, export, reset |
-| `cse.coord@cit.demo` | 🏫 **Dept. Coordinator** (CSE) | Book rooms for CSE events, approve CSE lab bookings, move CSE sessions |
-| `ece.coord@cit.demo` | 🏫 **Dept. Coordinator** (ECE) | Same for ECE; shows that a coordinator can't approve their own request |
-| `faculty@cit.demo` | 👨‍🏫 **Faculty** (F01, Dr. Ananya Mishra) | Own timetable, mark unavailability, ask the assistant to move a class |
-| `club@cit.demo` | 🎭 **Club Rep** (Robotics Club) | Submit venue requests in plain English or Hinglish, cancel them, see status & reason |
+The login page has one tile per role. Coordinator, Faculty and Club each have a dropdown, since the accounts come from the loaded dataset: one coordinator per department, one account per faculty member, one per club that makes venue requests.
 
-> The faculty and coordinator accounts follow the loaded dataset: the first faculty member and the first two teaching departments.
+| Role | Accounts (examples) | What to try |
+|------|---------------------|-------------|
+| 🔑 **Admin** (Dean's office) | `admin@cit.demo` | Generate timetable & exams, decide Spectra week, upload change files, approve proposals, export, reset |
+| 🏫 **Dept. Coordinator** | `cse.coord@cit.demo`, `ece.coord@cit.demo`, … (8 departments: `<dept>.coord@cit.demo`) | Book rooms for department events, approve your department's lab bookings, move your department's sessions. Two coordinators show that nobody approves their own request |
+| 👨‍🏫 **Faculty** | `f01@cit.demo` … `f40@cit.demo` (faculty id) | Own timetable, mark unavailability, ask the assistant to move a class |
+| 🎭 **Club Rep** | `robotics-club@cit.demo`, `dramatics-society@cit.demo`, … (11 clubs) | Submit venue requests by typing or speaking, in English or Hinglish; cancel them; see status & reason |
 
 ---
 

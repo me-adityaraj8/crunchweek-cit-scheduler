@@ -42,7 +42,8 @@ def token(c, email: str) -> dict:
 
 @pytest.fixture(scope="session")
 def heads(client):
-    return {k: token(client, f"{k}@cit.demo") for k in ("admin", "faculty", "club")} | {
+    return {"admin": token(client, "admin@cit.demo"), "faculty": token(client, "f01@cit.demo"),
+            "club": token(client, "robotics-club@cit.demo")} | {
         "cse": token(client, "cse.coord@cit.demo"), "ece": token(client, "ece.coord@cit.demo")}
 
 

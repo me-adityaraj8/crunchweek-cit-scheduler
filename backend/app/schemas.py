@@ -34,6 +34,7 @@ class DemoAccount(BaseModel):
     role: Role
     name: str
     description: str
+    department: str | None = None
 
 
 # ---------------------------------------------------------------- shared

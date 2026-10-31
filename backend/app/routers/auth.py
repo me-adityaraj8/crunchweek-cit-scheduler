@@ -33,5 +33,6 @@ def me(user: User = Depends(current_user)):
 def demo_accounts(db: Session = Depends(get_db)):
     """The accounts the login page offers as one-click buttons (passwords are in the README)."""
     _, ds = state.active_dataset(db)
-    return [DemoAccount(email=a["email"], role=a["role"], name=a["name"], description=a["description"])
+    return [DemoAccount(email=a["email"], role=a["role"], name=a["name"], description=a["description"],
+                        department=a["department"])
             for a in state.demo_accounts(ds)]
