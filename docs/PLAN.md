@@ -24,7 +24,7 @@
   - `JWT_SECRET`
   - `DEMO_PASSWORD`
   - `GEMINI_API_KEY`
-  - `GEMINI_MODEL` (default `gemini-2.5-flash`)
+  - `GEMINI_MODEL` (default `gemini-3.8-flash`)
   - `SOLVER_TIME_LIMIT_S` (default `60`)
   - `LLM_TIMEOUT_S` (default `8`)
 - The API is served under `/api`, has no CORS, and uses JWT bearer auth.

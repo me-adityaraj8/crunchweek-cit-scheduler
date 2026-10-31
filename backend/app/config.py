@@ -42,7 +42,7 @@ class Settings:
     jwt_secret: str = os.environ.get("JWT_SECRET") or DEV_SECRET
     demo_password: str = os.environ.get("DEMO_PASSWORD") or "demo1234"
     gemini_api_key: str = os.environ.get("GEMINI_API_KEY", "")
-    gemini_model: str = os.environ.get("GEMINI_MODEL") or "gemini-2.5-flash"
+    gemini_model: str = os.environ.get("GEMINI_MODEL") or "gemini-3.8-flash"
     solver_time_limit_s: float = float(os.environ.get("SOLVER_TIME_LIMIT_S") or 60)
     solver_workers: int = int(os.environ.get("SOLVER_WORKERS") or 8)
     llm_timeout_s: float = float(os.environ.get("LLM_TIMEOUT_S") or 8)
