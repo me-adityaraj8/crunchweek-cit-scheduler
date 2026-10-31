@@ -112,7 +112,7 @@ export function RoomDayGrid({
                         key={p}
                         type="button"
                         onClick={() => onFreeCell(r, p)}
-                        className="group/free m-[3px] grid place-items-center rounded-[5px] text-ink-3 transition-colors hover:bg-signal-soft hover:text-ink focus-visible:bg-signal-soft"
+                        className="group/free m-[3px] grid place-items-center rounded-[4px] text-ink-3 transition-colors hover:bg-signal-soft hover:text-ink focus-visible:bg-signal-soft"
                         style={{ gridColumn: col(p), gridRow: 1 }}
                         aria-label={`Book ${r.id} on ${day} P${p}`}
                       >
@@ -125,7 +125,7 @@ export function RoomDayGrid({
                     type="button"
                     onClick={() => onSelect?.(it)}
                     className={cn(
-                      "animate-rise m-[3px] flex min-w-0 items-center gap-1.5 overflow-hidden rounded-[5px] border px-1.5 text-left text-[11.5px] transition-shadow hover:shadow-[0_0_0_1px_var(--ink)]",
+                      "animate-rise m-[3px] flex min-w-0 items-center gap-1.5 overflow-hidden rounded-[4px] border px-1.5 text-left text-[11.5px] transition-shadow hover:shadow-[0_0_0_1px_var(--ink)]",
                       TINT[it.kind],
                       selected === it.key && "shadow-[0_0_0_2px_var(--ink),0_0_0_4px_var(--signal)]",
                       it.entry?.week7_moved && "shadow-[0_0_0_2px_var(--signal)]",

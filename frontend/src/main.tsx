@@ -30,7 +30,7 @@ function ThemedToaster() {
       offset={20}
       toastOptions={{
         classNames: {
-          toast: "!rounded-[10px] !border-rule-strong !bg-sheet !text-ink !shadow-float !font-sans",
+          toast: "!rounded-[4px] !border-2 !border-rule-strong !bg-sheet !text-ink !shadow-float !font-sans",
           description: "!text-ink-2",
         },
       }}

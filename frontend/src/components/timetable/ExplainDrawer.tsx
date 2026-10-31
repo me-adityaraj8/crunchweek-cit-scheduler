@@ -130,14 +130,14 @@ function SessionExplain({ item, days, periods, onClose }: { item: GridItem; days
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap gap-2">
-        <span className="inline-flex h-7 items-center gap-1.5 rounded-full border border-rule-strong px-2.5 text-[12.5px] font-semibold">
+        <span className="inline-flex h-7 items-center gap-1.5 rounded-[3px] border-2 border-rule-strong px-2.5 text-[12.5px] font-semibold">
           <KindBullet kind={item.kind} size="sm" /> {KIND[item.kind].label}
         </span>
-        <span className="inline-flex h-7 items-center rounded-full border border-rule-strong px-2.5 text-[12.5px] font-semibold tabular-nums">
+        <span className="inline-flex h-7 items-center rounded-[3px] border-2 border-rule-strong px-2.5 text-[12.5px] font-semibold tabular-nums">
           {dayShort(e.day)} {spanLabel(e.start_period, e.duration, periods)}
         </span>
-        <span className="inline-flex h-7 items-center rounded-full border border-rule-strong px-2.5 text-[12.5px] font-semibold">{e.room_id}</span>
-        {e.week7_moved && <span className="inline-flex h-7 items-center rounded-full bg-signal px-2.5 text-[12.5px] font-bold text-signal-ink">Moved for Week 7</span>}
+        <span className="inline-flex h-7 items-center rounded-[3px] border-2 border-rule-strong px-2.5 text-[12.5px] font-semibold">{e.room_id}</span>
+        {e.week7_moved && <span className="inline-flex h-7 items-center rounded-[3px] border-2 border-rule-strong bg-signal px-2.5 text-[12.5px] font-bold text-signal-ink">Moved for Week 7</span>}
       </div>
 
       <section>
@@ -166,7 +166,7 @@ function SessionExplain({ item, days, periods, onClose }: { item: GridItem; days
               <Loader2 className="size-4 animate-spin" /> Rewording the checker's facts…
             </p>
           ) : w.data?.words ? (
-            <blockquote className="rounded-[8px] border-l-[3px] border-signal bg-signal-soft px-3 py-2 text-[13.5px] leading-[20px]">{w.data.words}</blockquote>
+            <blockquote className="rounded-[4px] border-l-[3px] border-signal bg-signal-soft px-3 py-2 text-[13.5px] leading-[20px]">{w.data.words}</blockquote>
           ) : null}
         </div>
       </section>
@@ -184,7 +184,7 @@ function SessionExplain({ item, days, periods, onClose }: { item: GridItem; days
             onPick={(key, s) => setPicked({ key, s })}
           />
           {picked && picked.s.kind !== "none" && (
-            <div className="mt-3 rounded-[10px] border border-rule-strong bg-sheet-2 p-3" aria-live="polite">
+            <div className="mt-3 rounded-[6px] border-2 border-rule-strong bg-sheet-2 p-3" aria-live="polite">
               {picked.s.kind === "here" ? (
                 <p className="text-[13px]">This is where the solver put it.</p>
               ) : picked.s.kind === "blocked" ? (

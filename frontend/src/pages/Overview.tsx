@@ -88,8 +88,8 @@ function SoftBreakdown({ d }: { d: Dashboard }) {
           <li key={k} className="grid grid-cols-[34px_minmax(0,1fr)_64px_28px] items-center gap-2 text-[13px]">
             <Code>{k}</Code>
             <span className={cn("truncate", v ? "text-ink" : "text-ink-3")}>{SOFT_RULES[k]}</span>
-            <span className="h-2 overflow-hidden rounded-full bg-platform-2">
-              <span className="block h-full rounded-full bg-ink transition-[width] duration-500" style={{ width: `${(v / max) * 100}%` }} />
+            <span className="h-3 overflow-hidden rounded-[2px] border-2 border-rule-strong bg-sheet">
+              <span className="block h-full bg-ink transition-[width] duration-500" style={{ width: `${(v / max) * 100}%` }} />
             </span>
             <span className="text-right font-semibold tabular-nums">{v}</span>
           </li>
@@ -351,7 +351,7 @@ function ClubOverview() {
   return (
     <>
       <MyBookings />
-      <section className="flex flex-col items-start gap-3 rounded-[12px] bg-signal p-5 text-signal-ink shadow-[inset_0_-3px_0_oklch(0_0_0/0.12)] sm:flex-row sm:items-center sm:justify-between sm:p-6">
+      <section className="flex flex-col items-start gap-3 rounded-[6px] bg-signal p-5 text-signal-ink shadow-[inset_0_-3px_0_oklch(0_0_0/0.12)] sm:flex-row sm:items-center sm:justify-between sm:p-6">
         <div>
           <h2 className="text-[18px] font-bold">Book a venue in plain words</h2>
           <p className="mt-1 max-w-[60ch] text-[14px]">

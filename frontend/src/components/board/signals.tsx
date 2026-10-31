@@ -21,10 +21,10 @@ export function StatusChip({ aspect, children, className }: { aspect: Aspect; ch
   return (
     <span
       className={cn(
-        "inline-flex h-6 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 text-[12px] font-semibold [font-stretch:90%]",
-        aspect === "clear" && "border-clear/35 bg-clear-soft text-ink",
-        aspect === "caution" && "border-signal-edge bg-signal-soft text-ink",
-        aspect === "stop" && "border-stop/35 bg-stop-soft text-ink",
+        "inline-flex h-6 items-center gap-1.5 whitespace-nowrap rounded-[3px] border-2 px-2 text-[12px] font-bold [font-stretch:94%]",
+        aspect === "clear" && "border-rule-strong bg-clear-soft text-ink",
+        aspect === "caution" && "border-rule-strong bg-signal-soft text-ink",
+        aspect === "stop" && "border-rule-strong bg-stop-soft text-ink",
         aspect === "wait" && "border-rule-strong bg-wait-soft text-ink-2",
         aspect === "off" && "border-rule bg-transparent text-ink-3 line-through decoration-ink-3/60",
         className,

@@ -40,7 +40,7 @@ export function Ticket({ data, periods, stamped, checking }: { data: TicketData;
   const stamp = stamped ? bookingStatus(stamped) : null;
   return (
     <div className="relative" aria-live="polite">
-      <div className="flex overflow-hidden rounded-[12px] bg-sheet shadow-[0_0_0_1px_var(--rule-strong),var(--mount)]">
+      <div className="flex overflow-hidden rounded-[6px] bg-sheet shadow-[0_0_0_1px_var(--rule-strong),var(--mount)]">
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-3 bg-anthracite px-4 py-2.5 text-on-anthracite">
             <span className="text-[12px] font-semibold text-on-anthracite-2">Spectra week request</span>

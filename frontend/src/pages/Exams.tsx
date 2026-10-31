@@ -19,8 +19,8 @@ function SeatBar({ size, seats }: { size: number; seats: number }) {
   const pct = seats ? Math.min(100, (size / seats) * 100) : 0;
   return (
     <span className="flex items-center gap-2" title={`${size} students, ${seats} exam seats`}>
-      <span className="h-1.5 w-14 overflow-hidden rounded-full bg-platform-2">
-        <span className="block h-full rounded-full bg-ink" style={{ width: `${pct}%` }} />
+      <span className="h-3 w-14 overflow-hidden rounded-[2px] border-2 border-rule-strong bg-sheet">
+        <span className="block h-full bg-ink" style={{ width: `${pct}%` }} />
       </span>
       <span className="text-[11.5px] tabular-nums text-ink-3">
         {size}/{seats}
@@ -37,7 +37,7 @@ function ExamCard({ e, i, onOpen, dim }: { e: Exam; i: number; onOpen: (e: Exam)
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: dim ? 0.3 : 1, y: 0 }}
       transition={{ duration: 0.2, delay: Math.min(i, 30) * 0.012 }}
-      className="flex w-full flex-col gap-1.5 rounded-[7px] border border-k-exam-edge bg-k-exam-tint px-2.5 py-2 text-left transition-shadow hover:shadow-[0_0_0_1px_var(--ink)]"
+      className="flex w-full flex-col gap-1.5 rounded-[4px] border border-k-exam-edge bg-k-exam-tint px-2.5 py-2 text-left transition-shadow hover:shadow-[0_0_0_1px_var(--ink)]"
     >
       <span className="flex items-center gap-2">
         <b className="text-[13px] font-bold [font-stretch:80%]">{e.course_ids.join(" ") || e.exam_id}</b>
@@ -168,7 +168,7 @@ export default function Exams() {
             <p>
               {plural(open.size, "student")} from {open.groups.join(", ")} sit it in {plural(open.rooms.length, "room")}, {open.seats} exam seats in all.
             </p>
-            <ul className="flex flex-col divide-y divide-rule rounded-[10px] border border-rule">
+            <ul className="flex flex-col divide-y divide-rule rounded-[6px] border border-rule">
               {open.rooms.map((r) => {
                 const room = summary?.rooms.find((x) => x.id === r);
                 return (

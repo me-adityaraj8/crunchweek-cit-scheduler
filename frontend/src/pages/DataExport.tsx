@@ -198,7 +198,7 @@ function DatasetCard() {
   return (
     <section className="sheet flex flex-col gap-4 p-4 sm:p-6">
       <div className="flex items-start gap-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-[9px] bg-anthracite text-on-anthracite">
+        <span className="grid size-10 shrink-0 place-items-center rounded-[6px] bg-anthracite text-on-anthracite">
           <Database className="size-5" />
         </span>
         <div className="min-w-0">

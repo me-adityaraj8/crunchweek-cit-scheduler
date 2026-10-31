@@ -37,7 +37,7 @@ export function Select({
         id={id}
         aria-label={ariaLabel}
         className={cn(
-          "inline-flex h-9 w-full items-center justify-between gap-2 rounded-[7px] border border-rule-strong bg-sheet px-3 text-left text-[14px] text-ink shadow-mount transition-[border-color,box-shadow] focus-visible:border-ink focus-visible:shadow-[0_0_0_3px_var(--signal)] focus-visible:outline-none data-[placeholder]:text-ink-3 disabled:opacity-50",
+          "inline-flex h-9 w-full items-center justify-between gap-2 rounded-[4px] border-2 border-rule-strong bg-sheet px-3 text-left text-[14px] text-ink shadow-mount transition-[border-color,box-shadow] focus-visible:border-ink focus-visible:shadow-[0_0_0_3px_var(--signal)] focus-visible:outline-none data-[placeholder]:text-ink-3 disabled:opacity-50",
           className,
         )}
       >
@@ -52,7 +52,7 @@ export function Select({
         <SelectPrimitive.Content
           position="popper"
           sideOffset={6}
-          className="z-50 max-h-[min(380px,var(--radix-select-content-available-height))] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-[10px] bg-sheet shadow-float data-[state=closed]:animate-pop-out data-[state=open]:animate-pop-in"
+          className="z-50 max-h-[min(380px,var(--radix-select-content-available-height))] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-[4px] border-2 border-rule-strong bg-sheet shadow-float data-[state=closed]:animate-pop-out data-[state=open]:animate-pop-in"
         >
           <SelectPrimitive.Viewport className="p-1">
             {groups.map((g) => (

@@ -54,11 +54,11 @@ function UploadChangeFile() {
         onDrop={drop}
         disabled={upload.isPending}
         className={cn(
-          "flex flex-col items-center justify-center gap-2 rounded-[10px] border-2 border-dashed border-rule-strong px-4 py-8 text-center transition-colors hover:border-ink hover:bg-signal-soft",
+          "flex flex-col items-center justify-center gap-2 rounded-[6px] border-2 border-dashed border-rule-strong px-4 py-8 text-center transition-colors hover:border-ink hover:bg-signal-soft",
           over && "border-ink bg-signal-soft",
         )}
       >
-        <span className="grid size-10 place-items-center rounded-[9px] bg-signal text-signal-ink">
+        <span className="grid size-10 place-items-center rounded-[6px] bg-signal text-signal-ink">
           <FileUp className="size-5" />
         </span>
         <span className="text-[14px] font-semibold">Drop a change file here, or choose one</span>
@@ -134,7 +134,7 @@ function Unavailability() {
                     aria-pressed={on}
                     aria-label={`${d} P${p}`}
                     onClick={() => toggle(k)}
-                    className={cn("h-8 rounded-[5px] border transition-colors", on ? "hatch-closed border-ink bg-stop-soft" : "border-rule-strong bg-sheet hover:bg-signal-soft")}
+                    className={cn("h-8 rounded-[4px] border transition-colors", on ? "hatch-closed border-ink bg-stop-soft" : "border-rule-strong bg-sheet hover:bg-signal-soft")}
                   />
                 );
               })}
@@ -197,7 +197,7 @@ function AskForChange() {
         {parse.isPending ? <Loader2 className="animate-spin" /> : <Bot />} Read my request
       </Button>
       {result && (
-        <div className="rounded-[10px] border border-rule-strong bg-sheet-2 p-3.5" aria-live="polite">
+        <div className="rounded-[6px] border-2 border-rule-strong bg-sheet-2 p-3.5" aria-live="polite">
           {result.llm === "unavailable" && <p className="mb-1.5 text-[12px] font-semibold text-ink-2">AI unavailable, so keyword rules read this</p>}
           {result.intent ? (
             <>

@@ -8,7 +8,7 @@ export function Switch({ className, ...props }: ComponentProps<typeof SwitchPrim
   return (
     <SwitchPrimitive.Root
       className={cn(
-        "inline-flex h-[22px] w-[38px] shrink-0 items-center rounded-full border border-rule-strong bg-platform-2 p-[2px] transition-colors data-[state=checked]:border-ink data-[state=checked]:bg-ink",
+        "inline-flex h-[22px] w-[38px] shrink-0 items-center rounded-full border-2 border-rule-strong bg-platform-2 p-[2px] transition-colors data-[state=checked]:border-ink data-[state=checked]:bg-ink",
         className,
       )}
       {...props}
@@ -47,7 +47,7 @@ export function Segmented<T extends string>({
       value={value}
       onValueChange={(v) => v && onChange(v as T)}
       aria-label={ariaLabel}
-      className={cn("inline-flex max-w-full overflow-x-auto rounded-[9px] border border-rule-strong bg-platform-2/60 p-[3px] shadow-mount [scrollbar-width:none]", className)}
+      className={cn("inline-flex max-w-full overflow-x-auto rounded-[4px] border-2 border-rule-strong bg-sheet p-[3px] shadow-mount [scrollbar-width:none]", className)}
     >
       {items.map((it) => {
         const on = it.value === value;
@@ -56,15 +56,15 @@ export function Segmented<T extends string>({
             key={it.value}
             value={it.value}
             className={cn(
-              "relative inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[6px] font-semibold [font-stretch:90%] transition-colors [&_svg]:size-4",
+              "relative inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[3px] font-bold [font-stretch:96%] transition-colors [&_svg]:size-4",
               size === "sm" ? "h-7 px-2.5 text-[12.5px]" : "h-8 px-3 text-[13px]",
-              on ? "text-sheet" : "text-ink-2 hover:text-ink",
+              on ? "text-signal-ink" : "text-ink-2 hover:bg-signal-soft hover:text-ink",
             )}
           >
             {on && (
               <motion.span
                 layoutId={`seg-${id}`}
-                className="absolute inset-0 rounded-[6px] bg-ink"
+                className="absolute inset-0 rounded-[3px] border-2 border-rule-strong bg-signal"
                 transition={{ type: "spring", stiffness: 500, damping: 38 }}
               />
             )}
@@ -105,7 +105,7 @@ export function ChipToggle<T extends string>({
         <ToggleGroupPrimitive.Item
           key={it.value}
           value={it.value}
-          className="inline-flex h-8 items-center gap-1.5 rounded-full border border-rule-strong bg-sheet px-3 text-[12.5px] font-semibold text-ink-2 shadow-mount transition-colors [font-stretch:90%] hover:text-ink data-[state=on]:border-ink data-[state=on]:bg-ink data-[state=on]:text-sheet [&_svg]:size-3.5"
+          className="inline-flex h-8 items-center gap-1.5 rounded-[3px] border-2 border-rule-strong bg-sheet px-3 text-[12.5px] font-semibold text-ink-2 shadow-mount transition-colors [font-stretch:90%] hover:text-ink data-[state=on]:border-ink data-[state=on]:bg-ink data-[state=on]:text-sheet [&_svg]:size-3.5"
         >
           {it.icon}
           {it.label}

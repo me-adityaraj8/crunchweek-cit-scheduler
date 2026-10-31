@@ -76,7 +76,7 @@ function Figures({ p }: { p: Proposal }) {
   ];
   return (
     <div className="flex flex-col gap-2">
-      <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-[10px] border border-rule bg-rule sm:grid-cols-4 lg:grid-cols-7">
+      <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-[6px] border border-rule bg-rule sm:grid-cols-4 lg:grid-cols-7">
         {items.map(([label, value, strong]) => (
           <div key={label} className={cn("flex flex-col gap-0.5 bg-sheet px-4 py-3", strong && "bg-signal text-signal-ink")}>
             <dt className={cn("text-[12px]", strong ? "font-semibold" : "text-ink-2")}>{label}</dt>
@@ -155,7 +155,7 @@ export default function ChangeDetail() {
       </div>
 
       {p.stale && (
-        <div className="flex items-start gap-3 rounded-[10px] border border-stop/40 bg-stop-soft p-4 text-[13.5px]" role="alert">
+        <div className="flex items-start gap-3 rounded-[6px] border border-stop/40 bg-stop-soft p-4 text-[13.5px]" role="alert">
           <CircleSlash className="mt-0.5 size-4 shrink-0 text-stop" />
           <p>This proposal is out of date: the timetable changed after it was made, so it can't be applied. Make the change again to get a fresh proposal.</p>
         </div>
@@ -176,7 +176,7 @@ export default function ChangeDetail() {
               <h3 className="mb-2 text-[13.5px] font-bold">Slots that would work instead</h3>
               <div className="flex flex-wrap gap-2">
                 {p.alternatives.map((a, i) => (
-                  <span key={i} className="inline-flex h-8 items-center gap-2 rounded-[7px] border border-rule-strong px-2.5 text-[13px] font-semibold">
+                  <span key={i} className="inline-flex h-8 items-center gap-2 rounded-[4px] border-2 border-rule-strong px-2.5 text-[13px] font-semibold">
                     <Code>{a.room}</Code> {dayShort(a.day)} {periodLabel(a.start, summary?.periods)}
                   </span>
                 ))}

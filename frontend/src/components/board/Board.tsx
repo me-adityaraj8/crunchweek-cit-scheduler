@@ -25,7 +25,7 @@ export function Board({
 }) {
   return (
     <section
-      className={cn("overflow-hidden rounded-[12px] bg-anthracite text-on-anthracite shadow-mount", className)}
+      className={cn("overflow-hidden rounded-[6px] border-2 border-rule-strong bg-anthracite text-on-anthracite shadow-float", className)}
       style={{ "--board-cols": columns } as CSSProperties}
     >
       {(title || meta) && (

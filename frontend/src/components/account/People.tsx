@@ -102,7 +102,7 @@ export function People() {
     body = (
       <>
         {own.length === 0 ? (
-          <p className="rounded-[10px] border border-dashed border-rule-strong px-4 py-5 text-[13.5px] text-ink-2">
+          <p className="rounded-[6px] border border-dashed border-rule-strong px-4 py-5 text-[13.5px] text-ink-2">
             No one has signed up yet. Accounts people make on the login page show up here.
           </p>
         ) : (
@@ -119,7 +119,7 @@ export function People() {
             )}
           </ul>
         )}
-        <details className="mt-3 rounded-[10px] border border-rule">
+        <details className="mt-3 rounded-[6px] border border-rule">
           <summary className="cursor-pointer px-3 py-2.5 text-[13px] font-semibold text-ink-2 hover:text-ink">
             {plural(demo.length, "demo account")}, shared by everyone trying the app
           </summary>

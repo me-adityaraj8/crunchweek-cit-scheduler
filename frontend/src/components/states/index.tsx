@@ -8,7 +8,7 @@ export function PageHeader({ title, lede, actions, className }: { title: ReactNo
   return (
     <header className={cn("flex flex-wrap items-end justify-between gap-x-6 gap-y-3", className)}>
       <div className="min-w-0 max-w-[68ch]">
-        <h1 className="text-[24px] font-bold leading-[30px] tracking-[-0.01em] sm:text-[26px]">{title}</h1>
+        <h1 className="text-[26px] font-black uppercase leading-[30px] tracking-[-0.015em] [font-stretch:112%] sm:text-[30px] sm:leading-[34px]">{title}</h1>
         {lede && <p className="mt-1 text-[14px] leading-[21px] text-ink-2">{lede}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -19,7 +19,7 @@ export function PageHeader({ title, lede, actions, className }: { title: ReactNo
 export function SectionTitle({ children, aside, className }: { children: ReactNode; aside?: ReactNode; className?: string }) {
   return (
     <div className={cn("mb-3 flex items-center justify-between gap-3", className)}>
-      <h2 className="text-[16px] font-bold leading-[22px]">{children}</h2>
+      <h2 className="text-[16px] font-black leading-[22px] [font-stretch:104%]">{children}</h2>
       {aside}
     </div>
   );
@@ -50,7 +50,7 @@ export function GridSkeleton({ className }: { className?: string }) {
 export function Empty({ icon, title, children, action, className }: { icon?: ReactNode; title: ReactNode; children?: ReactNode; action?: ReactNode; className?: string }) {
   return (
     <div className={cn("sheet flex flex-col items-start gap-3 p-6 sm:p-8", className)}>
-      {icon && <div className="grid size-11 place-items-center rounded-[10px] bg-signal text-signal-ink [&_svg]:size-5">{icon}</div>}
+      {icon && <div className="grid size-11 place-items-center rounded-[6px] bg-signal text-signal-ink [&_svg]:size-5">{icon}</div>}
       <div className="max-w-[60ch]">
         <h2 className="text-[17px] font-bold">{title}</h2>
         {children && <div className="mt-1 text-[14px] leading-[21px] text-ink-2">{children}</div>}

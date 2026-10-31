@@ -52,11 +52,11 @@
   --shadow-mount: var(--mount);
   --shadow-float: var(--float);
 
-  --radius-sign: 12px;
-  --radius-sheet: 10px;
-  --radius-cell: 6px;
+  --radius-sign: 6px;
+  --radius-sheet: 6px;
+  --radius-cell: 4px;
 
-  --ease-arrive: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-arrive: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-leave: cubic-bezier(0.4, 0, 1, 1);
 
   --animate-shimmer: shimmer 1.4s linear infinite;
@@ -135,9 +135,25 @@
   /* a printed sheet: timetables, forms, lists */
   .sheet {
     background: var(--sheet);
-    border: 1px solid var(--rule);
+    border: 2px solid var(--rule-strong);
     border-radius: var(--radius-sheet);
-    box-shadow: var(--mount);
+    box-shadow: var(--float);
+  }
+  /* tactile press: lift a pixel on hover, sink by the shadow when pressed */
+  .press {
+    transition: transform 140ms var(--ease-arrive), box-shadow 140ms var(--ease-arrive), background-color 120ms ease-out;
+  }
+  .press:hover:not(:disabled) {
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 var(--shade);
+  }
+  .press:active:not(:disabled) {
+    transform: translate(2px, 2px);
+    box-shadow: 0 0 0 var(--shade);
+    transition-duration: 80ms;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .press, .press:hover, .press:active { transform: none !important; transition: none; }
   }
   /* hatching marks event bookings (not teaching) on any grid */
   .hatch-event {

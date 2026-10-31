@@ -115,8 +115,8 @@ export function DotMatrix({
                     </span>
                   ))}
                   <span className="flex items-center justify-end gap-2 pr-1">
-                    <span className="h-1.5 w-10 overflow-hidden rounded-full bg-platform-2">
-                      <span className="block h-full rounded-full bg-ink" style={{ width: `${Math.min(r.pct, 100)}%` }} />
+                    <span className="h-3 w-10 overflow-hidden rounded-[2px] border-2 border-rule-strong bg-sheet">
+                      <span className="block h-full bg-ink" style={{ width: `${Math.min(r.pct, 100)}%` }} />
                     </span>
                     <span className="w-9 text-right text-[12.5px] font-semibold tabular-nums">{r.pct.toFixed(0)}%</span>
                   </span>

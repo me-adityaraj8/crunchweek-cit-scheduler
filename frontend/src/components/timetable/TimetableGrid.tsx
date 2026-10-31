@@ -72,14 +72,13 @@ export function SessionCell({
       aria-label={label}
       aria-pressed={selected}
       className={cn(
-        "group relative flex h-full w-full flex-col overflow-hidden rounded-[6px] border pl-[9px] pr-1.5 pt-1 text-left transition-[box-shadow,transform] duration-150",
-        "before:absolute before:inset-y-0 before:left-0 before:w-[3px]",
-        "hover:z-10 hover:-translate-y-px hover:shadow-[0_0_0_1px_var(--ink),0_6px_14px_-8px_oklch(0.2_0.02_250/0.5)]",
+        "group relative flex h-full w-full flex-col overflow-hidden rounded-[4px] border-2 px-1.5 pt-1 text-left shadow-mount transition-[box-shadow,transform] duration-150 ease-arrive",
+        "hover:z-10 hover:-translate-x-px hover:-translate-y-px hover:shadow-[3px_3px_0_var(--shade)] active:translate-x-px active:translate-y-px active:shadow-none",
         TINT[item.kind],
-        moved && "shadow-[0_0_0_2px_var(--signal)]",
+        moved && "border-dashed",
         mark && mark !== "removed" && "z-[5] shadow-[0_0_0_2px_var(--signal-ink),0_0_0_5px_var(--signal)]",
         mark === "removed" && "opacity-60 shadow-[0_0_0_2px_var(--stop)] [&_*]:line-through",
-        selected && "z-10 shadow-[0_0_0_2px_var(--ink),0_0_0_5px_var(--signal)]",
+        selected && "z-10 -translate-x-px -translate-y-px border-[3px] shadow-[4px_4px_0_var(--shade)]",
       )}
     >
       {mark && (
@@ -94,20 +93,20 @@ export function SessionCell({
       )}
       <span className="flex min-w-0 items-center gap-1.5">
         {!narrow && <KindBullet kind={item.kind} size="sm" />}
-        <span className="min-w-0 truncate text-[12.5px] font-bold leading-4 [font-stretch:80%]">
+        <span className="min-w-0 truncate text-[13px] font-black leading-4 text-ink [font-stretch:85%]">
           {e ? e.course_id : b!.request_id}
         </span>
         {!narrow && (
-          <span className="ml-auto shrink-0 rounded-[3px] bg-sheet/70 px-1 text-[11px] font-bold leading-4 text-ink-2 [font-stretch:78%] dark:bg-black/20">
+          <span className="ml-auto shrink-0 rounded-[3px] border-2 border-rule-strong bg-sheet px-1 text-[10.5px] font-bold leading-[13px] text-ink [font-stretch:80%]">
             {view === "room" ? (e ? (e.groups.length > 2 ? `${e.groups[0]} +${e.groups.length - 1}` : e.groups.join(" ")) : "") : item.room}
           </span>
         )}
       </span>
       {!narrow && (
-        <span className="mt-0.5 line-clamp-1 text-[11.5px] leading-[15px] text-ink-2">{e ? e.course_title : b!.title}</span>
+        <span className="mt-0.5 line-clamp-1 text-[11.5px] font-semibold leading-[15px] text-ink">{e ? e.course_title : b!.title}</span>
       )}
       {(!narrow || tall) && (
-        <span className={cn("truncate text-[11px] leading-[14px] text-ink-3", narrow && "mt-0.5")}>
+        <span className={cn("truncate text-[11px] leading-[14px] text-ink-2", narrow && "mt-0.5")}>
           {narrow ? item.room : secondLine(item, view)}
         </span>
       )}
@@ -189,15 +188,14 @@ export function TimetableGrid({
     <div className="sheet overflow-x-auto">
       <div className="min-w-[720px]">
         {/* day header */}
-        <div className="sticky top-0 z-20 grid border-b border-rule bg-sheet" style={{ gridTemplateColumns: `68px repeat(${days.length}, minmax(0,1fr))` }}>
+        <div className="sticky top-0 z-20 grid border-b-2 border-rule-strong bg-sheet" style={{ gridTemplateColumns: `68px repeat(${days.length}, minmax(0,1fr))` }}>
           <div />
           {days.map((d) => {
             const today = showNow && now?.day === d;
             return (
-              <div key={d} className="relative px-2 py-2.5 text-[13px] font-bold [font-stretch:88%]">
+              <div key={d} className={cn("relative border-l-2 border-rule-strong px-2 py-2.5 text-[13px] font-black uppercase tracking-[0.06em]", today && "bg-signal text-signal-ink")}>
                 {dayShort(d)}
-                {today && <span className="ml-2 rounded-[3px] bg-signal px-1.5 py-px text-[10.5px] font-bold text-signal-ink">Today</span>}
-                {today && <span className="absolute inset-x-2 bottom-0 h-[3px] rounded-t bg-signal" />}
+                {today && <span className="ml-2 rounded-[3px] bg-anthracite px-1.5 py-px text-[10px] font-bold tracking-[0.08em] text-signal">TODAY</span>}
               </div>
             );
           })}
@@ -205,10 +203,10 @@ export function TimetableGrid({
 
         <div className="relative grid" style={{ gridTemplateColumns: `68px repeat(${days.length}, minmax(0,1fr))`, height }}>
           {/* period labels */}
-          <div className="relative border-r border-rule">
+          <div className="relative border-r-2 border-rule-strong bg-sheet-2">
             {shownPeriods.map((p) => (
               <div key={p} className="absolute inset-x-0 flex flex-col px-2 pt-1.5" style={{ top: rowTop(p, ROW_H, LUNCH_H, lunchAfter), height: ROW_H }}>
-                <span className={cn("text-[12.5px] font-bold leading-4 [font-stretch:80%]", p > 9 && "text-k-event")}>P{p}</span>
+                <span className={cn("text-[13px] font-black leading-4", p > 9 && "text-k-event")}>P{p}</span>
                 <span className="text-[11px] leading-[14px] text-ink-3 tabular-nums">{periodLabel(p, periods)}</span>
               </div>
             ))}
@@ -218,7 +216,7 @@ export function TimetableGrid({
           </div>
 
           {days.map((d) => (
-            <div key={d} className="relative border-r border-rule last:border-r-0">
+            <div key={d} className="relative border-r-2 border-rule-strong last:border-r-0">
               {/* row rules */}
               {shownPeriods.map((p) => (
                 <div

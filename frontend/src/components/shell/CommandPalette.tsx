@@ -26,8 +26,8 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-[oklch(0.15_0.01_250/0.45)] data-[state=closed]:animate-fade-out data-[state=open]:animate-fade-in" />
-        <DialogPrimitive.Content className="fixed left-1/2 top-[12vh] z-50 w-[min(600px,calc(100vw-24px))] -translate-x-1/2 overflow-hidden rounded-[14px] bg-sheet shadow-float data-[state=closed]:animate-pop-out data-[state=open]:animate-pop-in">
+        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/45 data-[state=closed]:animate-fade-out data-[state=open]:animate-fade-in" />
+        <DialogPrimitive.Content className="fixed left-1/2 top-[12vh] z-50 w-[min(600px,calc(100vw-24px))] -translate-x-1/2 overflow-hidden rounded-[6px] border-2 border-rule-strong bg-sheet shadow-[8px_8px_0_var(--shade)] data-[state=closed]:animate-pop-out data-[state=open]:animate-pop-in">
           <DialogPrimitive.Title className="sr-only">Where to?</DialogPrimitive.Title>
           <DialogPrimitive.Description className="sr-only">Search pages, groups, faculty and rooms</DialogPrimitive.Description>
           <Command label="Where to?" loop className="flex max-h-[min(520px,70vh)] flex-col">
@@ -40,7 +40,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                 placeholder="Where to? A page, group, faculty member or room"
                 className="h-14 flex-1 bg-transparent text-[15px] outline-none placeholder:text-ink-3"
               />
-              <kbd className="hidden rounded-[4px] border border-rule-strong px-1.5 py-0.5 text-[11px] text-ink-3 sm:block">Esc</kbd>
+              <kbd className="hidden rounded-[4px] border-2 border-rule-strong px-1.5 py-0.5 text-[11px] text-ink-3 sm:block">Esc</kbd>
             </div>
             <Command.List className="min-h-0 flex-1 overflow-y-auto p-2">
               <Command.Empty className="px-3 py-8 text-center text-[13.5px] text-ink-3">Nothing matches. Try a code like CR-101 or a group like CSE-2.</Command.Empty>
@@ -108,7 +108,7 @@ function Item({ children, icon, hint, value, onSelect }: { children: ReactNode; 
     <Command.Item
       value={value}
       onSelect={onSelect}
-      className="flex cursor-default items-center gap-3 rounded-[7px] px-2.5 py-2 text-[13.5px] data-[selected=true]:bg-signal-soft [&_svg]:size-4 [&_svg]:text-ink-3"
+      className="flex cursor-default items-center gap-3 rounded-[4px] px-2.5 py-2 text-[13.5px] data-[selected=true]:bg-signal-soft [&_svg]:size-4 [&_svg]:text-ink-3"
     >
       {icon}
       <span className="min-w-0 flex-1 truncate">{children}</span>

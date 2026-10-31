@@ -9,7 +9,7 @@ export const DialogClose = DialogPrimitive.Close;
 
 function Overlay() {
   return (
-    <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-[oklch(0.15_0.01_250/0.45)] backdrop-blur-[2px] data-[state=closed]:animate-fade-out data-[state=open]:animate-fade-in" />
+    <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/45 data-[state=closed]:animate-fade-out data-[state=open]:animate-fade-in" />
   );
 }
 
@@ -25,19 +25,19 @@ export function DialogContent({
       <Overlay />
       <DialogPrimitive.Content
         className={cn(
-          "fixed left-1/2 top-1/2 z-50 w-[min(520px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 rounded-[14px] bg-sheet p-6 shadow-float data-[state=closed]:animate-pop-out data-[state=open]:animate-pop-in",
+          "fixed left-1/2 top-1/2 z-50 w-[min(520px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 rounded-[6px] border-2 border-rule-strong bg-sheet p-6 shadow-[8px_8px_0_var(--shade)] data-[state=closed]:animate-pop-out data-[state=open]:animate-pop-in",
           className,
         )}
         {...props}
       >
-        <DialogPrimitive.Title className="pr-8 text-[18px] font-bold leading-6">{title}</DialogPrimitive.Title>
+        <DialogPrimitive.Title className="pr-8 text-[19px] font-black leading-6 [font-stretch:106%]">{title}</DialogPrimitive.Title>
         {description ? (
           <DialogPrimitive.Description className="mt-1.5 text-[13.5px] text-ink-2">{description}</DialogPrimitive.Description>
         ) : (
           <DialogPrimitive.Description className="sr-only">{title}</DialogPrimitive.Description>
         )}
         <div className="mt-5">{children}</div>
-        <DialogPrimitive.Close className="absolute right-4 top-4 grid size-8 place-items-center rounded-[7px] text-ink-3 hover:bg-ink/[0.06] hover:text-ink">
+        <DialogPrimitive.Close className="absolute right-4 top-4 grid size-8 place-items-center rounded-[4px] border-2 border-transparent text-ink-2 transition-colors hover:border-rule-strong hover:bg-signal hover:text-signal-ink">
           <X className="size-4" />
           <span className="sr-only">Close</span>
         </DialogPrimitive.Close>
@@ -70,16 +70,16 @@ export function Drawer({
         <Overlay />
         <DialogPrimitive.Content
           className={cn(
-            "fixed z-50 flex flex-col bg-sheet shadow-float",
-            "inset-x-0 bottom-0 max-h-[88dvh] rounded-t-[16px] data-[state=closed]:animate-sheet-down data-[state=open]:animate-sheet-up",
-            "md:inset-y-2 md:left-auto md:right-2 md:max-h-none md:rounded-[14px] md:data-[state=closed]:animate-drawer-out md:data-[state=open]:animate-drawer-in",
+            "fixed z-50 flex flex-col border-2 border-rule-strong bg-sheet shadow-float",
+            "inset-x-0 bottom-0 max-h-[88dvh] rounded-t-[6px] data-[state=closed]:animate-sheet-down data-[state=open]:animate-sheet-up",
+            "md:inset-y-2 md:left-auto md:right-2 md:max-h-none md:rounded-[6px] md:shadow-[8px_8px_0_var(--shade)] md:data-[state=closed]:animate-drawer-out md:data-[state=open]:animate-drawer-in",
             wide ? "md:w-[min(640px,calc(100vw-16px))]" : "md:w-[min(460px,calc(100vw-16px))]",
             className,
           )}
         >
-          <div className="flex items-start gap-3 border-b border-rule px-5 pb-4 pt-5">
+          <div className="flex items-start gap-3 border-b-2 border-rule-strong px-5 pb-4 pt-5">
             <div className="min-w-0 flex-1">
-              <DialogPrimitive.Title className="text-[17px] font-bold leading-6">{title}</DialogPrimitive.Title>
+              <DialogPrimitive.Title className="text-[18px] font-black leading-6 [font-stretch:106%]">{title}</DialogPrimitive.Title>
               {description ? (
                 <DialogPrimitive.Description asChild>
                   <div className="mt-1 text-[13px] text-ink-2">{description}</div>
@@ -88,7 +88,7 @@ export function Drawer({
                 <DialogPrimitive.Description className="sr-only">Details</DialogPrimitive.Description>
               )}
             </div>
-            <DialogPrimitive.Close className="grid size-8 shrink-0 place-items-center rounded-[7px] text-ink-3 hover:bg-ink/[0.06] hover:text-ink">
+            <DialogPrimitive.Close className="grid size-8 shrink-0 place-items-center rounded-[4px] border-2 border-transparent text-ink-2 transition-colors hover:border-rule-strong hover:bg-signal hover:text-signal-ink">
               <X className="size-4" />
               <span className="sr-only">Close</span>
             </DialogPrimitive.Close>

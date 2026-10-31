@@ -27,34 +27,32 @@ function isActive(stop: Stop, pathname: string) {
   return stop.to === "/" ? pathname === "/" : pathname === stop.to || pathname.startsWith(stop.to + "/");
 }
 
-/** The brand: a yellow wayfinding plate. */
+/** The brand: a yellow plate with the V block. */
 function Brand({ compact }: { compact?: boolean }) {
   return (
-    <div className="flex items-center gap-3">
-      <div className="grid size-10 shrink-0 place-items-center rounded-[9px] bg-signal text-signal-ink shadow-[inset_0_-2px_0_oklch(0_0_0/0.14)]">
-        <span className="text-[15px] font-black tracking-[-0.02em] [font-stretch:75%]">V</span>
+    <div className={cn("flex items-center gap-3 rounded-[6px] border-2 border-rule-strong bg-signal p-2 text-signal-ink shadow-mount", compact && "justify-center p-1.5")}>
+      <div className="grid size-9 shrink-0 place-items-center rounded-[4px] bg-anthracite text-signal">
+        <span className="text-[16px] font-black [font-stretch:110%]">V</span>
       </div>
       {!compact && (
-        <div className="leading-tight">
-          <div className="text-[14.5px] font-bold text-on-anthracite [font-stretch:88%]">Velora</div>
-          <div className="text-[12px] text-on-anthracite-2">Chilika Institute of Technology</div>
+        <div className="min-w-0 leading-tight">
+          <div className="text-[16px] font-black tracking-[0.01em] [font-stretch:118%]">VELORA</div>
+          <div className="truncate text-[11px] font-semibold [font-stretch:88%]">Chilika Institute of Technology</div>
         </div>
       )}
     </div>
   );
 }
 
-/** Navigation drawn as a route line: one stop per page, yours marked in yellow. */
-function RouteLine({ compact, onNavigate, scope = "rail" }: { compact?: boolean; onNavigate?: () => void; scope?: string }) {
+/** The menu: one row per page; the current page is a raised yellow tab. */
+function RouteLine({ compact, onNavigate }: { compact?: boolean; onNavigate?: () => void }) {
   const user = useUser();
   const { pathname } = useLocation();
   const approvals = useApprovalsCount();
-  const reduce = useReducedMotion();
   const stops = LINES[user.role];
   return (
-    <nav aria-label="Main" className="relative">
-      <span aria-hidden className={cn("absolute bottom-5 top-5 w-[2px] rounded-full bg-anthracite-3", compact ? "left-[27px]" : "left-[21px]")} />
-      <ul className="relative flex flex-col gap-0.5">
+    <nav aria-label="Main">
+      <ul className="flex flex-col gap-1">
         {stops.map((s) => {
           const active = isActive(s, pathname);
           const count = s.badge === "approvals" ? approvals : 0;
@@ -64,28 +62,20 @@ function RouteLine({ compact, onNavigate, scope = "rail" }: { compact?: boolean;
               end={s.to === "/"}
               onClick={onNavigate}
               className={cn(
-                "group relative flex h-10 items-center gap-3 rounded-[8px] pr-2 text-[13.5px] transition-colors",
-                compact ? "justify-center pl-0" : "pl-[10px]",
-                active ? "font-bold text-on-anthracite" : "font-medium text-on-anthracite-2 hover:bg-anthracite-2 hover:text-on-anthracite",
+                "group relative flex h-11 items-center gap-3 rounded-[4px] border-2 pr-2 text-[14px] transition-colors duration-100",
+                compact ? "justify-center px-0" : "pl-[10px]",
+                active
+                  ? "border-rule-strong bg-signal font-bold text-signal-ink shadow-mount"
+                  : "border-transparent font-semibold text-ink-2 hover:bg-signal-soft hover:text-ink",
               )}
             >
-              <span className={cn("relative grid size-6 shrink-0 place-items-center", compact && "size-8")}>
-                {active && (
-                  <motion.span
-                    layoutId={`route-here-${scope}`}
-                    className="absolute inset-0 rounded-full bg-signal shadow-[0_0_0_3px_var(--anthracite)]"
-                    transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 520, damping: 40 }}
-                  />
-                )}
-                {!active && <span className="size-2.5 rounded-full border-2 border-on-anthracite-2 bg-anthracite group-hover:border-on-anthracite" />}
-                {active && <s.icon className="relative z-10 size-3.5 text-signal-ink" strokeWidth={2.4} />}
-              </span>
+              <s.icon className="size-[18px] shrink-0" strokeWidth={active ? 2.4 : 2} />
               {!compact && <span className="flex-1 truncate">{s.label}</span>}
               {count > 0 && (
                 <span
                   className={cn(
-                    "grid h-5 min-w-5 place-items-center rounded-full bg-signal px-1.5 text-[11px] font-bold text-signal-ink",
-                    compact && "absolute right-1 top-0.5 h-4 min-w-4 px-1 text-[10px]",
+                    "grid h-5 min-w-5 place-items-center rounded-[3px] border-2 border-rule-strong bg-sheet px-1 text-[11px] font-bold text-ink",
+                    compact && "absolute right-0.5 top-0.5 h-4 min-w-4 text-[10px]",
                   )}
                 >
                   {count}
@@ -105,14 +95,14 @@ function UserPlate({ compact }: { compact?: boolean }) {
   const { logout } = useAuth();
   const [password, setPassword] = useState(false);
   return (
-    <div className={cn("flex items-center gap-3 rounded-[10px] bg-anthracite-2 p-2.5", compact && "flex-col p-2")}>
-      <div className="grid size-8 shrink-0 place-items-center rounded-full bg-anthracite-3 text-[12px] font-bold text-on-anthracite">
+    <div className={cn("flex items-center gap-3 rounded-[6px] border-2 border-rule-strong bg-sheet p-2.5", compact && "flex-col p-2")}>
+      <div className="grid size-8 shrink-0 place-items-center rounded-[4px] border-2 border-rule-strong bg-platform text-[12px] font-black text-ink">
         {user.name.replace(/^(Dr\.|Prof\.)\s+/, "").slice(0, 1)}
       </div>
       {!compact && (
         <div className="min-w-0 flex-1 leading-tight">
-          <div className="truncate text-[13px] font-semibold text-on-anthracite">{user.name}</div>
-          <div className="truncate text-[11.5px] text-on-anthracite-2">
+          <div className="truncate text-[13px] font-bold text-ink">{user.name}</div>
+          <div className="truncate text-[11.5px] text-ink-3">
             {user.demo ? "Demo " : ""}
             {user.demo ? ROLE[user.role].toLowerCase() : ROLE[user.role]}
             {user.department ? `, ${user.department}` : ""}
@@ -125,7 +115,7 @@ function UserPlate({ compact }: { compact?: boolean }) {
           <Tip label="Change password" side={compact ? "right" : "top"}>
             <button
               onClick={() => setPassword(true)}
-              className="grid size-8 place-items-center rounded-[7px] text-on-anthracite-2 hover:bg-anthracite-3 hover:text-on-anthracite"
+              className="grid size-8 place-items-center rounded-[4px] text-ink-2 hover:bg-signal-soft hover:text-ink"
               aria-label="Change password"
             >
               <KeyRound className="size-4" />
@@ -135,7 +125,7 @@ function UserPlate({ compact }: { compact?: boolean }) {
         </>
       )}
       <Tip label="Log out" side={compact ? "right" : "top"}>
-        <button onClick={() => logout()} className="grid size-8 place-items-center rounded-[7px] text-on-anthracite-2 hover:bg-anthracite-3 hover:text-on-anthracite" aria-label="Log out">
+        <button onClick={() => logout()} className="grid size-8 place-items-center rounded-[4px] text-ink-2 hover:bg-signal-soft hover:text-ink" aria-label="Log out">
           <LogOut className="size-4" />
         </button>
       </Tip>
@@ -159,30 +149,30 @@ function TopBar({ onSearch, onMenu }: { onSearch: () => void; onMenu: () => void
   const stop = LINES[user.role].find((s) => isActive(s, pathname));
   const now = useNow(5000);
   return (
-    <div className="sticky top-0 z-30 border-b border-rule bg-platform/85 backdrop-blur-md">
+    <div className="sticky top-0 z-30 border-b-2 border-rule-strong bg-platform">
       <div className="flex h-14 items-center gap-2 px-4 sm:px-6">
-        <button onClick={onMenu} className="grid size-9 place-items-center rounded-[8px] text-ink-2 hover:bg-ink/[0.06] md:hidden" aria-label="Open menu">
+        <button onClick={onMenu} className="press grid size-9 place-items-center rounded-[4px] border-2 border-rule-strong bg-sheet text-ink shadow-mount md:hidden" aria-label="Open menu">
           <MenuIcon className="size-5" />
         </button>
         <div className="flex min-w-0 items-center gap-2 text-[13.5px] md:hidden">
-          <span className="grid size-7 place-items-center rounded-[6px] bg-signal text-[11px] font-black text-signal-ink [font-stretch:75%]">V</span>
+          <span className="grid size-7 place-items-center rounded-[4px] border-2 border-rule-strong bg-signal text-[12px] font-black text-signal-ink">V</span>
           <span className="truncate font-semibold">{stop?.label}</span>
         </div>
         <button
           onClick={onSearch}
-          className="ml-auto flex h-9 items-center gap-2.5 rounded-[8px] border border-rule-strong bg-sheet px-3 text-[13px] text-ink-3 shadow-mount transition-colors hover:text-ink md:ml-0 md:w-[min(420px,40vw)]"
+          className="press ml-auto flex h-10 items-center gap-2.5 rounded-[4px] border-2 border-rule-strong bg-sheet px-3 text-[13.5px] font-medium text-ink-2 shadow-mount hover:text-ink md:ml-0 md:w-[min(440px,42vw)]"
         >
           <Search className="size-4" />
           <span className="hidden md:inline">Where to? Pages, groups, faculty, rooms</span>
-          <kbd className="ml-auto hidden rounded-[4px] border border-rule px-1.5 text-[11px] md:inline">Ctrl K</kbd>
+          <kbd className="ml-auto hidden rounded-[3px] border-2 border-rule-strong px-1.5 text-[10.5px] font-bold md:inline">CTRL K</kbd>
         </button>
         <div className="ml-auto hidden items-center gap-3 md:flex">
-          <div className="flex items-center gap-2 rounded-[8px] bg-anthracite px-2 py-1.5" title="Local time">
+          <div className="flex items-center gap-2 rounded-[4px] border-2 border-rule-strong bg-anthracite px-2 py-1 shadow-mount" title="Local time">
             <SplitFlap value={clock(now)} className="text-[15px]" label={`Time ${clock(now)}`} stagger={30} />
           </div>
         </div>
         <Tip label={theme === "dark" ? "Light theme" : "Dark theme"}>
-          <button onClick={toggle} className="grid size-9 place-items-center rounded-[8px] text-ink-2 hover:bg-ink/[0.06] hover:text-ink" aria-label="Switch theme">
+          <button onClick={toggle} className="press grid size-9 place-items-center rounded-[4px] border-2 border-rule-strong bg-sheet text-ink shadow-mount" aria-label="Switch theme">
             {theme === "dark" ? <SunMedium className="size-[18px]" /> : <MoonStar className="size-[18px]" />}
           </button>
         </Tip>
@@ -197,26 +187,26 @@ function PhoneBar({ onMore }: { onMore: () => void }) {
   const approvals = useApprovalsCount();
   const stops = PHONE[user.role].map((to) => LINES[user.role].find((s) => s.to === to)!).filter(Boolean);
   return (
-    <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-40 border-t border-anthracite-2 bg-anthracite pb-[env(safe-area-inset-bottom)] md:hidden">
+    <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-40 border-t-2 border-rule-strong bg-sheet pb-[env(safe-area-inset-bottom)] md:hidden">
       <ul className="grid grid-cols-5">
         {stops.map((s) => {
           const active = isActive(s, pathname);
           return (
             <li key={s.to}>
               <NavLink to={s.to} end={s.to === "/"} className="relative flex h-16 flex-col items-center justify-center gap-1 text-[11px] font-semibold [font-stretch:85%]">
-                <span className={cn("relative grid size-8 place-items-center rounded-full", active ? "bg-signal text-signal-ink" : "text-on-anthracite-2")}>
+                <span className={cn("relative grid size-8 place-items-center rounded-[4px] border-2", active ? "border-rule-strong bg-signal text-signal-ink shadow-mount" : "border-transparent text-ink-2")}>
                   <s.icon className="size-[18px]" />
                   {s.badge === "approvals" && approvals > 0 && (
-                    <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-signal px-1 text-[10px] font-bold text-signal-ink ring-2 ring-anthracite">{approvals}</span>
+                    <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-signal px-1 text-[10px] font-bold text-signal-ink ring-2 ring-sheet">{approvals}</span>
                   )}
                 </span>
-                <span className={active ? "text-on-anthracite" : "text-on-anthracite-2"}>{s.label.replace("My timetable", "Timetable").replace("Book a venue", "Book")}</span>
+                <span className={active ? "font-bold text-ink" : "text-ink-2"}>{s.label.replace("My timetable", "Timetable").replace("Book a venue", "Book")}</span>
               </NavLink>
             </li>
           );
         })}
         <li>
-          <button onClick={onMore} className="flex h-16 w-full flex-col items-center justify-center gap-1 text-[11px] font-semibold text-on-anthracite-2 [font-stretch:85%]">
+          <button onClick={onMore} className="flex h-16 w-full flex-col items-center justify-center gap-1 text-[11px] font-semibold text-ink-2 [font-stretch:85%]">
             <span className="grid size-8 place-items-center">
               <MenuIcon className="size-[18px]" />
             </span>
@@ -241,7 +231,7 @@ export function AppShell() {
   return (
     <div className="platform-bg min-h-dvh">
       {tablet && (
-        <aside className="fixed inset-y-0 left-0 z-40 flex w-[76px] flex-col gap-6 bg-anthracite px-3 py-4 lg:w-[252px] lg:px-4">
+        <aside className="fixed inset-y-0 left-0 z-40 flex w-[76px] flex-col gap-5 border-r-2 border-rule-strong bg-sheet px-3 py-4 lg:w-[252px] lg:px-4">
           <Brand compact={!wide} />
           <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1">
             <RouteLine compact={!wide} />
@@ -267,9 +257,9 @@ export function AppShell() {
       </div>
 
       {!tablet && <PhoneBar onMore={() => setMoreOpen(true)} />}
-      <Drawer open={moreOpen} onOpenChange={setMoreOpen} title="Go to" className="bg-anthracite text-on-anthracite">
+      <Drawer open={moreOpen} onOpenChange={setMoreOpen} title="Go to" className="bg-sheet text-ink">
         <div className="flex flex-col gap-5 pb-4">
-          <RouteLine scope="drawer" onNavigate={() => setMoreOpen(false)} />
+          <RouteLine onNavigate={() => setMoreOpen(false)} />
           <UserPlate />
         </div>
       </Drawer>

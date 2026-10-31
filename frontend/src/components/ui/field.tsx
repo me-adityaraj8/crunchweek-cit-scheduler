@@ -4,7 +4,7 @@ import { useState, type ComponentProps, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 const control =
-  "w-full rounded-[7px] border border-rule-strong bg-sheet px-3 text-[14px] text-ink shadow-mount placeholder:text-ink-3 transition-[border-color,box-shadow] duration-150 focus-visible:border-ink focus-visible:shadow-[0_0_0_3px_var(--signal)] focus-visible:outline-none aria-[invalid=true]:border-stop disabled:opacity-50";
+  "w-full rounded-[4px] border-2 border-rule-strong bg-sheet px-3 text-[14px] text-ink shadow-mount placeholder:text-ink-3 transition-[border-color,box-shadow] duration-150 focus-visible:border-ink focus-visible:shadow-[0_0_0_3px_var(--signal)] focus-visible:outline-none aria-[invalid=true]:border-stop disabled:opacity-50";
 
 export function Input({ className, ...props }: ComponentProps<"input">) {
   return <input data-slot="input" className={cn(control, "h-9", className)} {...props} />;
@@ -70,7 +70,7 @@ export function Field({
         </Label>
         {aside}
       </div>
-      <div className={cn(guessed && "rounded-[8px] ring-2 ring-signal ring-offset-2 ring-offset-sheet")}>{children}</div>
+      <div className={cn(guessed && "rounded-[4px] ring-2 ring-signal ring-offset-2 ring-offset-sheet")}>{children}</div>
       {error ? (
         <p className="text-[12.5px] font-medium text-stop">{error}</p>
       ) : hint ? (

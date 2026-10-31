@@ -74,21 +74,27 @@ function DayList({ items, days, onSelect, summary }: { items: GridItem[]; days: 
         <ul className="flex flex-col gap-2">
           {list.map((it) => (
             <li key={it.key}>
-              <button type="button" onClick={() => onSelect(it)} className="sheet flex w-full items-stretch gap-3 overflow-hidden p-0 text-left">
-                <span className={cn("w-1 shrink-0", { lecture: "bg-k-lecture", tutorial: "bg-k-tutorial", lab: "bg-k-lab", exam: "bg-k-exam", event: "bg-k-event" }[it.kind])} />
-                <span className="flex w-[74px] shrink-0 flex-col justify-center py-3 text-[12.5px] font-bold tabular-nums leading-4 [font-stretch:85%]">
+              <button
+                type="button"
+                onClick={() => onSelect(it)}
+                className={cn(
+                  "press flex w-full items-stretch gap-3 overflow-hidden rounded-[4px] border-2 border-rule-strong text-left shadow-mount",
+                  { lecture: "bg-k-lecture-tint", tutorial: "bg-k-tutorial-tint", lab: "bg-k-lab-tint", exam: "bg-k-exam-tint", event: "bg-k-event-tint" }[it.kind],
+                )}
+              >
+                <span className="flex w-[70px] shrink-0 flex-col justify-center border-r-2 border-rule-strong bg-sheet px-3 py-3 text-[12.5px] font-bold tabular-nums leading-4 [font-stretch:85%]">
                   {spanLabel(it.start, it.end - it.start + 1, summary?.periods).split("–").map((t, i) => (
-                    <span key={i} className={i ? "text-ink-3" : ""}>{t}</span>
+                    <span key={i} className={i ? "text-ink-2" : ""}>{t}</span>
                   ))}
                 </span>
                 <span className="min-w-0 flex-1 py-3 pr-3">
                   <span className="flex items-center gap-2">
                     <KindBullet kind={it.kind} size="sm" />
-                    <b className="truncate text-[14px] font-bold [font-stretch:85%]">{it.entry?.course_id ?? it.booking?.request_id}</b>
-                    <span className="ml-auto rounded-[4px] bg-ink/[0.07] px-1.5 text-[12px] font-bold [font-stretch:80%]">{it.room}</span>
+                    <b className="truncate text-[14px] font-black [font-stretch:85%]">{it.entry?.course_id ?? it.booking?.request_id}</b>
+                    <span className="ml-auto rounded-[3px] border-2 border-rule-strong bg-sheet px-1.5 text-[12px] font-bold [font-stretch:80%]">{it.room}</span>
                   </span>
-                  <span className="mt-0.5 block truncate text-[13px] text-ink-2">{it.entry?.course_title ?? it.booking?.title}</span>
-                  {it.entry && <span className="block truncate text-[12px] text-ink-3">{it.entry.groups.join(", ")}, {it.entry.faculty_name}</span>}
+                  <span className="mt-0.5 block truncate text-[13px] text-ink">{it.entry?.course_title ?? it.booking?.title}</span>
+                  {it.entry && <span className="block truncate text-[12px] text-ink-2">{it.entry.groups.join(", ")}, {it.entry.faculty_name}</span>}
                 </span>
               </button>
             </li>

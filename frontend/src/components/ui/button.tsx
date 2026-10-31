@@ -4,17 +4,17 @@ import type { ComponentProps } from "react";
 import { cn } from "@/lib/utils";
 
 export const buttonVariants = cva(
-  "inline-flex select-none items-center justify-center gap-2 whitespace-nowrap rounded-[7px] font-semibold [font-stretch:92%] transition-[background-color,color,box-shadow,transform,filter] duration-150 ease-arrive active:translate-y-px disabled:pointer-events-none disabled:opacity-45 [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex select-none items-center justify-center gap-2 whitespace-nowrap rounded-[4px] border-2 border-rule-strong font-bold [font-stretch:96%] disabled:pointer-events-none disabled:border-dashed disabled:opacity-50 disabled:shadow-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        primary: "bg-ink text-sheet shadow-mount hover:bg-ink/88",
-        signal: "bg-signal text-signal-ink shadow-[inset_0_-2px_0_oklch(0_0_0/0.14)] hover:brightness-[0.96]",
-        outline: "border border-rule-strong bg-sheet text-ink shadow-mount hover:bg-sheet-2",
-        ghost: "text-ink-2 hover:bg-ink/[0.06] hover:text-ink",
-        danger: "bg-stop text-sheet hover:bg-stop/90",
-        clear: "bg-clear text-sheet hover:bg-clear/90",
-        board: "border border-anthracite-3 bg-anthracite-2 text-on-anthracite hover:bg-anthracite-3",
+        primary: "press bg-signal text-signal-ink shadow-mount",
+        signal: "press bg-signal text-signal-ink shadow-mount",
+        outline: "press bg-sheet text-ink shadow-mount hover:bg-sheet-2",
+        ghost: "border-transparent text-ink-2 transition-colors hover:bg-ink/[0.06] hover:text-ink",
+        danger: "press bg-stop text-sheet shadow-mount",
+        clear: "press bg-clear text-sheet shadow-mount",
+        board: "border-on-anthracite-2 bg-anthracite-2 text-on-anthracite transition-colors hover:bg-anthracite-3",
       },
       size: {
         sm: "h-8 px-3 text-[13px]",

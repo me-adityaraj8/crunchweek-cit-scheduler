@@ -95,12 +95,12 @@ function RequestDrawer({ b, onClose, onShow, summary }: { b: Booking | null; onC
                   <Loader2 className="size-4 animate-spin" /> Rewording the decision…
                 </p>
               ) : w.data?.words ? (
-                <blockquote className="rounded-[8px] border-l-[3px] border-signal bg-signal-soft px-3 py-2 text-[13.5px] leading-[20px]">{w.data.words}</blockquote>
+                <blockquote className="rounded-[4px] border-l-[3px] border-signal bg-signal-soft px-3 py-2 text-[13.5px] leading-[20px]">{w.data.words}</blockquote>
               ) : null}
             </div>
           </section>
           {(d?.lost_to || ex.data?.lost_to) && (
-            <section className="rounded-[10px] border border-stop/40 bg-stop-soft p-3">
+            <section className="rounded-[6px] border border-stop/40 bg-stop-soft p-3">
               <p className="text-[13.5px]">
                 Lost its first choice to <b>{d?.lost_to ?? ex.data?.lost_to}</b>, which ranks higher.
               </p>
@@ -120,7 +120,7 @@ function RequestDrawer({ b, onClose, onShow, summary }: { b: Booking | null; onC
               </div>
             </section>
           )}
-          <section className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-[10px] bg-sheet-2 p-3 text-[13px]">
+          <section className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-[6px] bg-sheet-2 p-3 text-[13px]">
             <div>
               <div className="text-[11.5px] text-ink-3">Category</div>
               {categoryLabel(b.category)}
@@ -256,7 +256,7 @@ export default function Spectra() {
       ) : (
         <>
           {sum && (
-            <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-[10px] border border-rule bg-rule sm:grid-cols-3 lg:grid-cols-6">
+            <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-[6px] border border-rule bg-rule sm:grid-cols-3 lg:grid-cols-6">
               {[
                 ["Approved", sum.approved, "clear"],
                 ["Another slot offered", sum.alternatives, "caution"],

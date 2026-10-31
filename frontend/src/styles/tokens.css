@@ -1,116 +1,119 @@
-/* Signal design tokens. Colour carries meaning or nothing (see frontend/DESIGN.md).
-   Values are OKLCH so light and dark keep the same perceived contrast. */
+/* Signal & Concrete: neo-brutalist operations theme. Ink outlines draw the structure, hard offset
+   shadows mark what can be pressed, one yellow means "act here", and pastels name session kinds
+   (always with a LEC/TUT/LAB letter, never colour alone). Dark mode is "Night Shift". */
 
 :root {
   color-scheme: light;
 
   /* surfaces */
-  --platform: oklch(0.928 0.006 240);
-  --platform-2: oklch(0.9 0.007 240);
-  --dot: oklch(0.84 0.007 240);
-  --sheet: oklch(1 0 0);
-  --sheet-2: oklch(0.975 0.004 240);
-  --anthracite: oklch(0.29 0.012 250);
-  --anthracite-2: oklch(0.345 0.012 250);
-  --anthracite-3: oklch(0.4 0.012 250);
+  --platform: #e3e5e1;
+  --platform-2: #d9dbd6;
+  --dot: #cbcec8;
+  --sheet: #ffffff;
+  --sheet-2: #f4f5f2;
+  --anthracite: #111111;
+  --anthracite-2: #232321;
+  --anthracite-3: #3a3a36;
 
   /* text */
-  --ink: oklch(0.21 0.012 250);
-  --ink-2: oklch(0.42 0.014 250);
-  --ink-3: oklch(0.52 0.012 250);
-  --on-anthracite: oklch(0.965 0.004 90);
-  --on-anthracite-2: oklch(0.74 0.01 250);
+  --ink: #111111;
+  --ink-2: #3a3a36;
+  --ink-3: #5a5b56;
+  --on-anthracite: #f4f3ee;
+  --on-anthracite-2: #b9bab4;
 
-  /* rules */
-  --rule: oklch(0.885 0.006 240);
-  --rule-strong: oklch(0.79 0.008 240);
+  /* rules: light dividers inside things; ink outlines around them */
+  --rule: #d5d7d2;
+  --rule-strong: #111111;
 
-  /* wayfinding yellow: here, changed, focus */
-  --signal: oklch(0.875 0.165 92);
-  --signal-ink: oklch(0.21 0.02 90);
-  --signal-soft: oklch(0.965 0.055 95);
-  --signal-edge: oklch(0.8 0.15 90);
+  /* the one action colour: here, chosen, press me */
+  --signal: #ffd23f;
+  --signal-ink: #111111;
+  --signal-soft: #fff3bf;
+  --signal-edge: #111111;
 
-  /* status signals */
-  --clear: oklch(0.55 0.14 152);
-  --clear-soft: oklch(0.955 0.04 152);
-  --stop: oklch(0.555 0.2 27);
-  --stop-soft: oklch(0.955 0.03 27);
-  --wait: oklch(0.6 0.012 250);
-  --wait-soft: oklch(0.95 0.004 250);
+  /* status signals (text-safe colours plus soft fills) */
+  --clear: oklch(0.52 0.14 152);
+  --clear-soft: #cff5dc;
+  --stop: oklch(0.53 0.2 27);
+  --stop-soft: #ffe1dd;
+  --wait: oklch(0.55 0.012 250);
+  --wait-soft: #eceeea;
 
-  /* session kinds: line colours, always paired with a letter. Lecture, tutorial, lab and event pass
-     the categorical checks (normal-vision ΔE >= 15, colour-blind ΔE >= 8) in both modes; exam is ink. */
-  --k-lecture: oklch(0.5 0.15 255);
-  --k-lecture-tint: oklch(0.958 0.022 255);
-  --k-lecture-edge: oklch(0.78 0.08 255);
-  --k-tutorial: oklch(0.6 0.11 192);
-  --k-tutorial-tint: oklch(0.958 0.022 192);
-  --k-tutorial-edge: oklch(0.78 0.07 192);
-  --k-lab: oklch(0.48 0.18 300);
-  --k-lab-tint: oklch(0.958 0.026 300);
-  --k-lab-edge: oklch(0.78 0.09 300);
-  --k-exam: oklch(0.3 0.015 250);
-  --k-exam-tint: oklch(0.945 0.004 250);
-  --k-exam-edge: oklch(0.7 0.01 250);
-  --k-event: oklch(0.6 0.19 355);
-  --k-event-tint: oklch(0.958 0.026 355);
-  --k-event-edge: oklch(0.8 0.09 355);
-  --k-on: oklch(1 0 0);
+  /* session kinds: a pastel fill with ink text, a darker line colour for the letter chip */
+  --k-lecture: #1f5faf;
+  --k-lecture-tint: #9ed2ff;
+  --k-lecture-edge: #111111;
+  --k-tutorial: #a34a12;
+  --k-tutorial-tint: #ffb98a;
+  --k-tutorial-edge: #111111;
+  --k-lab: #6a3fc2;
+  --k-lab-tint: #cdb8ff;
+  --k-lab-edge: #111111;
+  --k-exam: #111111;
+  --k-exam-tint: #ff9eb5;
+  --k-exam-edge: #111111;
+  --k-event: #4d6a00;
+  --k-event-tint: #c6f06b;
+  --k-event-edge: #111111;
+  --k-on: #ffffff;
 
-  /* elevation: a mounted sign, not a floating card */
-  --mount: 0 1px 0 var(--rule-strong);
-  --float: 0 0 0 1px var(--rule-strong), 0 18px 40px -18px oklch(0.2 0.02 250 / 0.35);
+  /* elevation: hard offset shadows, no blur */
+  --shade: #111111;
+  --mount: 2px 2px 0 var(--shade);
+  --float: 4px 4px 0 var(--shade);
 }
 
 .dark {
   color-scheme: dark;
 
-  --platform: oklch(0.19 0.008 250);
-  --platform-2: oklch(0.165 0.008 250);
-  --dot: oklch(0.255 0.009 250);
-  --sheet: oklch(0.228 0.01 250);
-  --sheet-2: oklch(0.252 0.01 250);
-  --anthracite: oklch(0.15 0.006 250);
-  --anthracite-2: oklch(0.21 0.008 250);
-  --anthracite-3: oklch(0.27 0.01 250);
+  --platform: #131313;
+  --platform-2: #0e0e0e;
+  --dot: #262624;
+  --sheet: #1d1d1b;
+  --sheet-2: #252523;
+  --anthracite: #0b0b0b;
+  --anthracite-2: #1d1d1b;
+  --anthracite-3: #33332f;
 
-  --ink: oklch(0.955 0.004 250);
-  --ink-2: oklch(0.79 0.01 250);
-  --ink-3: oklch(0.66 0.012 250);
-  --on-anthracite: oklch(0.965 0.004 90);
-  --on-anthracite-2: oklch(0.7 0.01 250);
+  --ink: #f1efe8;
+  --ink-2: #cfccc2;
+  --ink-3: #a9a69c;
+  --on-anthracite: #f1efe8;
+  --on-anthracite-2: #b9b6ac;
 
-  --rule: oklch(0.3 0.01 250);
-  --rule-strong: oklch(0.38 0.012 250);
+  --rule: #33332f;
+  --rule-strong: #f1efe8;
 
-  --signal-soft: oklch(0.33 0.06 92);
-  --signal-edge: oklch(0.7 0.13 92);
+  --signal-soft: #3a3216;
+  --signal-edge: #f1efe8;
 
-  --clear: oklch(0.75 0.15 152);
-  --clear-soft: oklch(0.3 0.05 152);
-  --stop: oklch(0.69 0.19 27);
-  --stop-soft: oklch(0.31 0.065 27);
-  --wait: oklch(0.64 0.012 250);
-  --wait-soft: oklch(0.28 0.008 250);
+  --clear: oklch(0.78 0.15 152);
+  --clear-soft: #173b26;
+  --stop: oklch(0.72 0.18 27);
+  --stop-soft: #3e1b18;
+  --wait: oklch(0.66 0.012 250);
+  --wait-soft: #262624;
 
-  --k-lecture: oklch(0.6 0.15 255);
-  --k-lecture-tint: oklch(0.29 0.04 255);
-  --k-lecture-edge: oklch(0.45 0.08 255);
-  --k-tutorial: oklch(0.66 0.11 192);
-  --k-tutorial-tint: oklch(0.29 0.035 192);
-  --k-tutorial-edge: oklch(0.45 0.07 192);
-  --k-lab: oklch(0.56 0.17 300);
-  --k-lab-tint: oklch(0.29 0.045 300);
-  --k-lab-edge: oklch(0.45 0.09 300);
-  --k-exam: oklch(0.88 0.01 250);
-  --k-exam-tint: oklch(0.28 0.008 250);
-  --k-exam-edge: oklch(0.45 0.01 250);
-  --k-event: oklch(0.64 0.17 355);
-  --k-event-tint: oklch(0.29 0.045 355);
-  --k-event-edge: oklch(0.47 0.09 355);
-  --k-on: oklch(0.15 0.01 250);
+  --k-lecture: #7cc6ff;
+  --k-lecture-tint: #17324a;
+  --k-lecture-edge: #7cc6ff;
+  --k-tutorial: #ffa66b;
+  --k-tutorial-tint: #3d2513;
+  --k-tutorial-edge: #ffa66b;
+  --k-lab: #b9a2ff;
+  --k-lab-tint: #2a2148;
+  --k-lab-edge: #b9a2ff;
+  --k-exam: #ff9eb5;
+  --k-exam-tint: #3d1d26;
+  --k-exam-edge: #ff9eb5;
+  --k-event: #c6f06b;
+  --k-event-tint: #2a3512;
+  --k-event-edge: #c6f06b;
+  --k-on: #111111;
 
-  --mount: 0 1px 0 oklch(0.13 0.006 250);
-  --float: 0 0 0 1px var(--rule-strong), 0 18px 40px -16px oklch(0 0 0 / 0.6);
+  /* Night Shift: the hard shadows are signal light */
+  --shade: #ffd23f;
+  --mount: 2px 2px 0 var(--shade);
+  --float: 4px 4px 0 var(--shade);
 }

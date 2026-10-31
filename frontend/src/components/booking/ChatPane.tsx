@@ -108,7 +108,7 @@ export function ChatPane({ days, onDraft }: { days: string[]; onDraft: (r: Booki
   return (
     <section className="sheet flex min-h-[460px] flex-col overflow-hidden" aria-label="Booking assistant">
       <header className="flex items-center gap-3 border-b border-rule px-4 py-3">
-        <span className="grid size-8 place-items-center rounded-[8px] bg-anthracite text-on-anthracite">
+        <span className="grid size-8 place-items-center rounded-[4px] bg-anthracite text-on-anthracite">
           <Bot className="size-4" />
         </span>
         <div className="min-w-0 flex-1">
@@ -131,7 +131,7 @@ export function ChatPane({ days, onDraft }: { days: string[]; onDraft: (r: Booki
                   <button
                     type="button"
                     onClick={() => send(ex)}
-                    className="w-full rounded-[8px] border border-rule-strong bg-sheet-2 px-3 py-2 text-left text-[13px] leading-[18px] transition-colors hover:border-ink hover:bg-signal-soft"
+                    className="w-full rounded-[4px] border-2 border-rule-strong bg-sheet-2 px-3 py-2 text-left text-[13px] leading-[18px] transition-colors hover:border-ink hover:bg-signal-soft"
                   >
                     {ex}
                   </button>
@@ -147,7 +147,7 @@ export function ChatPane({ days, onDraft }: { days: string[]; onDraft: (r: Booki
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.2, ease: [0.2, 0.8, 0.2, 1] }}
-              className={cn("max-w-[92%] rounded-[12px] px-3.5 py-2.5 text-[13.5px] leading-[20px]", m.role === "you" ? "self-end rounded-br-[4px] bg-ink text-sheet" : "self-start rounded-bl-[4px] border border-rule-strong bg-sheet-2")}
+              className={cn("max-w-[92%] rounded-[6px] px-3.5 py-2.5 text-[13.5px] leading-[20px]", m.role === "you" ? "self-end rounded-br-[4px] bg-ink text-sheet" : "self-start rounded-bl-[4px] border-2 border-rule-strong bg-sheet-2")}
             >
               {m.fallback && (
                 <p className="mb-1.5 flex items-center gap-1.5 text-[12px] font-semibold text-ink-2">
@@ -206,7 +206,7 @@ export function ChatPane({ days, onDraft }: { days: string[]; onDraft: (r: Booki
           rows={2}
           maxLength={2000}
           placeholder="e.g. auditorium Friday 6 pm, 300 people, stage and mic. Or press the mic and say it."
-          className="min-h-[44px] flex-1 resize-none rounded-[8px] border border-rule-strong bg-sheet px-3 py-2 text-[14px] leading-5 placeholder:text-ink-3 focus-visible:border-ink focus-visible:shadow-[0_0_0_3px_var(--signal)] focus-visible:outline-none"
+          className="min-h-[44px] flex-1 resize-none rounded-[4px] border-2 border-rule-strong bg-sheet px-3 py-2 text-[14px] leading-5 placeholder:text-ink-3 focus-visible:border-ink focus-visible:shadow-[0_0_0_3px_var(--signal)] focus-visible:outline-none"
         />
         {canRecord() && (
           <Button

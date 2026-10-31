@@ -1,6 +1,8 @@
-# Frontend design: "Signal"
+# Frontend design: "Signal & Concrete"
 
 The visual identity and design system for the Velora web app. Product scope and API live in `docs/DESIGN.md`; this file covers how the app looks, moves and reads.
+
+The app started as "Signal" (sections 1 to 3). A second pass, "Signal & Concrete", kept the signage idea and gave it a neo-brutalist build: ink outlines, hard offset shadows, pastel session fills and one yellow. Section 4 describes the current look.
 
 ## 1. Research
 
@@ -32,6 +34,8 @@ What we looked at, and the one pattern we took from each.
 
 **Chosen: A, Signal.** It is the only direction where the metaphor and the problem are the same thing: a timetable is a timetable. We borrow one idea from E (the approval stamp, which is also how a ticket gets validated) and the grid discipline of D.
 
+**Second pass: Signal & Concrete.** Taken from a neo-brutalist task dashboard (D-Tasks on Dribbble): every component outlined in ink, shadows that are solid offsets rather than blur, flat pastel cards, chunky expanded type. Three directions were drawn on a canvas (concrete day, sticker pastel, "Night Shift" dark); concrete day became the light theme and Night Shift the dark one.
+
 ## 3. Principles
 
 1. **Signage, not dashboard.** One type family at several widths. Anthracite, white, platform grey and yellow. Colour carries information or nothing.
@@ -44,20 +48,21 @@ What we looked at, and the one pattern we took from each.
 
 ### Colour
 
-Tokens live in `src/styles/tokens.css` as OKLCH, with light and dark values. Approximate hex for reference:
+Tokens live in `src/styles/tokens.css`, with light and dark values:
 
 | Token | Light | Dark | Use |
 | --- | --- | --- | --- |
-| `platform` | `#E6E9EC` | `#15181C` | App background |
-| `sheet` | `#FFFFFF` | `#1D2126` | Timetables, forms, lists |
-| `ink` | `#15191E` | `#ECEFF2` | Text, primary buttons |
-| `anthracite` | `#24292F` | `#0D0F11` | Boards, nav rail |
-| `signal` (yellow) | `#FFD02B` | `#FFD02B` | You are here, changed, focus, primary sign |
+| `platform` | `#E3E5E1` | `#131313` | App background (concrete, dotted) |
+| `sheet` | `#FFFFFF` | `#1D1D1B` | Cards, timetables, forms, lists |
+| `ink` / `rule-strong` | `#111111` | `#F1EFE8` | Text and the outline on every component |
+| `anthracite` | `#111111` | `#0B0B0B` | Boards, the V block |
+| `signal` (yellow) | `#FFD23F` | `#FFD23F` | The one action colour: primary buttons, your page, today, the selected thing |
+| `shade` | `#111111` | `#FFD23F` | Hard offset shadows (yellow at night) |
 | `clear` | green | brighter green | Approved, valid, 0 violations |
 | `stop` | red | brighter red | Rejected, hard conflict |
 | `wait` | grey | grey | Pending approval, submitted |
 
-Session kinds are "line colours" used as cell tints and bullet fills, always paired with a letter: lecture **L** (blue), tutorial **T** (teal), lab **P** for practical (violet), exam **E** (ink), event **★** (magenta, hatched). Kinds never use the signal colours, and statuses always come with a lamp shape and a word. The four hues were run through a palette validator in both themes: lightness band, chroma floor, colour-blind separation (worst pair ΔE 11.9) and normal-vision separation (worst pair ΔE 15.2, floor 15). The first attempt failed that last check (blue and teal too close) and was re-stepped.
+Session kinds are flat pastel fills with an ink outline, always paired with a letter: lecture **L** (`#9ED2FF`), tutorial **T** (`#FFB98A`), lab **P** for practical (`#CDB8FF`), exam **E** (`#FF9EB5`), event **★** (`#C6F06B`, hatched in the grid). In dark mode they become deep tints with bright outlines. Text on the pastels is ink, never grey-on-colour. Kinds never use the signal colours, and statuses always come with a lamp shape and a word.
 
 ### Type
 
@@ -66,19 +71,21 @@ Archivo (variable, OFL) for everything, through its width axis:
 | Role | Size / line | Width | Weight |
 | --- | --- | --- | --- |
 | Board flaps | 13–44px, caps | 75 | 700 |
-| Page title | 26 / 30 | 100 | 700 |
-| Section heading | 16 / 22 | 100 | 650 |
+| Login headline | 42–68 / 0.92, caps | 112 | 900 |
+| Page title | 26–30 / 30–34, caps | 112 | 900 |
+| Section heading | 16 / 22 | 104 | 900 |
 | Body, controls | 14 / 20 | 100 | 450 |
 | Codes in cells (CR-101, MA101) | 12.5 / 16 | 80 | 650 |
 | Meta, captions | 12 / 16 | 90 | 450 |
 
-All numbers use tabular figures. Sentence case everywhere except the board, where caps are the medium's own.
+All numbers use tabular figures. Sentence case everywhere except the board, page titles and the login headline.
 
 ### Shape and layout
 
 - 4px base unit. Page gutter 24px desktop, 16px phone.
-- Radius by hierarchy: sign panels 12px, sheets 10px, cells and inputs 6px, lamps and bullets round. No drop shadows: elevation is a 1px border plus a 1px darker bottom rule, like a mounted sign.
-- Navigation is a route map: a vertical line with one stop per page; your stop gets the yellow ring. Each role sees only its own stops. On phones it becomes a bottom bar.
+- Every component has a 2px ink outline. Radius: cards 6px, controls 4px, chips 3px; lamps, dots and bullets stay round.
+- Elevation is a solid offset shadow with no blur: 2px for controls and cells, 4px for cards and menus, 6 to 8px for dialogs, the drawer and the login sheet. No gradients, no glass; overlays are a flat 45% black.
+- Navigation is a list of plates; your page is a yellow plate with an outline and shadow. Each role sees only its own pages. On phones it becomes a bottom bar.
 
 ### Components
 
@@ -89,9 +96,9 @@ All numbers use tabular figures. Sentence case everywhere except the board, wher
 | Token | Duration | Easing | Used for |
 | --- | --- | --- | --- |
 | `flap` | 66ms per step, at most 7 steps per tile, 22ms between tiles | linear | Split-flap characters |
-| `quick` | 150ms | `cubic-bezier(.2,.8,.2,1)` | Hover, press, lamp change |
+| `press` | hover 140ms, press 80ms | `cubic-bezier(.23,1,.32,1)` | Buttons and cells lift 1px on hover and sink onto their shadow when pressed |
 | `move` | about 320ms | spring (stiffness 380, damping 34) | Sessions gliding to a new slot |
-| `enter` | 220ms, 28ms stagger, capped at 14 rows | `cubic-bezier(.2,.8,.2,1)` | Board rows and cells arriving |
+| `enter` | 220ms, 28ms stagger, capped at 14 rows | `cubic-bezier(.23,1,.32,1)` | Board rows and cells arriving |
 
 One orchestrated moment per screen. Decisions flip in the order the solver made them (Spectra requests in priority order). `prefers-reduced-motion` swaps every flip and glide for an instant change and keeps only 120ms fades.
 

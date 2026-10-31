@@ -234,7 +234,7 @@ export function BookingForm({
                 key={i}
                 type="button"
                 onClick={() => applyAlternative(a)}
-                className="inline-flex h-9 items-center gap-2 rounded-[8px] border border-rule-strong bg-sheet px-3 text-[13px] font-semibold shadow-mount transition-colors hover:border-ink hover:bg-signal-soft"
+                className="inline-flex h-9 items-center gap-2 rounded-[4px] border-2 border-rule-strong bg-sheet px-3 text-[13px] font-semibold shadow-mount transition-colors hover:border-ink hover:bg-signal-soft"
               >
                 <span className="rounded-[3px] bg-ink/[0.07] px-1 font-bold [font-stretch:80%]">{a.room_id}</span>
                 {a.day && dayShort(a.day)} {a.start_period != null && periodLabel(a.start_period, summary.periods)}

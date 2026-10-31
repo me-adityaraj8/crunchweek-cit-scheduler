@@ -21,7 +21,7 @@ function PriorityItem({ id, i, n, move }: { id: string; i: number; n: number; mo
       value={id}
       dragListener={false}
       dragControls={drag}
-      className="flex items-center gap-3 rounded-[9px] border border-rule-strong bg-sheet px-2 py-2 shadow-mount"
+      className="flex items-center gap-3 rounded-[6px] border-2 border-rule-strong bg-sheet px-2 py-2 shadow-mount"
       whileDrag={{ scale: 1.02, boxShadow: "0 0 0 2px var(--ink), 0 10px 24px -12px rgb(0 0 0 / 0.4)" }}
     >
       <button

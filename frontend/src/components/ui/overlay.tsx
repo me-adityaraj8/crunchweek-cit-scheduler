@@ -5,7 +5,7 @@ import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 const floating =
-  "z-50 rounded-[10px] bg-sheet text-ink shadow-float data-[state=closed]:animate-pop-out data-[state=open]:animate-pop-in";
+  "z-50 rounded-[4px] border-2 border-rule-strong bg-sheet text-ink shadow-float data-[state=closed]:animate-pop-out data-[state=open]:animate-pop-in";
 
 // ---------------------------------------------------------------- tooltip
 export const TooltipProvider = TooltipPrimitive.Provider;
@@ -18,7 +18,7 @@ export function Tip({ label, children, side = "top" }: { label: ReactNode; child
         <TooltipPrimitive.Content
           side={side}
           sideOffset={6}
-          className="z-50 max-w-72 rounded-[7px] bg-anthracite px-2.5 py-1.5 text-[12.5px] leading-[17px] text-on-anthracite data-[state=closed]:animate-fade-out data-[state=delayed-open]:animate-fade-in"
+          className="z-50 max-w-72 rounded-[4px] bg-anthracite px-2.5 py-1.5 text-[12.5px] leading-[17px] text-on-anthracite data-[state=closed]:animate-fade-out data-[state=delayed-open]:animate-fade-in"
         >
           {label}
         </TooltipPrimitive.Content>
