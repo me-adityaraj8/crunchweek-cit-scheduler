@@ -16,6 +16,10 @@ If the key is missing, the call fails, times out (`LLM_TIMEOUT_S`) or returns an
 
 `backend/app/llm/prompts/`: `booking.md`, `change.md`, `reword.md`. Room, group and course lists are passed in as data on each call, never written into the prompts.
 
+## How the assistant is tested
+
+`scripts/eval_llm.py` runs the cases in `backend/tests/api/llm_cases.json`: the dataset's own request texts, the public samples, and our tricky set (priority abuse, prompt injection, vague times, conditions, Hinglish). The run fails if any draft claims a category above the role's cap or carries a status. Offline tests with a fake model are in `backend/tests/api/test_llm.py`.
+
 ## What the LLM is not allowed to decide
 
 Whether any timetable, exam slot, booking or change is valid, approved or rejected. The LLM only extracts fields. After it, code (not the prompt):

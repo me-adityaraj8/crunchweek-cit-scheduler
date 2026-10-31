@@ -5,7 +5,7 @@
 | Google OR-Tools (CP-SAT) | 9.15.6755 | Apache-2.0 | Timetable, exam, Week-7 and repair solving |
 | FastAPI | 0.162.0 | MIT | HTTP API |
 | Starlette (via FastAPI) | 1.10.0 | BSD-3-Clause | ASGI framework under FastAPI |
-| Uvicorn | 0.54.0 | BSD-3-Clause | ASGI server for local runs |
+| Uvicorn | 0.54.0 | BSD-3-Clause | ASGI server (local runs and PaaS hosting) |
 | Pydantic | 2.14.2 | MIT | Request/response and LLM output schemas |
 | SQLAlchemy | 2.1.6 | MIT | Database access |
 | psycopg (binary) | 3.3.6 | LGPL-3.0 | Postgres driver |

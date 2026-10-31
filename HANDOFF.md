@@ -78,9 +78,24 @@ Engine change (Lane A file, small): `solver/fest.py` `decide_fest(..., cache=Non
 
 Not done in Lane B: Task 0 deploy check (needs Vercel/Neon/Gemini accounts), `scripts/eval_llm.py` live LLM eval, `vercel.json` frontend build (add when `frontend/` exists). `vercel.json` currently routes `/api/*` only and is untested on Vercel.
 
+## Deploy prep (2026-10-31, Varun, Laptop 2)
+**Backend size vs a Vercel Python function.** Installed the Linux (manylinux x86_64, cp312) wheels for `requirements.txt` and measured them: **310 MB unzipped**.
+- Biggest pieces: ortools 82.5 MB, pandas 76.1, numpy 68 (with its libs), sqlalchemy 27.7, psycopg binary 20.
+- Of that, 66 MB is `__pycache__` and 53 MB is test folders inside pandas/numpy. Without those it's ~181 MB.
+- Vercel documents a 250 MB function limit; check the current number. Whether its Python build keeps caches and tests is unknown.
+- pandas can't be dropped: `ortools/sat/python/cp_model.py` imports it at load time.
+- Dropped `uvicorn[standard]` extras (−10 MB, unused).
+
+So the Vercel function may or may not fit. And CPU matters as much as size: judges generate in the app, and CP-SAT quality depends on cores. Simplest safe plan: backend on Railway/Render/Fly using the new `Procfile` (`uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT`), SPA on Vercel with a rewrite of `/api/(.*)` to `https://<backend>/api/$1`. The browser still sees one origin, so no CORS. The Vercel-only `vercel.json` stays for trying Vercel first.
+
+**Assistant eval.** `scripts/eval_llm.py` with cases in `backend/tests/api/llm_cases.json`: the 25 dataset texts (expected values from the dataset), the 8 public samples, 16 tricky ones (priority abuse, prompt injection, JSON injection, vague time/day/size, conditions, weekend, Hinglish kal/parso/se-tak, too big, unknown room, accessible, compulsory group) and 4 change requests. Guards (category never above the role cap, no status in a draft) fail the run if broken.
+- Keyword fallback, no key: dataset 17/20, tricky + samples 24/24, change 4/4, guards ok. The 3 misses are judgement calls: BR-04 window 10–12 vs 10–13; BR-09 has no length, we assume 2 h, the dataset says 3; BR-17 "10 pm to midnight" gets a "too late, pick an earlier time" question.
+- Not yet run with Gemini (no key). Once `GEMINI_API_KEY` is in `.env`: `python scripts/eval_llm.py`.
+- Parser changes from this: an event type not stated → the usual one for the role (admin institute, coordinator department, faculty guest lecture, club club), marked guessed. Start time without a length → 1 hour. A day without a time → any teaching hour that day plus a question. "The auditorium" → AUD when only one room has that type. A start past the last period → a question.
+
 ## Next steps
-1. Task 0: Vercel project + Neon + Gemini key; deploy and open `/api/health` (add `?deep=1` to test the LLM). **Measure a real `POST /api/timetable/generate` on the host**: quality depends on cores. If ortools is too big for the function or too slow, move the backend to Railway/Fly (`uvicorn backend.app.main:app`) and keep the SPA on Vercel with a `/api` rewrite.
-2. Lane C (frontend) against `schemas.py` / `/api/openapi.json`, per docs/PLAN.md C1–C6.
+1. Task 0: decide the host. Neon + Gemini key; deploy; open `/api/health` (add `?deep=1` to test the LLM). **Measure a real `POST /api/timetable/generate` on the host.** See Deploy prep above for the size and CPU numbers.
+2. Lane C (frontend) is being built in `frontend/` by Varun's separate UI/UX session (on Laptop 2). Don't edit `frontend/` from another session meanwhile. When it lands, `vercel.json` needs the SPA build (`frontend/dist`) and an `index.html` fallback.
 3. Then `scripts/make_exports.py` against the deployed URL and commit `exports/`.
 
 ## Before you start

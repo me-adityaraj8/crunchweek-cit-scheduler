@@ -10,3 +10,4 @@
 | 2026-10-31 | Aditya (Laptop 1) | Engine QA: rule/fuzz parity, brute-force optimality, adversarial + repair tests; fixed 12 bugs (see HANDOFF); faster provably-minimal repair; booking-aware base timetable |
 | 2026-10-31 | Varun (Laptop 2) | Checked engine on Laptop 2: validator 0 hard on both exports; quick suite 353 passed, 2 timing-dependent repair tests failed (see HANDOFF) |
 | 2026-10-31 | Varun (Laptop 2) | Lane B: API (auth, data, timetable, views, exams, bookings, changes, export), services, Gemini assistant with keyword fallback, 44 API tests, make_exports script; end-to-end via HTTP: validator 0 hard on both exports, soft 3, 17 moved |
+| 2026-10-31 | Varun (Laptop 2) | Deploy prep: backend is 310 MB unzipped on Linux (181 MB without caches/tests) vs Vercel's 250 MB function limit; Procfile for PaaS. Assistant eval script + 53 cases; keyword fallback 17/20 dataset, 24/24 tricky, 4/4 change, guards ok |

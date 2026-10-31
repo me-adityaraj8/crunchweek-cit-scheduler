@@ -66,7 +66,7 @@ Seeded demo accounts (README), password from `DEMO_PASSWORD`, bcrypt. `POST /api
 - Engine (Lane A): dataset loading + change files, checker that matches validator.py, CP-SAT timetable, exam scheduler, Spectra week decisions, export, minimal-move repair with infeasibility reasons, explanations. Numbers in HANDOFF.md.
 
 ## Pending features
-Frontend (Lane C), deployment + hour-1 hosting check (Task 0), `exports/` from the deployed app, live LLM eval (`scripts/eval_llm.py` not written), video.
+Frontend (Lane C, in progress in a separate session), deployment + hosting check (Task 0; size numbers in HANDOFF), `exports/` from the deployed app, a Gemini run of `scripts/eval_llm.py` (needs a key), video.
 
 ## Known bugs
 - Approving a change re-decides Spectra week only when app requests changed since the proposal; otherwise it reuses the repair's decisions. If displacement re-solves are needed, approval can take tens of seconds.

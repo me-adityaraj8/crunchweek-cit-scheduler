@@ -62,6 +62,14 @@ Produce the two export files from a running app (local or deployed) and check th
 .venv/bin/python scripts/make_exports.py --base-url http://localhost:8000
 ```
 
+Score the booking/change assistant on tricky requests (Gemini if `GEMINI_API_KEY` is set, else the keyword fallback):
+
+```bash
+.venv/bin/python scripts/eval_llm.py
+```
+
+On a PaaS host (Railway, Render, Fly), the `Procfile` starts the API with `uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT`.
+
 ## Demo accounts
 
 Every account uses the password in `DEMO_PASSWORD` (default `demo1234` locally). The Admin's "reset demo data" (`POST /api/admin/reset`) restores the starter dataset, removes every timetable, request and proposal, and keeps the accounts.
