@@ -31,7 +31,8 @@
 | clsx | 2.1.1 | MIT | Class names |
 | tailwind-merge | 3.7.0 | MIT | Class names |
 | Tailwind CSS, @tailwindcss/vite | 4.1.18 | MIT | Styling |
-| Archivo variable font (@fontsource-variable/archivo) | 5.3.0 | OFL-1.1 | The one typeface, used across its width axis |
+| Inter variable font (@fontsource-variable/inter) | 5.3.0 | OFL-1.1 | Text and headings |
+| Geist Mono variable font (@fontsource-variable/geist-mono) | 5.3.0 | OFL-1.1 | Codes, caps labels, the split-flap boards |
 | Vite, @vitejs/plugin-react | 7.3.7, 5.2.0 | MIT | Dev server and build |
 | TypeScript | 5.9.3 | Apache-2.0 | Types (dev only) |
 | openapi-typescript | 7.13.0 | MIT | API types generated from `/api/openapi.json` (dev only) |

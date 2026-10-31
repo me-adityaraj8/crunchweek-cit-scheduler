@@ -500,6 +500,7 @@ class PendingItem(BaseModel):
 class DashboardOut(BaseModel):
     has_timetable: bool
     version_id: int | None = None
+    solver_status: str | None = None        # "optimal" when CP-SAT proved the soft score can't go lower
     dataset_id: str
     hard_count: int
     soft: dict[str, int]

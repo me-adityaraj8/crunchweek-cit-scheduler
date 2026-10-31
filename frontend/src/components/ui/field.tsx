@@ -4,10 +4,10 @@ import { useState, type ComponentProps, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 const control =
-  "w-full rounded-[4px] border-2 border-rule-strong bg-sheet px-3 text-[14px] text-ink shadow-mount placeholder:text-ink-3 transition-[border-color,box-shadow] duration-150 focus-visible:border-ink focus-visible:shadow-[0_0_0_3px_var(--signal)] focus-visible:outline-none aria-[invalid=true]:border-stop disabled:opacity-50";
+  "w-full rounded-[4px] border-2 border-rule-strong bg-sheet px-3 text-[15px] font-medium text-ink placeholder:font-normal placeholder:text-ink-3 transition-[background-color,box-shadow] duration-150 focus-visible:bg-signal-faint focus-visible:shadow-lift focus-visible:outline-none aria-[invalid=true]:bg-stop-input aria-[invalid=true]:shadow-[3px_3px_0_var(--stop-vivid)] disabled:opacity-50";
 
 export function Input({ className, ...props }: ComponentProps<"input">) {
-  return <input data-slot="input" className={cn(control, "h-9", className)} {...props} />;
+  return <input data-slot="input" className={cn(control, "h-11", className)} {...props} />;
 }
 
 /** Password box with a show/hide button, so people can check what they typed (on a phone especially). */
@@ -21,7 +21,7 @@ export function PasswordInput({ className, ...props }: Omit<ComponentProps<"inpu
         onClick={() => setShown((s) => !s)}
         aria-label={shown ? "Hide password" : "Show password"}
         aria-pressed={shown}
-        className="absolute inset-y-0 right-0 grid w-9 place-items-center rounded-r-[7px] text-ink-3 hover:text-ink focus-visible:text-ink focus-visible:outline-none"
+        className="absolute inset-y-[2px] right-[2px] grid w-9 place-items-center rounded-r-[2px] text-ink-2 transition-colors hover:bg-signal-soft hover:text-ink focus-visible:bg-signal-soft focus-visible:text-ink focus-visible:outline-none"
       >
         {shown ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
       </button>
@@ -30,11 +30,11 @@ export function PasswordInput({ className, ...props }: Omit<ComponentProps<"inpu
 }
 
 export function Textarea({ className, ...props }: ComponentProps<"textarea">) {
-  return <textarea data-slot="textarea" className={cn(control, "min-h-20 resize-y py-2 leading-5", className)} {...props} />;
+  return <textarea data-slot="textarea" className={cn(control, "min-h-20 resize-y py-2.5 leading-[1.4]", className)} {...props} />;
 }
 
 export function Label({ className, ...props }: ComponentProps<typeof LabelPrimitive.Root>) {
-  return <LabelPrimitive.Root className={cn("text-[13px] font-semibold text-ink [font-stretch:92%]", className)} {...props} />;
+  return <LabelPrimitive.Root className={cn("text-[12px] font-extrabold uppercase tracking-[0.06em] text-ink", className)} {...props} />;
 }
 
 /** Label, control and an optional hint/error under it. `guessed` marks a value the assistant inferred. */
@@ -63,14 +63,14 @@ export function Field({
         <Label htmlFor={htmlFor} className="flex items-center gap-2">
           {label}
           {guessed && (
-            <span className="rounded-[4px] bg-signal px-1.5 py-px text-[11px] font-bold text-signal-ink [font-stretch:85%]">
-              auto-filled, please check
+            <span className="rounded-[3px] border-2 border-rule-strong bg-signal px-1.5 py-px text-[10px] font-extrabold tracking-[0.06em] text-signal-ink">
+              AUTO-FILLED · CHECK
             </span>
           )}
         </Label>
         {aside}
       </div>
-      <div className={cn(guessed && "rounded-[4px] ring-2 ring-signal ring-offset-2 ring-offset-sheet")}>{children}</div>
+      <div>{children}</div>
       {error ? (
         <p className="text-[12.5px] font-medium text-stop">{error}</p>
       ) : hint ? (

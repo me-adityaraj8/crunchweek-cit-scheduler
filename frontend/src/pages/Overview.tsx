@@ -1,18 +1,18 @@
-import { CalendarPlus, CalendarRange, MessageSquareText, Ticket } from "lucide-react";
+import { ArrowRight, CalendarPlus, CalendarRange, Check, Download, MessageSquareText, Ticket } from "lucide-react";
+import { toast } from "sonner";
+import { download, errorMessage } from "@/api/client";
 import { Link, useNavigate } from "react-router";
-import { useBookings, useChanges, useDashboard, useSummary, useTimetable } from "@/api/hooks";
+import { useBookings, useChanges, useDashboard, useExams, useFest, useSummary, useTimetable } from "@/api/hooks";
 import type { Dashboard, Entry } from "@/api/types";
 import { Board, BoardRow, BoardText } from "@/components/board/Board";
 import { Code, KindBullet, StatusChip } from "@/components/board/signals";
 import { SplitFlap, type FlapTone } from "@/components/board/SplitFlap";
-import { DotMatrix } from "@/components/dashboard/DotMatrix";
 import { GenerateCard } from "@/components/dashboard/GenerateCard";
-import { DotRow, MetricCard, MiniColumns, RingMeter, RuleTicks, StackBar, type Part, type Tick } from "@/components/dashboard/Metrics";
-import { RoomLoad } from "@/components/dashboard/RoomLoad";
-import { Empty, ErrorState, Loading, PageHeader, SectionTitle } from "@/components/states";
+import { Badge, CountChips, MetricCard, MiniColumns, ProgressBar, RingMeter, RuleTicks, StackBar, type Part, type Tick } from "@/components/dashboard/Metrics";
+import { Empty, ErrorState, Loading, PageHeader, Panel, SectionTitle } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/lib/auth";
-import { bookingStatus, kindOf, proposalStatus, ROLE, ruleLabel, RULES, SOFT_RULES } from "@/lib/format";
+import { bookingStatus, categoryLabel, kindOf, proposalStatus, ROLE, ruleLabel, RULES, SOFT_RULES } from "@/lib/format";
 import { dayName, dayShort, DAYS, nowOnGrid, periodLabel, spanLabel, todayCode } from "@/lib/time";
 import { cn, fmtDateTime, plural } from "@/lib/utils";
 
@@ -74,21 +74,54 @@ function SpectraMetric({ d }: { d: Dashboard }) {
 }
 
 function AdminMetrics({ d }: { d: Dashboard }) {
+  const f = d.fest;
+  const peak = Object.entries(d.soft).sort((a, b) => b[1] - a[1])[0];
+  const rules = Object.keys(RULES);
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <TimetableHealth d={d} hero />
-      <MetricCard label="Soft penalty" value={d.soft_total} unit="points" note="Lower is better. The tallest column is the rule costing most.">
+    <div className="grid grid-cols-[repeat(auto-fit,minmax(230px,1fr))] gap-5">
+      <MetricCard
+        label="Sessions placed"
+        value={d.placed}
+        unit={`/ ${d.total}`}
+        badge={<Badge fill={d.placed === d.total ? "bg-clear-vivid" : "bg-stop-vivid"}>{d.placed === d.total ? "All" : "Missing"}</Badge>}
+        note={d.placed === d.total ? "Every session in the dataset, and any added by a change file, has a slot." : `${d.total - d.placed} still without a slot.`}
+        to="/timetable"
+      >
+        <ProgressBar value={d.placed} max={d.total} label={`${d.placed} of ${d.total} placed`} />
+      </MetricCard>
+      <MetricCard
+        label="Hard violations"
+        value={d.hard_count}
+        badge={<Badge fill={d.hard_count ? "bg-stop-vivid" : "bg-clear-vivid"}>{d.hard_count ? "Stop" : "Clear"}</Badge>}
+        note={d.hard_count ? `${plural(d.hard_count, "violation")} to fix, listed below.` : `All ${rules.length} hard rules hold, ${rules[0]} to ${rules.at(-1)}.`}
+      >
+        <RuleTicks ticks={ruleTicks(d)} />
+      </MetricCard>
+      <MetricCard
+        label="Soft penalty"
+        value={d.soft_total}
+        badge={d.solver_status === "optimal" && <Badge fill="bg-signal">Proven optimal</Badge>}
+        note={peak && peak[1] > 0 ? `${peak[0]} = ${peak[1]}: ${SOFT_RULES[peak[0]] ?? peak[0]}.` : "No soft rule costs anything."}
+      >
         <MiniColumns mark columns={Object.keys(SOFT_RULES).map((k) => ({ key: k, label: k, value: d.soft[k] ?? 0, detail: `${k} ${SOFT_RULES[k]}: ${d.soft[k] ?? 0}` }))} />
       </MetricCard>
-      <SpectraMetric d={d} />
       <MetricCard
-        label="Midsem exams"
-        value={d.exams_scheduled}
-        unit={`of ${d.exams_total} placed`}
-        note={d.exams_scheduled ? "Monday to Saturday, rooms at half capacity." : "Not scheduled yet."}
-        to="/exams"
+        label="Spectra week"
+        value={f ? f.booking_score : "—"}
+        unit={f ? `/ ${f.booking_score_max}` : undefined}
+        badge={f && <Badge fill={f.priority_inversions.length ? "bg-stop-vivid" : "bg-k-event-tint"}>{f.priority_inversions.length ? "Check" : "Decided"}</Badge>}
+        note={f ? `Booking score, ${plural(f.priority_inversions.length, "priority inversion")}.` : "Not decided yet."}
+        to="/spectra"
       >
-        {d.exams_total > 0 && <DotRow done={d.exams_scheduled} total={d.exams_total} label="exams placed" />}
+        {f && (
+          <CountChips
+            items={[
+              { label: "approved", value: f.approved, fill: "bg-white" },
+              { label: f.alternatives === 1 ? "alternative" : "alternatives", value: f.alternatives, fill: "bg-caution-soft" },
+              { label: "rejected", value: f.rejected, fill: "bg-[#ffc9c3]" },
+            ]}
+          />
+        )}
       </MetricCard>
     </div>
   );
@@ -126,119 +159,27 @@ function CoordinatorMetrics({ d, days }: { d: Dashboard; days: string[] }) {
   );
 }
 
-function ServiceBoard({ d, scope }: { d: Dashboard; scope: "admin" | "coordinator" }) {
-  const nav = useNavigate();
-  const fest = d.fest;
-  const rows: { service: string; detail: string; status: Status; to: string }[] = [
-    {
-      service: "Timetable",
-      detail: d.has_timetable ? `${d.placed} of ${d.total} sessions placed. Soft penalty ${d.soft_total}.` : "Not generated yet",
-      status: !d.has_timetable ? ["NOT RUN", "wait"] : d.placed === d.total ? ["ON TIME", "clear"] : ["PARTIAL", "stop"],
-      to: "/timetable",
-    },
-    {
-      service: "Hard rules",
-      detail: !d.has_timetable ? "Checked once a timetable exists" : d.hard_count ? `${plural(d.hard_count, "violation")} found` : "No violations in the timetable, exams or bookings",
-      status: !d.has_timetable ? ["", "wait"] : d.hard_count ? ["STOP", "stop"] : ["CLEAR", "clear"],
-      to: "/timetable",
-    },
-    {
-      service: "Midsem exams",
-      detail: d.exams_scheduled ? `${d.exams_scheduled} of ${d.exams_total} exams placed` : "Not scheduled yet",
-      status: !d.exams_scheduled ? ["NOT RUN", "wait"] : d.exams_scheduled === d.exams_total ? ["ON TIME", "clear"] : ["PARTIAL", "caution"],
-      to: "/exams",
-    },
-    {
-      service: "Spectra week",
-      detail: fest
-        ? `${fest.approved} approved, ${fest.alternatives} offered another slot, ${fest.rejected} rejected. Score ${fest.booking_score} of ${fest.booking_score_max}.`
-        : "Not decided yet",
-      status: !fest ? ["NOT RUN", "wait"] : fest.priority_inversions.length ? ["CHECK", "stop"] : fest.pending ? ["WAITING", "caution"] : ["DECIDED", "clear"],
-      to: "/spectra",
-    },
-    {
-      service: "Approvals",
-      detail: d.pending.length ? `${plural(d.pending.length, "request")} waiting for you` : "Nothing waiting for you",
-      status: d.pending.length ? ["WAITING", "caution"] : ["NONE", "wait"],
-      to: "/approvals",
-    },
-  ];
-  const shown = scope === "admin" ? rows : rows.filter((r) => r.service !== "Hard rules" && r.service !== "Midsem exams");
-  return (
-    <Board
-      title="Status"
-      meta={<span>Checked against the same rules as the official validator</span>}
-      columns="150px minmax(0,1fr) 136px"
-      headers={["Service", "Detail", "Status"]}
-    >
-      {shown.map((r, i) => (
-        <BoardRow key={r.service} index={i} onClick={() => nav(r.to)}>
-          <BoardText className="text-[14px]">{r.service}</BoardText>
-          <span role="cell" className="col-span-2 row-start-2 text-[13px] text-on-anthracite-2 sm:col-span-1 sm:row-start-auto">
-            {r.detail}
-          </span>
-          <span role="cell" className="justify-self-end text-[15px] sm:justify-self-start">
-            <SplitFlap value={r.status[0]} length={8} tone={r.status[1]} delay={i * 120} label={r.status[0] || "waiting"} />
-          </span>
-        </BoardRow>
-      ))}
-    </Board>
-  );
-}
-
-function SoftBreakdown({ d }: { d: Dashboard }) {
-  const entries = Object.keys(SOFT_RULES).map((k) => [k, d.soft[k] ?? 0] as const);
-  const max = Math.max(1, ...entries.map(([, v]) => v));
-  return (
-    <section className="sheet p-4 sm:p-5">
-      <p className="eyebrow">Soft rules</p>
-      <SectionTitle className="mt-1" aside={<span className="text-[24px] font-black leading-none">{d.soft_total}</span>}>Where the penalty comes from</SectionTitle>
-      <p className="-mt-2 mb-4 text-[12.5px] text-ink-2">Lower is better. Once every hard rule holds, the solver keeps these as low as it can.</p>
-      <ul className="flex flex-col gap-2.5">
-        {entries.map(([k, v]) => (
-          <li key={k} className="grid grid-cols-[34px_minmax(0,1fr)_64px_28px] items-center gap-2 text-[13px]">
-            <Code>{k}</Code>
-            <span className={cn("truncate", v ? "text-ink" : "text-ink-3")}>{SOFT_RULES[k]}</span>
-            <span className="h-3 overflow-hidden rounded-[2px] border-2 border-rule-strong bg-sheet">
-              <span className="block h-full bg-ink transition-[width] duration-500" style={{ width: `${(v / max) * 100}%` }} />
-            </span>
-            <span className="text-right font-semibold tabular-nums">{v}</span>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
 function Waiting({ d }: { d: Dashboard }) {
-  const changes = d.pending.filter((p) => p.kind === "change").length;
   return (
-    <section className="sheet flex flex-col p-4 sm:p-5">
-      <p className="eyebrow">Activity</p>
-      <SectionTitle className="mt-1" aside={d.pending.length > 0 && <Link to="/approvals" className="text-[13px] font-semibold underline-offset-2 hover:underline">Open approvals</Link>}>
-        Waiting for you
-      </SectionTitle>
-      <dl className="mb-3 grid grid-cols-2 gap-2">
-        {[
-          ["Changes", changes],
-          ["Bookings", d.pending.length - changes],
-        ].map(([label, v]) => (
-          <div key={label} className="inset-tile px-3 py-2.5">
-            <dt className="eyebrow truncate">{label}</dt>
-            <dd className="text-[26px] font-black leading-8">{v}</dd>
-          </div>
-        ))}
-      </dl>
+    <Panel title="Waiting for you" aside={d.pending.length > 0 && <Link to="/approvals" className="underline underline-offset-2">Open approvals</Link>} className="min-w-0 flex-[1_1_420px]">
       {d.pending.length === 0 ? (
-        <p className="text-[13.5px] text-ink-2">Nothing to approve. Requests that need you will appear here.</p>
+        <div className="flex items-center gap-4 rounded-[4px] border-2 border-dashed border-rule-strong bg-sheet-2 p-4">
+          <span className="grid size-12 shrink-0 place-items-center rounded-[4px] border-2 border-[#111] bg-clear-vivid text-[#111] shadow-mount">
+            <Check className="size-6" strokeWidth={3} />
+          </span>
+          <span>
+            <span className="block text-[16px] font-bold">Nothing to approve</span>
+            <span className="block text-[14px] text-ink-2">Change proposals and lab bookings that need you will show up here.</span>
+          </span>
+        </div>
       ) : (
-        <ul className="flex flex-col divide-y divide-rule">
+        <ul className="-my-1 flex flex-col divide-y-2 divide-rule">
           {d.pending.slice(0, 6).map((p) => (
             <li key={p.kind + p.id}>
-              <Link to={p.kind === "change" ? `/changes/${p.id}` : "/approvals"} className="flex items-center gap-3 py-2.5 hover:text-ink">
+              <Link to={p.kind === "change" ? `/changes/${p.id}` : "/approvals"} className="flex items-center gap-3 py-2.5 hover:bg-sheet-2">
                 <Code tone="signal">{p.kind === "change" ? `#${p.id}` : p.id}</Code>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[13.5px] font-semibold">{p.title}</span>
+                  <span className="block truncate text-[14px] font-semibold">{p.title}</span>
                   <span className="block truncate text-[12px] text-ink-3">
                     {p.kind === "change" ? "Timetable change" : "Venue booking"} from {p.requested_by}
                     {p.created_at ? `, ${fmtDateTime(p.created_at)}` : ""}
@@ -249,87 +190,157 @@ function Waiting({ d }: { d: Dashboard }) {
           ))}
         </ul>
       )}
-    </section>
+    </Panel>
   );
 }
 
 function Conflicts({ d }: { d: Dashboard }) {
   if (!d.conflicts.length) return null;
   return (
-    <section className="sheet border-stop/50 p-4 sm:p-5" role="alert">
-      <SectionTitle>Hard-rule violations</SectionTitle>
-      <ul className="flex flex-col gap-2">
-        {d.conflicts.map((c, i) => (
-          <li key={i} className="flex items-start gap-2 text-[13px]">
-            <Code className="bg-stop text-sheet">{c.rule}</Code>
-            <span>
-              <b className="font-semibold">{ruleLabel(c.rule)}.</b> {c.detail} <span className="text-ink-3">({c.where})</span>
-            </span>
-          </li>
-        ))}
-      </ul>
-    </section>
+    <div role="alert">
+      <Panel title="Hard-rule violations" tint="bg-stop-vivid">
+        <ul className="flex flex-col gap-2">
+          {d.conflicts.map((c, i) => (
+            <li key={i} className="flex items-start gap-2 text-[14px]">
+              <Code className="bg-stop-vivid text-[#111]">{c.rule}</Code>
+              <span>
+                <b className="font-semibold">{ruleLabel(c.rule)}.</b> {c.detail} <span className="text-ink-3">({c.where})</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      </Panel>
+    </div>
   );
 }
 
-function SpectraDecisions({ d }: { d: Dashboard }) {
-  const f = d.fest;
+const DECISION: Record<string, [string, string]> = {
+  approved: ["Approved", "bg-clear-vivid"],
+  alternative_offered: ["Alternative", "bg-caution-soft"],
+  rejected: ["Rejected", "bg-[#ffc9c3]"],
+  pending_approval: ["Pending approval", "bg-white border-dashed"],
+};
+
+/** The first decisions in priority order, as on the Overview board. */
+function SpectraTable() {
+  const { data } = useFest();
+  const { data: summary } = useSummary();
+  if (!data?.decided) return null;
+  const rows = data.requests.filter((r) => r.decision).slice(0, 6);
   return (
-    <section className="sheet flex flex-col p-4 sm:p-5">
-      <p className="eyebrow">Spectra week</p>
-      <SectionTitle className="mt-1" aside={<Link to="/spectra" className="text-[13px] font-semibold underline-offset-2 hover:underline">Decision board</Link>}>
-        How the requests were decided
-      </SectionTitle>
-      {!f ? (
-        <p className="text-[13.5px] text-ink-2">Not decided yet. The Admin decides every request at once, in priority order.</p>
-      ) : (
-        <>
-          <StackBar
-            parts={[
-              { key: "approved", label: "Approved", value: f.approved, fill: FILL.clear },
-              { key: "alt", label: "Another slot offered", value: f.alternatives, fill: FILL.caution },
-              { key: "rejected", label: "Rejected", value: f.rejected, fill: FILL.stop },
-              { key: "pending", label: "Waiting for approval", value: f.pending, fill: FILL.wait },
-            ]}
-          />
-          <dl className="mt-4 grid grid-cols-2 gap-2">
-            {[
-              ["Priority inversions", f.priority_inversions.length],
-              ["Overrides", f.overrides],
-            ].map(([label, v]) => (
-              <div key={label} className="inset-tile px-3 py-2.5">
-                <dt className="eyebrow truncate">{label}</dt>
-                <dd className="text-[26px] font-black leading-8">{v}</dd>
-              </div>
-            ))}
-          </dl>
-        </>
-      )}
-    </section>
+    <Panel
+      title="Spectra week decisions"
+      tint="bg-k-event-tint"
+      aside={<Link to="/spectra" className="underline underline-offset-2">All {data.requests.length} requests</Link>}
+      className="min-w-0 flex-[1.7_1_560px]"
+      bodyClassName="overflow-x-auto p-0"
+    >
+      <table className="w-full min-w-[640px] text-left text-[14px]">
+        <thead>
+          <tr className="border-b-2 border-rule-strong text-[11px] font-extrabold uppercase tracking-[0.08em]">
+            <th className="px-[18px] py-2.5">Request</th>
+            <th className="px-3 py-2.5">Decision</th>
+            <th className="px-3 py-2.5">Venue · time</th>
+            <th className="px-3 py-2.5">Why</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => {
+            const [label, fill] = DECISION[r.status] ?? [r.status, "bg-white"];
+            const dec = r.decision!;
+            return (
+              <tr key={r.id} className="border-b-2 border-rule align-top last:border-b-0 hover:bg-sheet-2">
+                <td className="px-[18px] py-3">
+                  <span className="block font-bold">{r.title}</span>
+                  <span className="block text-[12px] text-ink-3">
+                    {r.id} · {categoryLabel(r.category)} · {r.attendance}
+                  </span>
+                </td>
+                <td className="px-3 py-3">
+                  <Badge fill={fill}>{label}</Badge>
+                </td>
+                <td className="whitespace-nowrap px-3 py-3 font-semibold">
+                  {dec.room_id ? `${dec.room_id} · ${dayShort(dec.day ?? "")} ${periodLabel(dec.start_period ?? 0, summary?.periods)}` : "—"}
+                </td>
+                <td className="px-3 py-3 text-ink-2">{r.reason || dec.reason}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </Panel>
+  );
+}
+
+/** Rooms by share of teaching hours used; labs in lilac. */
+function BusiestRooms({ d }: { d: Dashboard }) {
+  const top = [...d.utilisation].sort((a, b) => b.pct - a.pct).slice(0, 6);
+  const hours = d.utilisation[0]?.total_hours ?? 0;
+  return (
+    <Panel title="Busiest rooms" tint="bg-k-lecture-tint" className="min-w-0 flex-[1_1_320px]">
+      <ul className="flex flex-col gap-3">
+        {top.map((r) => (
+          <li key={r.room_id} className="grid grid-cols-[92px_minmax(0,1fr)_52px] items-center gap-2.5">
+            <span className="truncate text-[14px] font-bold" title={r.name}>
+              {r.room_id}
+            </span>
+            <span className="h-4 overflow-hidden rounded-[3px] border-2 border-rule-strong bg-sheet-2">
+              <span
+                className={cn("block h-full border-r-2 border-rule-strong", r.type.startsWith("lab") || r.type === "workshop" ? "bg-k-lab-tint" : "bg-k-lecture-tint")}
+                style={{ width: `${Math.max(2, r.pct)}%` }}
+              />
+            </span>
+            <span className="text-right text-[14px] font-bold tabular-nums">{Math.round(r.pct)}%</span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-4 border-t-2 border-dashed border-rule-strong pt-3 text-[13px] text-ink-2">Share of the {hours} teaching hours used. Lilac bars are labs.</p>
+    </Panel>
+  );
+}
+
+/** Midsems placed, and how they spread over Monday to Saturday. */
+function MidsemCard({ d }: { d: Dashboard }) {
+  const { data } = useExams();
+  const days = data?.days ?? ["MON", "TUE", "WED", "THU", "FRI", "SAT"];
+  const per = (day: string) => data?.exams.filter((e) => e.day === day).length ?? 0;
+  return (
+    <Panel
+      title="Midsem exams"
+      aside={
+        <Badge fill="bg-k-exam-tint">
+          {d.exams_scheduled} / {d.exams_total} placed
+        </Badge>
+      }
+      className="min-w-0 flex-[1_1_420px]"
+    >
+      <Link to="/exams" className="grid grid-cols-6 overflow-hidden rounded-[4px] border-2 border-[#111] hover:brightness-95">
+        {days.map((day) => (
+          <span key={day} className="border-r-2 border-[#111] bg-k-exam-tint px-1 py-2.5 text-center text-[#111] last:border-r-0">
+            <span className="block text-[12px] font-extrabold">{dayShort(day)}</span>
+            <span className="block text-[18px] font-black tabular-nums">{per(day)}</span>
+          </span>
+        ))}
+      </Link>
+      <p className="mt-3 text-[13px] text-ink-2">Two sessions a day, rooms at half capacity, no group sits two exams at once.</p>
+    </Panel>
   );
 }
 
 function AdminOverview({ d }: { d: Dashboard }) {
-  const { data: summary } = useSummary();
+  if (!d.has_timetable) return <GenerateCard />;
   return (
     <>
-      {!d.has_timetable && <GenerateCard />}
-      {d.has_timetable && <AdminMetrics d={d} />}
-      {d.has_timetable && summary && (
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-          <RoomLoad rooms={d.utilisation} grid={d.grid} days={summary.days} periods={summary.periods} lunchAfter={summary.lunch_after} />
-          <Waiting d={d} />
-        </div>
-      )}
-      <ServiceBoard d={d} scope="admin" />
+      <AdminMetrics d={d} />
       <Conflicts d={d} />
-      {d.has_timetable && (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <SoftBreakdown d={d} />
-          <SpectraDecisions d={d} />
-        </div>
-      )}
-      {d.has_timetable && summary && <DotMatrix rooms={d.utilisation} grid={d.grid} days={summary.days} periods={summary.periods} lunchAfter={summary.lunch_after} />}
+      <div className="flex flex-wrap items-start gap-6">
+        <SpectraTable />
+        <BusiestRooms d={d} />
+      </div>
+      <div className="flex flex-wrap items-stretch gap-6">
+        <Waiting d={d} />
+        <MidsemCard d={d} />
+      </div>
     </>
   );
 }
@@ -339,12 +350,13 @@ function CoordinatorOverview({ d }: { d: Dashboard }) {
   return (
     <>
       <CoordinatorMetrics d={d} days={summary?.days ?? [...DAYS]} />
-      <ServiceBoard d={d} scope="coordinator" />
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="flex flex-wrap items-start gap-6">
         <Waiting d={d} />
-        <MyBookings compact />
+        <div className="min-w-0 flex-[1_1_420px]">
+          <MyBookings compact />
+        </div>
       </div>
-      {d.has_timetable && summary && <DotMatrix rooms={d.utilisation} grid={d.grid} days={summary.days} periods={summary.periods} lunchAfter={summary.lunch_after} />}
+      {d.has_timetable && <BusiestRooms d={d} />}
     </>
   );
 }
@@ -372,13 +384,13 @@ function YourDay() {
   return (
     <Board
       title={`${dayName(today)}${isToday ? "" : " (next teaching day)"}`}
-      meta={<Link to="/timetable" className="font-semibold text-on-anthracite hover:underline">Full week</Link>}
+      meta={<Link to="/timetable" className="font-semibold text-ink hover:underline">Full week</Link>}
       columns="112px minmax(0,1fr) 92px 120px 96px"
       headers={["Time", "Class", "Room", "Groups", "Status"]}
       footer={entries.length ? `${plural(entries.length, "class", "classes")} today` : undefined}
     >
       {entries.length === 0 ? (
-        <div className="px-5 py-6 text-[13.5px] text-on-anthracite-2">No classes on {dayName(today)}.</div>
+        <div className="px-5 py-6 text-[13.5px] text-ink-2">No classes on {dayName(today)}.</div>
       ) : (
         entries.map((e, i) => {
           const [label, tone] = status(e, i);
@@ -388,7 +400,7 @@ function YourDay() {
               <span role="cell" className="col-span-2 row-start-2 flex min-w-0 items-center gap-2 sm:col-span-1 sm:row-start-auto">
                 <KindBullet kind={kindOf(e.kind)} size="sm" />
                 <span className="truncate text-[13.5px] font-semibold">
-                  {e.course_id} <span className="font-normal text-on-anthracite-2">{e.course_title}</span>
+                  {e.course_id} <span className="font-normal text-ink-2">{e.course_title}</span>
                 </span>
               </span>
               <BoardText className="hidden sm:block">{e.room_id}</BoardText>
@@ -529,7 +541,7 @@ function MyBookings({ compact }: { compact?: boolean }) {
   return (
     <Board
       title="Your venue requests"
-      meta={<Link to="/book" className="font-semibold text-on-anthracite hover:underline">New request</Link>}
+      meta={<Link to="/book" className="font-semibold text-ink hover:underline">New request</Link>}
       columns={compact ? "96px minmax(0,1fr) 120px" : "96px minmax(0,1fr) 150px 96px 132px"}
       headers={compact ? ["Request", "Event", "Status"] : ["Request", "Event", "When", "Venue", "Status"]}
     >
@@ -619,11 +631,11 @@ export default function Overview() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        eyebrow={`${ROLE[user.role]} · ${date}`}
+        eyebrow={user.role === "admin" ? undefined : `${ROLE[user.role]} · ${date}`}
         title={user.role === "faculty" ? `Good to see you, ${first}` : user.role === "club" ? user.name : "Overview"}
         lede={
           user.role === "admin"
-            ? "Where the week stands. Every number here comes from the solver and the rule checker."
+            ? "Where the week stands. Every number here comes from the solver and the rule checker, which applies the same rules as the official validator."
             : user.role === "coordinator"
               ? `Requests for ${user.department} and the state of the week.`
               : user.role === "faculty"
@@ -631,12 +643,25 @@ export default function Overview() {
                 : "Your venue requests for Spectra week and where they stand."
         }
         actions={
-          user.role !== "club" && (
-            <Button asChild>
-              <Link to="/timetable">
-                <CalendarRange /> Open timetable
-              </Link>
-            </Button>
+          user.role === "admin" ? (
+            <>
+              <Button size="xl" onClick={() => download("/export/schedule.json", { after: 0 }, "schedule.json").catch((e) => toast.error("Couldn't export", { description: errorMessage(e) }))}>
+                <Download /> Export schedule.json
+              </Button>
+              <Button asChild size="xl" variant="primary">
+                <Link to="/data">
+                  Generate timetable <ArrowRight />
+                </Link>
+              </Button>
+            </>
+          ) : (
+            user.role !== "club" && (
+              <Button asChild size="xl">
+                <Link to="/timetable">
+                  <CalendarRange /> Open timetable
+                </Link>
+              </Button>
+            )
           )
         }
       />

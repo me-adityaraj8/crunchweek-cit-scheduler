@@ -37,7 +37,7 @@ export function Select({
         id={id}
         aria-label={ariaLabel}
         className={cn(
-          "inline-flex h-9 w-full items-center justify-between gap-2 rounded-[4px] border-2 border-rule-strong bg-sheet px-3 text-left text-[14px] text-ink shadow-mount transition-[border-color,box-shadow] focus-visible:border-ink focus-visible:shadow-[0_0_0_3px_var(--signal)] focus-visible:outline-none data-[placeholder]:text-ink-3 disabled:opacity-50",
+          "inline-flex h-11 w-full items-center justify-between gap-2 rounded-[4px] border-2 border-rule-strong bg-sheet px-3 text-left text-[15px] font-semibold text-ink transition-[background-color,box-shadow] focus-visible:bg-signal-faint focus-visible:shadow-lift focus-visible:outline-none data-[placeholder]:font-normal data-[placeholder]:text-ink-3 data-[state=open]:shadow-lift disabled:opacity-50",
           className,
         )}
       >
@@ -82,7 +82,7 @@ function SelectItem({ children, hint, className, ...props }: ComponentProps<type
   return (
     <SelectPrimitive.Item
       className={cn(
-        "relative flex cursor-default select-none items-center gap-2 rounded-[6px] py-1.5 pl-2.5 pr-8 text-[13.5px] text-ink outline-none data-[highlighted]:bg-signal-soft data-[disabled]:opacity-40",
+        "relative flex cursor-default select-none items-center gap-2 rounded-[3px] py-2 pl-2.5 pr-8 text-[14px] text-ink outline-none data-[highlighted]:bg-signal-soft data-[disabled]:opacity-40",
         className,
       )}
       {...props}

@@ -85,7 +85,7 @@ export function RoomLoad({
                       );
                     })}
                 </div>
-                <span className="mt-1.5 text-center text-[11px] font-black uppercase tracking-[0.08em] text-ink-2">{dayShort(day)}</span>
+                <span className="mt-1.5 text-center font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-ink-2">{dayShort(day)}</span>
               </div>
             ))}
           </div>

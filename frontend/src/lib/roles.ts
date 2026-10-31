@@ -20,6 +20,8 @@ export interface Stop {
   icon: LucideIcon;
   /** shown as a count next to the stop */
   badge?: "approvals";
+  /** draw a rule above this stop: the admin's data and settings sit apart from the daily pages */
+  divider?: boolean;
 }
 
 const S = {
@@ -37,19 +39,28 @@ const S = {
 } satisfies Record<string, Stop>;
 
 export const LINES: Record<Role, Stop[]> = {
-  admin: [S.overview, S.data, S.timetable, S.exams, S.spectra, S.changes, S.approvals, S.rooms, S.book, S.settings],
+  admin: [S.overview, S.timetable, S.exams, S.spectra, S.changes, S.approvals, S.rooms, S.book, { ...S.data, divider: true }, S.settings],
   coordinator: [S.overview, S.timetable, S.book, S.approvals, S.spectra, S.changes, S.rooms, S.exams],
   faculty: [S.overview, S.myTimetable, S.changes, S.rooms, S.book, S.exams, S.spectra],
   club: [S.overview, S.book, S.spectra, S.rooms, S.timetable, S.exams],
 };
 
-/** The four stops a phone's bottom bar shows; the rest sit under "More". */
+/** The three pages a phone's bottom bar shows; the fourth item, "Me", opens the full menu. */
 export const PHONE: Record<Role, string[]> = {
-  admin: ["/", "/timetable", "/spectra", "/approvals"],
-  coordinator: ["/", "/timetable", "/book", "/approvals"],
-  faculty: ["/", "/timetable", "/changes", "/rooms"],
-  club: ["/", "/book", "/spectra", "/rooms"],
+  admin: ["/", "/timetable", "/approvals"],
+  coordinator: ["/", "/timetable", "/approvals"],
+  faculty: ["/", "/timetable", "/book"],
+  club: ["/", "/book", "/spectra"],
 };
+
+/** Short names for the phone bar, where a stop has about 90px. */
+export function phoneLabel(role: Role, stop: Stop) {
+  if (stop.to === "/") return role === "faculty" ? "Today" : "Home";
+  if (stop.to === "/timetable") return "Week";
+  if (stop.to === "/book") return "Book";
+  if (stop.to === "/spectra") return "Spectra";
+  return stop.label;
+}
 
 export function canSee(role: Role, path: string) {
   const root = "/" + (path.split("/")[1] ?? "");

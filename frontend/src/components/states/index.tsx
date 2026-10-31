@@ -4,15 +4,17 @@ import { ApiError, errorMessage } from "@/api/client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+/** The page's name in heavy caps, a plain-language line under it, and its main actions on the right.
+ * `eyebrow` is a small mono line above the title (kept for pages that name a context, like a group). */
 export function PageHeader({ title, lede, eyebrow, actions, className }: { title: ReactNode; lede?: ReactNode; eyebrow?: ReactNode; actions?: ReactNode; className?: string }) {
   return (
-    <header className={cn("flex flex-wrap items-end justify-between gap-x-6 gap-y-3", className)}>
-      <div className="min-w-0 max-w-[68ch]">
+    <header className={cn("flex flex-wrap items-end justify-between gap-4", className)}>
+      <div className="min-w-0 max-w-[720px]">
         {eyebrow && <p className="eyebrow mb-2">{eyebrow}</p>}
-        <h1 className="text-[26px] font-black uppercase leading-[30px] tracking-[-0.015em] [font-stretch:112%] sm:text-[30px] sm:leading-[34px]">{title}</h1>
-        {lede && <p className="mt-1 text-[14px] leading-[21px] text-ink-2">{lede}</p>}
+        <h1 className="text-[32px] font-black uppercase leading-none tracking-[-0.035em] sm:text-[44px] xl:text-[52px]">{title}</h1>
+        {lede && <p className="mt-2.5 text-[15px] leading-[1.45] text-ink-2 sm:text-[16px]">{lede}</p>}
       </div>
-      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+      {actions && <div className="flex flex-wrap items-center gap-3">{actions}</div>}
     </header>
   );
 }
@@ -20,9 +22,48 @@ export function PageHeader({ title, lede, eyebrow, actions, className }: { title
 export function SectionTitle({ children, aside, className }: { children: ReactNode; aside?: ReactNode; className?: string }) {
   return (
     <div className={cn("mb-3 flex items-center justify-between gap-3", className)}>
-      <h2 className="text-[16px] font-black leading-[22px] [font-stretch:104%]">{children}</h2>
+      <h2 className="text-[15px] font-extrabold uppercase leading-[22px] tracking-[0.06em]">{children}</h2>
       {aside}
     </div>
+  );
+}
+
+/** A card with an optional coloured header strip (the boards' section pattern). `tint` is any
+ * background class, e.g. "bg-k-event-tint"; without it the header is a plain ruled row. */
+export function Panel({
+  title,
+  aside,
+  tint,
+  children,
+  className,
+  bodyClassName,
+  shadow = "float",
+}: {
+  title?: ReactNode;
+  aside?: ReactNode;
+  tint?: string;
+  children: ReactNode;
+  className?: string;
+  bodyClassName?: string;
+  shadow?: "float" | "panel" | "none";
+}) {
+  return (
+    <section
+      className={cn(
+        "overflow-hidden rounded-sheet border-2 border-rule-strong bg-sheet",
+        shadow === "float" && "shadow-float",
+        shadow === "panel" && "shadow-panel",
+        className,
+      )}
+    >
+      {title && (
+        <div className={cn("flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b-2 border-rule-strong px-[18px] py-3.5", tint ?? "bg-sheet")}>
+          <h2 className="text-[15px] font-extrabold uppercase tracking-[0.06em] text-ink">{title}</h2>
+          {aside && <div className="text-[13px] font-bold text-ink">{aside}</div>}
+        </div>
+      )}
+      <div className={cn("p-[18px]", bodyClassName)}>{children}</div>
+    </section>
   );
 }
 

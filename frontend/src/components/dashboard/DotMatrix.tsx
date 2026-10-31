@@ -65,10 +65,10 @@ export function DotMatrix({
         {hover ? (
           <>
             <span className="rounded-[3px] bg-anthracite-3 px-1.5 py-0.5 font-bold [font-stretch:78%]">{hover.room}</span>
-            <span className="font-semibold uppercase tracking-[0.03em] [font-stretch:80%]">
+            <span className="font-mono font-medium uppercase tracking-[0.03em]">
               {dayShort(hover.day)} P{hover.period} {periodLabel(hover.period, periods)}
             </span>
-            <span className={cn("ml-auto font-bold uppercase tracking-[0.04em] [font-stretch:80%]", hover.used ? "text-on-anthracite" : "text-signal")}>
+            <span className={cn("ml-auto font-mono font-medium uppercase tracking-[0.04em]", hover.used ? "text-on-anthracite" : "text-signal")}>
               {hover.used ? "In use" : "Free"}
             </span>
           </>

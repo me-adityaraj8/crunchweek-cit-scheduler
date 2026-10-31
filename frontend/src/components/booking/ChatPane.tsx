@@ -1,4 +1,4 @@
-import { Bot, CornerDownLeft, Loader2, Mic, Square, TriangleAlert } from "lucide-react";
+import { CornerDownLeft, Loader2, Mic, Square, TriangleAlert } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { errorMessage } from "@/api/client";
@@ -18,6 +18,8 @@ interface Message {
   followUp?: string | null;
   fallback?: boolean;
   error?: boolean;
+  /** the person said it into the mic and sent the transcript */
+  spoken?: boolean;
 }
 
 const EXAMPLES = [
@@ -41,6 +43,7 @@ export function ChatPane({ days, onDraft }: { days: string[]; onDraft: (r: Booki
     return d >= 1 && d <= 5 ? days[d - 1] ?? days[0] : days[0];
   });
   const [messages, setMessages] = useState<Message[]>([]);
+  const [spoken, setSpoken] = useState(false);
   const seq = useRef(0);
   const list = useRef<HTMLDivElement>(null);
 
@@ -51,8 +54,9 @@ export function ChatPane({ days, onDraft }: { days: string[]; onDraft: (r: Booki
   function send(t: string) {
     const msg = t.trim();
     if (!msg || parse.isPending) return;
-    setMessages((m) => [...m, { id: ++seq.current, role: "you", text: msg }]);
+    setMessages((m) => [...m, { id: ++seq.current, role: "you", text: msg, spoken }]);
     setText("");
+    setSpoken(false);
     parse.mutate(
       { text: msg, today },
       {
@@ -81,7 +85,10 @@ export function ChatPane({ days, onDraft }: { days: string[]; onDraft: (r: Booki
   // voice goes into the box, not straight to the assistant, so the person can read and fix it first
   function transcribe(wav: Blob) {
     voice.mutate(wav, {
-      onSuccess: (r) => setText((t) => (t.trim() ? `${t.trimEnd()} ` : "") + r.text),
+      onSuccess: (r) => {
+        setText((t) => (t.trim() ? `${t.trimEnd()} ` : "") + r.text);
+        setSpoken(true);
+      },
       onError: (e) => say(errorMessage(e)),
     });
   }
@@ -106,18 +113,21 @@ export function ChatPane({ days, onDraft }: { days: string[]; onDraft: (r: Booki
   }
 
   return (
-    <section className="sheet flex min-h-[460px] flex-col overflow-hidden" aria-label="Booking assistant">
-      <header className="flex items-center gap-3 border-b border-rule px-4 py-3">
-        <span className="grid size-8 place-items-center rounded-[4px] bg-anthracite text-on-anthracite">
-          <Bot className="size-4" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <h2 className="text-[15px] font-bold leading-5">Assistant</h2>
-          <p className="truncate text-[12px] text-ink-3">Fills the form. The rule checker decides.</p>
+    <section className="flex min-h-[460px] flex-col overflow-hidden rounded-sheet border-2 border-rule-strong bg-sheet shadow-panel" aria-label="Booking assistant">
+      <header className="flex flex-wrap items-center justify-between gap-2.5 bg-[#111] px-4 py-3 text-white">
+        <div className="min-w-0">
+          <h2 className="text-[15px] font-extrabold tracking-[0.08em]">ASSISTANT</h2>
+          <p className="truncate text-[12px] text-[#c9cbc5]">Fills the form. The rule checker decides.</p>
         </div>
-        <label className="flex items-center gap-2 text-[12px] text-ink-2">
-          <span className="hidden sm:inline">Today is</span>
-          <Select aria-label="Reference day for words like tomorrow or kal" value={today} onValueChange={setToday} options={days.map((d) => ({ value: d, label: dayName(d) }))} className="h-8 w-[124px] text-[13px]" />
+        <label className="flex items-center gap-2 text-[12px] font-bold">
+          Today is
+          <Select
+            aria-label="Reference day for words like tomorrow or kal"
+            value={today}
+            onValueChange={setToday}
+            options={days.map((d) => ({ value: d, label: dayName(d) }))}
+            className="h-[34px] w-[124px] border-white bg-[#111] text-[13px] font-bold text-white"
+          />
         </label>
       </header>
 
@@ -147,15 +157,25 @@ export function ChatPane({ days, onDraft }: { days: string[]; onDraft: (r: Booki
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.2, ease: [0.2, 0.8, 0.2, 1] }}
-              className={cn("max-w-[92%] rounded-[6px] px-3.5 py-2.5 text-[13.5px] leading-[20px]", m.role === "you" ? "self-end rounded-br-[4px] bg-ink text-sheet" : "self-start rounded-bl-[4px] border-2 border-rule-strong bg-sheet-2")}
+              className={cn(
+                "max-w-[92%] px-3.5 py-3 text-[15px] leading-[1.45]",
+                m.role === "you"
+                  ? "self-end rounded-[6px_6px_0_6px] border-2 border-[#111] bg-[#111] text-white"
+                  : "self-start rounded-[6px_6px_6px_0] border-2 border-rule-strong bg-sheet-2 shadow-lift",
+              )}
             >
+              {m.spoken && (
+                <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-extrabold tracking-[0.06em]">
+                  <Mic className="size-3" strokeWidth={2.6} /> SPOKEN · TRANSCRIBED
+                </p>
+              )}
               {m.fallback && (
                 <p className="mb-1.5 flex items-center gap-1.5 text-[12px] font-semibold text-ink-2">
                   <TriangleAlert className="size-3.5" /> AI unavailable, so keyword rules filled this
                 </p>
               )}
               <p className={cn(m.error && "text-stop")}>{m.text}</p>
-              {m.followUp && <p className="mt-1.5 rounded-[6px] bg-signal px-2 py-1 font-semibold text-signal-ink">{m.followUp}</p>}
+              {m.followUp && <p className="mt-1.5 rounded-[4px] border-2 border-rule-strong bg-signal px-2 py-1 font-semibold text-signal-ink">{m.followUp}</p>}
               {m.notes && m.notes.filter((n) => !n.startsWith("Filled in by simple keyword rules")).length > 0 && (
                 <ul className="mt-1.5 flex list-disc flex-col gap-0.5 pl-4 text-[12.5px] text-ink-2">
                   {m.notes

@@ -1022,6 +1022,8 @@ export interface components {
             has_timetable: boolean;
             /** Version Id */
             version_id?: number | null;
+            /** Solver Status */
+            solver_status?: string | null;
             /** Dataset Id */
             dataset_id: string;
             /** Hard Count */

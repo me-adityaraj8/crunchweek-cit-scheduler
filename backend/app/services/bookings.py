@@ -215,18 +215,34 @@ def _out(ds: Dataset, req: dict, source: str, status: str, decision: dict | None
             "can_decide": can_decide}
 
 
+def owns_dataset_request(user: User, req: dict) -> bool:
+    """A request in the dataset that this account stands for: a club by its name, a coordinator by
+    department, a faculty member by the id in the requester ("Dr. Amit Behera (F12)")."""
+    role = req.get("role")
+    if user.role == "club":
+        return role == "club" and req.get("requester") == user.name
+    if user.role == "coordinator":
+        return role == "department_coordinator" and req.get("department") == user.department
+    if user.role == "faculty" and user.faculty_id:
+        return role == "faculty" and f"({user.faculty_id})" in (req.get("requester") or "")
+    return False
+
+
 def list_requests(db: Session, ds: Dataset, version: TimetableVersion | None, user: User,
                   mine: bool = False) -> list[dict]:
+    """All requests, or with `mine` the user's own: dataset requests they stand for first, then the
+    ones they made in the app (oldest first, so the newest is last)."""
     fest = state.fest_of(version)
     dec = {d.request_id: asdict(d) for d in fest.decisions} if fest else {}
     out = []
-    if not mine:
-        for rid, req in ds.requests.items():
-            d = dec.get(rid)
-            status = d["status"] if d else ("rejected" if rid in ds.cancelled else "submitted")
-            if not d and rid in ds.cancelled:
-                d = {"request_id": rid, "status": "rejected", "reason": "Cancelled by requester"}
-            out.append(_out(ds, req, "dataset", status, d, user))
+    for rid, req in ds.requests.items():
+        if mine and not owns_dataset_request(user, req):
+            continue
+        d = dec.get(rid)
+        status = d["status"] if d else ("rejected" if rid in ds.cancelled else "submitted")
+        if not d and rid in ds.cancelled:
+            d = {"request_id": rid, "status": "rejected", "reason": "Cancelled by requester"}
+        out.append(_out(ds, req, "dataset", status, d, user))
     for b in live_requests(db):
         visible = (user.role == "admin" or b.created_by == user.id or not mine or
                    (user.role == "coordinator" and b.approver == user.department))

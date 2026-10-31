@@ -75,7 +75,7 @@ Session kinds are flat pastel fills with an ink outline, always paired with a le
 
 ### Type
 
-Archivo (variable, OFL) for everything, through its width axis:
+Built: Inter (variable, OFL) for words and Geist Mono for codes and caps labels; the original plan below used Archivo across its width axis:
 
 | Role | Size / line | Width | Weight |
 | --- | --- | --- | --- |
@@ -132,3 +132,14 @@ One orchestrated moment per screen. Decisions flip in the order the solver made 
 ### Responsive
 
 Desktop ≥1024px: route rail plus content. Tablet: the rail collapses to icons. Phone (375px): bottom bar, the timetable becomes a day picker plus a list, boards become stacked rows, no horizontal page scroll.
+
+
+## 5. As built (2026-11-01): Varun's canvas, with Inter and cyan
+
+The app now follows the "Velora — Operations Redesign" canvas (direction A, Signal & Concrete) screen by screen, with two substitutions Varun chose: Inter + Geist Mono instead of Archivo, and cyan `#0CDCF7` wherever the boards use yellow.
+- Tokens (`src/styles/tokens.css`): concrete `#E3E5E1`, paper, ink `#111` outlines, shadow steps 2/3/4/6/8 px (`--mount`, `--lift`, `--float`, `--panel`, `--hero`), board pastels, vivid status fills for badges.
+- Dark mode is **Night Shift** (canvas direction C): `#131313` page, `#1D1D1B` cards, near-white outlines, shadows cast in the accent.
+- Shell: floating menu cards (brand, nav with role label and divider, user), a top row with search, the WEEK 7 chip and theme; menu above the content on tablets; a 4-cell bottom bar and a ☰ menu on phones.
+- Login: the board's headline with a looping word (Skiper UI `useLoop` → `useLoop` in `lib/hooks.ts`, `LoopText`), four service tiles, and demo accounts as four cards that expand in place (after Skiper UI "minimal card expand").
+- A spring mouse follower (`components/ui/cursor.tsx`, after Skiper UI "mouse follow"): mouse only, off under reduced motion.
+- Overview, timetable grid, "Why here?", phone day list and Book a venue follow their boards. The "Why here?" panel stays a slide-over drawer, and Book a venue keeps its ticket, rather than the boards' inline panel and live-check card.

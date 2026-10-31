@@ -1,9 +1,9 @@
-/* Signal & Concrete: neo-brutalist operations theme. Ink outlines draw the structure, hard offset
-   shadows mark what can be pressed, one yellow means "act here", and pastels name session kinds
-   (always with a LEC/TUT/LAB letter, never colour alone). The app is a framed canvas (platform) on a
-   deeper page (platform-2); cards are white sheets and tiles inside cards a step deeper (sheet-2).
-   Dark mode is "Graphite": blue-grey surfaces, slate outlines, concrete-white plates where daylight
-   has yellow, and the same pastel session fills with dark type. */
+/* Signal & Concrete, as designed on the Velora canvas: 2px ink outlines draw the structure, hard
+   offset shadows mean "you can press this", concrete ground and paper surfaces, pastels name session
+   kinds (always with a LEC/TUT/LAB tag, never colour alone). Two substitutions from the boards: the
+   type is Inter with Geist Mono for codes and caps, and the one action colour is cyan where the
+   boards have yellow. Dark mode is "Night Shift" (canvas direction C): warm near-black, near-white
+   outlines, and shadows cast in the accent. */
 
 :root {
   color-scheme: light;
@@ -20,35 +20,44 @@
 
   /* text */
   --ink: #111111;
-  --ink-2: #3a3a36;
-  --ink-3: #5a5b56;
+  --ink-2: #2e2e2b;
+  --ink-3: #4a4a45;
   --on-anthracite: #f4f3ee;
   --on-anthracite-2: #b9bab4;
 
-  /* rules: light dividers inside things; ink outlines around them */
-  --rule: #d5d7d2;
+  /* rules: concrete dividers inside things; ink outlines around them */
+  --rule: #e3e5e1;
   --rule-strong: #111111;
 
-  /* the one action colour: here, chosen, press me */
-  --signal: #ffd23f;
+  /* the one action colour: chosen, current, press me (the boards' yellow, as cyan) */
+  --signal: #0cdcf7;
   --signal-ink: #111111;
-  --signal-soft: #fff3bf;
+  --signal-soft: #d7f8fd;
+  --signal-faint: #eefcfe;
   --signal-edge: #111111;
 
-  /* status signals (text-safe colours plus soft fills) */
+  /* status signals: text-safe colours, soft fills, and the vivid fills badges use */
   --clear: oklch(0.52 0.14 152);
   --clear-soft: #cff5dc;
+  --clear-vivid: #29c46b;
   --stop: oklch(0.53 0.2 27);
-  --stop-soft: #ffe1dd;
-  --wait: oklch(0.55 0.012 250);
-  --wait-soft: #eceeea;
-  /* caution is a status, kept apart from the action colour so a theme can change one without the other */
-  --caution: #ffd23f;
-  --caution-soft: #fff3bf;
+  --stop-soft: #ffc9c3;
+  --stop-input: #ffe3e0;
+  --stop-vivid: #ff6b5e;
+  --wait: #8a8c86;
+  --wait-soft: #f4f5f2;
+  /* caution is the "alternative offered" status, kept apart from the action colour */
+  --caution: #b07a00;
+  --caution-soft: #ffe7a1;
   /* the one highlighted mark in a chart (the busiest period, the costliest rule) */
-  --mark: #ffd23f;
+  --mark: #0cdcf7;
 
-  /* session kinds: a pastel fill with ink text, a darker line colour for the letter chip */
+  /* disabled controls: dashed, flat, no shadow */
+  --off-fill: #f4f5f2;
+  --off-edge: #8a8c86;
+  --off-ink: #5e605b;
+
+  /* session kinds: a pastel fill with ink text, a deeper line colour for small marks */
   --k-lecture: #1f5faf;
   --k-lecture-tint: #9ed2ff;
   --k-lecture-edge: #111111;
@@ -66,71 +75,85 @@
   --k-event-edge: #111111;
   --k-on: #ffffff;
 
-  /* elevation: hard offset shadows, no blur */
+  /* elevation: hard offsets, no blur. 2 chip, 3 focused input, 4 card, 6 focus panel, 8 one per page */
   --shade: #111111;
   --mount: 2px 2px 0 var(--shade);
+  --lift: 3px 3px 0 var(--shade);
   --float: 4px 4px 0 var(--shade);
+  --panel: 6px 6px 0 var(--shade);
+  --hero: 8px 8px 0 var(--shade);
   --glow: var(--mount);
+  --radius-card: 6px;
 }
 
 .dark {
   color-scheme: dark;
 
-  /* Graphite: cool blue-grey surfaces (never pure black), slate outlines, and concrete white for the
-     plates that are yellow by day. Colour comes from the pastel session fills and the status lamps. */
-  --platform: #15181d;
-  --platform-2: #0b0d10;
-  --dot: #232831;
-  --sheet: #1c2027;
-  --sheet-2: #252a32;
-  --anthracite: #0f1216;
-  --anthracite-2: #1c2027;
-  --anthracite-3: #2d343e;
+  /* Night Shift: warm near-black, near-white outlines, and the accent casts the shadows */
+  --platform: #131313;
+  --platform-2: #0c0c0c;
+  --dot: #232321;
+  --sheet: #1d1d1b;
+  --sheet-2: #262624;
+  --anthracite: #0c0c0c;
+  --anthracite-2: #1d1d1b;
+  --anthracite-3: #3a3a36;
 
-  --ink: #e9edf2;
-  --ink-2: #b6bfca;
-  --ink-3: #8b95a3;
-  --on-anthracite: #e9edf2;
-  --on-anthracite-2: #a3acb8;
+  --ink: #f1efe8;
+  --ink-2: #c9c6bc;
+  --ink-3: #a9a69c;
+  --on-anthracite: #f1efe8;
+  --on-anthracite-2: #c9c6bc;
 
-  --rule: #2b313a;
-  --rule-strong: #566170;
+  --rule: #3a3a36;
+  --rule-strong: #f1efe8;
 
-  --signal: #e4e7e2;
-  --signal-ink: #111418;
-  --signal-soft: #2a3039;
-  --signal-edge: #6b7686;
+  --signal: #0cdcf7;
+  --signal-ink: #131313;
+  --signal-soft: #0f3338;
+  --signal-faint: #142427;
+  --signal-edge: #f1efe8;
 
-  --clear: oklch(0.78 0.14 152);
+  --clear: oklch(0.8 0.16 150);
   --clear-soft: #15302a;
-  --stop: oklch(0.72 0.17 25);
+  --clear-vivid: #29c46b;
+  --stop: oklch(0.74 0.17 25);
   --stop-soft: #3b1f23;
-  --wait: oklch(0.7 0.015 250);
-  --wait-soft: #252a32;
-  --caution: #f0c850;
-  --caution-soft: #3a3318;
-  --mark: #8fc3ee;
+  --stop-input: #3b1f23;
+  --stop-vivid: #ff6b5e;
+  --wait: #8a8c86;
+  --wait-soft: #262624;
+  --caution: #f2c14e;
+  --caution-soft: #ffe7a1;
+  --mark: #0cdcf7;
 
-  /* the same pastels as daylight, a touch softer; inside them type turns dark (see index.css) */
+  --off-fill: #262624;
+  --off-edge: #6b6c66;
+  --off-ink: #9a9890;
+
   --k-lecture: #1f5faf;
-  --k-lecture-tint: #8fc3ee;
-  --k-lecture-edge: #0b0d10;
+  --k-lecture-tint: #7cc6ff;
+  --k-lecture-edge: #131313;
   --k-tutorial: #a34a12;
   --k-tutorial-tint: #f0ae80;
-  --k-tutorial-edge: #0b0d10;
+  --k-tutorial-edge: #131313;
   --k-lab: #6a3fc2;
-  --k-lab-tint: #bea9f2;
-  --k-lab-edge: #0b0d10;
+  --k-lab-tint: #b9a2ff;
+  --k-lab-edge: #131313;
   --k-exam: #b2365a;
   --k-exam-tint: #ee9bb0;
-  --k-exam-edge: #0b0d10;
+  --k-exam-edge: #131313;
   --k-event: #4d6a00;
   --k-event-tint: #b9dc6c;
-  --k-event-edge: #0b0d10;
+  --k-event-edge: #131313;
   --k-on: #ffffff;
 
-  --shade: #07090b;
+  --shade: #0cdcf7;
   --mount: 2px 2px 0 var(--shade);
+  --lift: 3px 3px 0 var(--shade);
   --float: 4px 4px 0 var(--shade);
+  --panel: 6px 6px 0 var(--shade);
+  --hero: 8px 8px 0 var(--shade);
   --glow: var(--mount);
+  --radius-card: 4px;
 }

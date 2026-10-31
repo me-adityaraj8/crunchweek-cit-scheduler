@@ -99,7 +99,7 @@ export function Code({ children, className, tone = "plain" }: { children: ReactN
   return (
     <span
       className={cn(
-        "inline-flex h-[20px] items-center whitespace-nowrap rounded-[4px] px-1.5 text-[12px] font-bold tabular-nums leading-none [font-stretch:78%]",
+        "inline-flex h-[20px] items-center whitespace-nowrap rounded-[4px] px-1.5 font-mono text-[11.5px] font-medium tabular-nums leading-none",
         tone === "plain" && "bg-ink/[0.07] text-ink",
         tone === "signal" && "bg-signal text-signal-ink",
         tone === "board" && "bg-anthracite-3 text-on-anthracite",

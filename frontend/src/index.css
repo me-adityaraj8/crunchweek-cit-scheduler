@@ -1,11 +1,13 @@
 @import "tailwindcss";
-@import "@fontsource-variable/archivo/wdth.css";
+@import "@fontsource-variable/inter/opsz.css";
+@import "@fontsource-variable/geist-mono/wght.css";
 @import "./styles/tokens.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
-  --font-sans: "Archivo Variable", "Archivo", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --color-platform: var(--platform);
   --color-platform-2: var(--platform-2);
@@ -25,6 +27,13 @@
   --color-signal-ink: var(--signal-ink);
   --color-signal-soft: var(--signal-soft);
   --color-signal-edge: var(--signal-edge);
+  --color-signal-faint: var(--signal-faint);
+  --color-clear-vivid: var(--clear-vivid);
+  --color-stop-input: var(--stop-input);
+  --color-stop-vivid: var(--stop-vivid);
+  --color-off-fill: var(--off-fill);
+  --color-off-edge: var(--off-edge);
+  --color-off-ink: var(--off-ink);
   --color-clear: var(--clear);
   --color-clear-soft: var(--clear-soft);
   --color-stop: var(--stop);
@@ -53,10 +62,13 @@
   --color-k-on: var(--k-on);
 
   --shadow-mount: var(--mount);
+  --shadow-lift: var(--lift);
   --shadow-float: var(--float);
+  --shadow-panel: var(--panel);
+  --shadow-hero: var(--hero);
 
-  --radius-sign: 6px;
-  --radius-sheet: 6px;
+  --radius-sign: var(--radius-card);
+  --radius-sheet: var(--radius-card);
   --radius-cell: 4px;
 
   --ease-arrive: cubic-bezier(0.23, 1, 0.32, 1);
@@ -69,7 +81,7 @@
   --animate-fade-out: fade-out 0.12s var(--ease-leave) both;
   --animate-pop-in: pop-in 0.16s var(--ease-arrive) both;
   --animate-pop-out: pop-out 0.1s var(--ease-leave) both;
-  --animate-drawer-in: drawer-in 0.26s var(--ease-arrive) both;
+  --animate-drawer-in: drawer-in 0.22s var(--ease-arrive) both;
   --animate-drawer-out: drawer-out 0.18s var(--ease-leave) both;
   --animate-sheet-up: sheet-up 0.26s var(--ease-arrive) both;
   --animate-sheet-down: sheet-down 0.18s var(--ease-leave) both;
@@ -117,11 +129,10 @@
     background: var(--signal);
     color: var(--signal-ink);
   }
+  /* the boards' focus: a thick ink outline set off from the element, nothing else */
   :focus-visible {
-    outline: 2px solid var(--ink);
-    outline-offset: 2px;
-    box-shadow: 0 0 0 5px var(--signal);
-    border-radius: 4px;
+    outline: 3px solid var(--ink);
+    outline-offset: 3px;
   }
   button, [role="button"] { cursor: pointer; }
   button:disabled { cursor: not-allowed; }
@@ -141,7 +152,7 @@
     --sheet-2: #f2f3f1;
     --rule: #c9cdd2;
     --rule-strong: #111111;
-    --shade: #0b0d10;
+    --shade: #111111;
     color: var(--ink);
   }
 }
@@ -165,12 +176,13 @@
     background: var(--sheet-2);
     border-radius: 4px;
   }
-  /* small, precise caps above a title or a figure */
+  /* small, precise caps above a title or a figure, set in the mono face */
   .eyebrow {
+    font-family: var(--font-mono);
     font-size: 11px;
     line-height: 14px;
-    font-weight: 800;
-    letter-spacing: 0.1em;
+    font-weight: 600;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--ink-3);
   }
@@ -189,6 +201,11 @@
       color-mix(in oklch, var(--ink-3) 22%, transparent) 5px 6px
     );
   }
+  /* the lunch band: ink hatching on the muted fill, as on the boards */
+  .hatch-lunch {
+    background-color: var(--sheet-2);
+    background-image: repeating-linear-gradient(135deg, transparent 0 7px, var(--rule-strong) 7px 9px);
+  }
   .skeleton {
     background: linear-gradient(90deg, var(--sheet-2) 0%, var(--platform) 50%, var(--sheet-2) 100%);
     background-size: 200% 100%;
@@ -196,12 +213,12 @@
     border-radius: 6px;
   }
   .label-caps {
+    font-family: var(--font-mono);
     font-size: 11px;
     line-height: 14px;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    font-stretch: 85%;
-    font-weight: 650;
+    font-weight: 600;
   }
 }
 
@@ -219,8 +236,8 @@
   height: var(--fh);
   margin-right: 0.06em;
   perspective: 280px;
-  font-weight: 700;
-  font-stretch: 75%;
+  font-family: var(--font-mono);
+  font-weight: 600;
   font-style: normal;
   text-align: center;
   color: var(--flap-fg);
@@ -275,19 +292,27 @@
   }
 }
 
-/* Tactile press, outside the layers so it beats the shadow utilities: lift a pixel on hover, sink
-   onto the shadow when pressed. In Night Shift the main action glows instead of casting a block. */
+/* Tactile press, outside the layers so it beats the shadow utilities: a button rests on a 4px shadow,
+   lifts a pixel on hover, and sinks all the way onto the page when pressed. */
 .press {
   transition: transform 140ms var(--ease-arrive), box-shadow 140ms var(--ease-arrive), background-color 120ms ease-out;
 }
 .press:hover:not(:disabled) {
   transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0 var(--shade);
+  box-shadow: 5px 5px 0 var(--shade);
 }
 .press:active:not(:disabled) {
-  transform: translate(2px, 2px);
+  transform: translate(4px, 4px);
   box-shadow: 0 0 0 var(--shade);
   transition-duration: 80ms;
+}
+/* a card you can open: it rises two pixels onto a deeper shadow */
+.lift {
+  transition: transform 160ms var(--ease-arrive), box-shadow 160ms var(--ease-arrive);
+}
+.lift:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--shade);
 }
 .dark .glow,
 .dark .glow:hover:not(:disabled) {
@@ -297,5 +322,11 @@
   box-shadow: none;
 }
 @media (prefers-reduced-motion: reduce) {
-  .press, .press:hover, .press:active { transform: none !important; transition: none; }
+  .press, .press:hover, .press:active, .lift, .lift:hover { transform: none !important; transition: none; }
+}
+
+/* a field the assistant filled in: the control itself carries the accent until the person edits it */
+[data-guessed] :is(input, textarea, button[role="combobox"]) {
+  background-color: var(--signal-faint);
+  box-shadow: 3px 3px 0 var(--signal);
 }

@@ -5,6 +5,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router";
 import { Toaster } from "sonner";
 import { ApiError } from "@/api/client";
+import { CursorFollower } from "@/components/ui/cursor";
 import { TooltipProvider } from "@/components/ui/overlay";
 import { AuthProvider } from "@/lib/auth";
 import { ThemeProvider, useTheme } from "@/lib/theme";
@@ -30,7 +31,7 @@ function ThemedToaster() {
       offset={20}
       toastOptions={{
         classNames: {
-          toast: "!rounded-[4px] !border-2 !border-rule-strong !bg-sheet !text-ink !shadow-float !font-sans",
+          toast: "!rounded-[6px] !border !border-rule-strong !bg-sheet !text-ink !shadow-float !font-sans",
           description: "!text-ink-2",
         },
       }}
@@ -50,6 +51,7 @@ createRoot(document.getElementById("root")!).render(
               </AuthProvider>
             </BrowserRouter>
             <ThemedToaster />
+            <CursorFollower />
           </TooltipProvider>
         </MotionConfig>
       </ThemeProvider>

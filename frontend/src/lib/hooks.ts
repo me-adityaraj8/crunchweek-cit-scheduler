@@ -29,3 +29,17 @@ export function usePrevious<T>(value: T) {
   }, [value]);
   return ref.current;
 }
+
+/** A counter that ticks every `delayMs` (after Skiper UI's useLoop): key an animated element on it to
+ * cycle content. It holds still while the tab is hidden, and when `paused` (reduced motion). */
+export function useLoop(delayMs: number, paused = false) {
+  const [key, setKey] = useState(0);
+  useEffect(() => {
+    if (paused) return;
+    const id = window.setInterval(() => {
+      if (document.visibilityState === "visible") setKey((k) => k + 1);
+    }, delayMs);
+    return () => clearInterval(id);
+  }, [delayMs, paused]);
+  return key;
+}

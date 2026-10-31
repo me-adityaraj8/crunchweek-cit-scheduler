@@ -1,11 +1,10 @@
-import { CalendarRange, DoorOpen, LayoutList, Sparkles, UserRound, Users } from "lucide-react";
+import { CalendarRange, Clock, DoorOpen, LayoutList, Sparkles, UserRound, Users } from "lucide-react";
 import { LayoutGroup } from "motion/react";
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 import { ApiError } from "@/api/client";
 import { useSummary, useTimetable } from "@/api/hooks";
 import type { Summary, User, View, Week } from "@/api/types";
-import { KindBullet } from "@/components/board/signals";
 import { GenerateCard } from "@/components/dashboard/GenerateCard";
 import { ErrorState, GridSkeleton, PageHeader } from "@/components/states";
 import { ExplainDrawer } from "@/components/timetable/ExplainDrawer";
@@ -17,7 +16,7 @@ import { Select, type Option } from "@/components/ui/select";
 import { useUser } from "@/lib/auth";
 import { KIND, roomTypeLabel } from "@/lib/format";
 import { useMediaQuery } from "@/lib/hooks";
-import { dayName, dayShort, spanLabel, todayCode } from "@/lib/time";
+import { dayName, dayShort, nowOnGrid, periodEnd, periodLabel, todayCode } from "@/lib/time";
 import { cn, plural } from "@/lib/utils";
 
 function defaults(user: User, summary?: Summary): { view: View; id: string } {
@@ -61,44 +60,97 @@ function heading(view: View, id: string, summary?: Summary) {
   return { title: "All rooms", lede: "Every room on one day. Blank cells are free." };
 }
 
-/** Phone layout: pick a day, read it as a list. */
+const TINT: Record<string, string> = { lecture: "bg-k-lecture-tint", tutorial: "bg-k-tutorial-tint", lab: "bg-k-lab-tint", exam: "bg-k-exam-tint", event: "bg-k-event-tint" };
+const TAG: Record<string, string> = { lecture: "LEC", tutorial: "TUT", lab: "LAB", exam: "EXAM", event: "EVENT" };
+
+/** Phone layout, as on the phone board: day tiles with class counts, the next class, then the day as
+ * a time list with the current class raised and the lunch break in its place. */
 function DayList({ items, days, onSelect, summary }: { items: GridItem[]; days: string[]; onSelect: (i: GridItem) => void; summary?: Summary }) {
   const [day, setDay] = useState(() => (days.includes(todayCode()) ? todayCode() : days[0]));
+  const now = nowOnGrid(summary?.periods);
+  const lunch = summary?.lunch_after ?? 5;
   const list = items.filter((i) => i.day === day).sort((a, b) => a.start - b.start || a.key.localeCompare(b.key));
+  const isNow = (it: GridItem) => !!now && now.day === day && now.period >= it.start && now.period <= it.end;
+  const next = now && now.day === day ? list.find((it) => it.start > now.period) : undefined;
   return (
     <div className="flex flex-col gap-3">
-      <Segmented aria-label="Day" value={day} onChange={setDay} items={days.map((d) => ({ value: d, label: dayShort(d) }))} className="w-full justify-between" size="sm" />
+      <div className="grid grid-cols-5 gap-2" role="group" aria-label="Day">
+        {days.slice(0, 5).map((d) => {
+          const on = d === day;
+          return (
+            <button
+              key={d}
+              type="button"
+              aria-pressed={on}
+              aria-current={d === todayCode() ? "date" : undefined}
+              onClick={() => setDay(d)}
+              className={cn("press flex h-[52px] flex-col items-center justify-center rounded-[4px] border-2 border-rule-strong", on ? "bg-signal text-signal-ink shadow-float" : "bg-sheet shadow-mount")}
+            >
+              <span className={cn("text-[12px]", on ? "font-black" : "font-extrabold")}>{dayShort(d)}</span>
+              <span className="text-[11px] font-semibold">{items.filter((i) => i.day === d).length}</span>
+            </button>
+          );
+        })}
+      </div>
+      {next && (
+        <p className="flex items-center gap-2 rounded-[4px] border-2 border-dashed border-rule-strong px-3 py-2.5 text-[13px] font-bold">
+          <Clock className="size-4" /> Next: {next.entry?.course_id ?? next.booking?.request_id} at {periodLabel(next.start, summary?.periods)} in {next.room}
+        </p>
+      )}
       {list.length === 0 ? (
         <p className="sheet p-4 text-[13.5px] text-ink-2">Nothing on {dayName(day)}.</p>
       ) : (
-        <ul className="flex flex-col gap-2">
-          {list.map((it) => (
-            <li key={it.key}>
-              <button
-                type="button"
-                onClick={() => onSelect(it)}
-                className={cn(
-                  "press flex w-full items-stretch gap-3 overflow-hidden rounded-[4px] border-2 border-rule-strong text-left shadow-mount",
-                  { lecture: "bg-k-lecture-tint", tutorial: "bg-k-tutorial-tint", lab: "bg-k-lab-tint", exam: "bg-k-exam-tint", event: "bg-k-event-tint" }[it.kind],
+        <ul className="flex flex-col gap-3">
+          {list.map((it, i) => {
+            const nowOn = isNow(it);
+            const len = it.end - it.start + 1;
+            const lunchBefore = it.start > lunch && (i === 0 || list[i - 1].end <= lunch);
+            return (
+              <li key={it.key} className="flex flex-col gap-3">
+                {lunchBefore && (
+                  <div className="hatch-lunch flex h-[30px] items-center rounded-[4px] border-2 border-rule-strong px-2">
+                    <span className="rounded-[3px] border-2 border-rule-strong bg-sheet px-1.5 text-[10px] font-extrabold tracking-[0.08em]">
+                      LUNCH · {periodEnd(lunch, summary?.periods)}–{periodLabel(lunch + 1, summary?.periods)}
+                    </span>
+                  </div>
                 )}
-              >
-                <span className="flex w-[70px] shrink-0 flex-col justify-center border-r-2 border-rule-strong bg-sheet px-3 py-3 text-[12.5px] font-bold tabular-nums leading-4 [font-stretch:85%]">
-                  {spanLabel(it.start, it.end - it.start + 1, summary?.periods).split("–").map((t, i) => (
-                    <span key={i} className={i ? "text-ink-2" : ""}>{t}</span>
-                  ))}
-                </span>
-                <span className="min-w-0 flex-1 py-3 pr-3">
-                  <span className="flex items-center gap-2">
-                    <KindBullet kind={it.kind} size="sm" />
-                    <b className="truncate text-[14px] font-black [font-stretch:85%]">{it.entry?.course_id ?? it.booking?.request_id}</b>
-                    <span className="ml-auto rounded-[3px] border-2 border-rule-strong bg-sheet px-1.5 text-[12px] font-bold [font-stretch:80%]">{it.room}</span>
+                <div className="grid grid-cols-[52px_minmax(0,1fr)] gap-2.5">
+                  <span className="pt-1.5 leading-tight">
+                    <span className="block text-[15px] font-extrabold tabular-nums">{periodLabel(it.start, summary?.periods)}</span>
+                    <span className="block text-[12px] text-ink-3">{len > 1 ? `P${it.start}–P${it.end}` : `P${it.start}`}</span>
                   </span>
-                  <span className="mt-0.5 block truncate text-[13px] text-ink">{it.entry?.course_title ?? it.booking?.title}</span>
-                  {it.entry && <span className="block truncate text-[12px] text-ink-2">{it.entry.groups.join(", ")}, {it.entry.faculty_name}</span>}
-                </span>
-              </button>
-            </li>
-          ))}
+                  <button
+                    type="button"
+                    onClick={() => onSelect(it)}
+                    className={cn(
+                      "press flex flex-col gap-1 rounded-[4px] border-rule-strong p-3 text-left",
+                      nowOn ? "border-[3px] shadow-[5px_5px_0_var(--shade)]" : "border-2 shadow-lift",
+                      len > 1 && "min-h-[132px]",
+                      TINT[it.kind],
+                    )}
+                  >
+                    <span className="flex items-center gap-2">
+                      <b className="truncate text-[17px] font-extrabold">{it.entry?.course_id ?? it.booking?.request_id}</b>
+                      <span className="ml-auto flex shrink-0 gap-1">
+                        {nowOn && <span className="rounded-[3px] bg-[#111] px-1.5 py-0.5 text-[10px] font-extrabold text-signal">NOW</span>}
+                        <span className="rounded-[3px] border-2 border-[#111] bg-white px-1.5 text-[10px] font-extrabold leading-4 text-[#111]">
+                          {TAG[it.kind]}
+                          {len > 1 ? ` · ${len} H` : ""}
+                        </span>
+                      </span>
+                    </span>
+                    <span className="truncate text-[14px] font-semibold">{it.entry?.course_title ?? it.booking?.title}</span>
+                    <span className="truncate text-[13px]">
+                      {it.room}
+                      {it.entry ? ` · ${it.entry.faculty_name}` : ""}
+                      {it.entry && it.entry.groups.length > 1 ? ` · with ${it.entry.groups.slice(1).join(", ")}` : ""}
+                    </span>
+                    {len > 1 && <span className="mt-auto text-[12px] font-bold">Until {periodEnd(it.end, summary?.periods)}</span>}
+                  </button>
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
@@ -186,8 +238,8 @@ export default function Timetable() {
         )}
         <div className="ml-auto flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px] text-ink-2">
           {(["lecture", "tutorial", "lab"] as const).map((k) => (
-            <span key={k} className="flex items-center gap-1.5">
-              <KindBullet kind={k} size="sm" /> {KIND[k].label}
+            <span key={k} className={cn("rounded-[4px] border-2 border-[#111] px-2.5 py-1.5 text-[12px] font-extrabold uppercase tracking-[0.06em] text-[#111]", TINT[k])}>
+              {TAG[k]} · {k === "lab" ? "3 hours" : KIND[k].label}
             </span>
           ))}
           {evening && (

@@ -1,6 +1,6 @@
 import uuid
 
-from conftest import PW
+from conftest import PW, token
 
 
 def bearer(r) -> dict:
@@ -140,3 +140,16 @@ def test_reset_keeps_own_accounts(client, heads):
     assert client.post("/api/auth/login", json={"email": email, "password": "long-enough-1"}).status_code == 200
     assert {a["email"] for a in client.get("/api/auth/demo-accounts").json()} <= {
         u["email"] for u in client.get("/api/users", headers=heads["admin"]).json()}
+
+
+def test_my_requests_include_the_dataset_requests_i_stand_for(client, heads):
+    """Demo accounts come from the dataset's requesters, so their own dataset requests are theirs."""
+    def mine(h):
+        return {r["id"]: r for r in client.get("/api/bookings", params={"mine": True}, headers=h).json()}
+    club = mine(heads["club"])                                   # Robotics Club
+    assert "BR-04" in club and club["BR-04"]["source"] == "dataset" and not club["BR-04"]["can_cancel"]
+    assert all(r["source"] == "app" or r["requester"] == "Robotics Club" for r in club.values())
+    assert "BR-08" in mine(heads["ece"]) and "BR-13" in mine(heads["cse"])
+    f12 = token(client, "f12@cit.demo")
+    assert "BR-19" in mine(f12) and "BR-19" not in mine(heads["faculty"])
+    assert client.get("/api/dashboard", headers=heads["club"]).json()["my_requests"] >= 1

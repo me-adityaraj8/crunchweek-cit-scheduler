@@ -25,7 +25,10 @@ const ROLE_CAP: Record<string, Category> = {
 };
 
 function WindowsEditor({ value, onChange, days, summary, guessed }: { value: Window[]; onChange: (w: Window[]) => void; days: string[]; summary: Summary; guessed: boolean }) {
-  const periods = summary.periods.map((p) => ({ value: String(p.id), label: `P${p.id}  ${p.start}`, group: p.teaching ? "Teaching hours" : "Evening (events only)" }));
+  const group = (p: Summary["periods"][number]) => (p.teaching ? "Teaching hours" : "Evening (events only)");
+  // a window is a range of whole periods, so "until" names when the last one ends, not when it starts
+  const from = summary.periods.map((p) => ({ value: String(p.id), label: `P${p.id} · ${p.start}`, group: group(p) }));
+  const until = summary.periods.map((p) => ({ value: String(p.id), label: `P${p.id} · until ${p.end}`, group: group(p) }));
   const set = (i: number, patch: Partial<Window>) => onChange(value.map((w, k) => (k === i ? { ...w, ...patch } : w)));
   return (
     <Field label="When" guessed={guessed} hint="Any time inside a window works. Add more windows to give the code options.">
@@ -33,8 +36,8 @@ function WindowsEditor({ value, onChange, days, summary, guessed }: { value: Win
         {value.map((w, i) => (
           <div key={i} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_36px] items-center gap-2">
             <Select aria-label="Day" value={w.day} onValueChange={(v) => set(i, { day: v })} options={days.map((d) => ({ value: d, label: dayShort(d) }))} />
-            <Select aria-label="From" value={String(w.from_period)} onValueChange={(v) => set(i, { from_period: Number(v), to_period: Math.max(Number(v), w.to_period) })} options={periods} />
-            <Select aria-label="To" value={String(w.to_period)} onValueChange={(v) => set(i, { to_period: Number(v) })} options={periods.filter((p) => Number(p.value) >= w.from_period)} />
+            <Select aria-label="From" value={String(w.from_period)} onValueChange={(v) => set(i, { from_period: Number(v), to_period: Math.max(Number(v), w.to_period) })} options={from} />
+            <Select aria-label="Until" value={String(w.to_period)} onValueChange={(v) => set(i, { to_period: Number(v) })} options={until.filter((p) => Number(p.value) >= w.from_period)} />
             <Button type="button" size="icon-sm" variant="ghost" aria-label="Remove window" onClick={() => onChange(value.filter((_, k) => k !== i))}>
               <Trash2 />
             </Button>
@@ -135,7 +138,7 @@ export function BookingForm({
     <section className="flex flex-col gap-4" aria-label="Booking request">
       <div ref={sheet} className="sheet flex flex-col gap-4 p-4 sm:p-5">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-[16px] font-bold">Request</h2>
+          <h2 className="text-[15px] font-extrabold uppercase tracking-[0.08em]">Request</h2>
           <Button type="button" size="sm" variant="ghost" onClick={() => { setStamped(null); onReset(); }}>
             <RotateCcw /> Start over
           </Button>
@@ -153,7 +156,7 @@ export function BookingForm({
               aria-label="Length in periods"
               value={String(form.duration)}
               onValueChange={(v) => up({ duration: Number(v) })}
-              options={Array.from({ length: 6 }, (_, i) => ({ value: String(i + 1), label: `${i + 1} period${i ? "s" : ""}` }))}
+              options={Array.from({ length: 6 }, (_, i) => ({ value: String(i + 1), label: `${i + 1} period${i ? "s" : ""} · ${i + 1} hour${i ? "s" : ""}` }))}
             />
           </Field>
         </div>

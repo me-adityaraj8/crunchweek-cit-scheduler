@@ -56,15 +56,15 @@ export function Segmented<T extends string>({
             key={it.value}
             value={it.value}
             className={cn(
-              "relative inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[3px] font-bold [font-stretch:96%] transition-colors [&_svg]:size-4",
-              size === "sm" ? "h-7 px-2.5 text-[12.5px]" : "h-8 px-3 text-[13px]",
+              "relative inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[3px] font-bold transition-colors [&_svg]:size-4",
+              size === "sm" ? "h-8 px-2.5 text-[13px]" : "h-9 px-3 text-[14px]",
               on ? "text-signal-ink" : "text-ink-2 hover:bg-signal-soft hover:text-ink",
             )}
           >
             {on && (
               <motion.span
                 layoutId={`seg-${id}`}
-                className="absolute inset-0 rounded-[3px] border-2 border-rule-strong bg-signal"
+                className="absolute inset-0 rounded-[3px] border-2 border-rule-strong bg-signal shadow-mount"
                 transition={{ type: "spring", stiffness: 500, damping: 38 }}
               />
             )}
@@ -99,13 +99,13 @@ export function ChipToggle<T extends string>({
       value={values}
       onValueChange={(v) => onChange(v as T[])}
       aria-label={ariaLabel}
-      className={cn("flex flex-wrap gap-1.5", className)}
+      className={cn("flex flex-wrap gap-2", className)}
     >
       {items.map((it) => (
         <ToggleGroupPrimitive.Item
           key={it.value}
           value={it.value}
-          className="inline-flex h-8 items-center gap-1.5 rounded-[3px] border-2 border-rule-strong bg-sheet px-3 text-[12.5px] font-semibold text-ink-2 shadow-mount transition-colors [font-stretch:90%] hover:text-ink data-[state=on]:border-ink data-[state=on]:bg-ink data-[state=on]:text-sheet [&_svg]:size-3.5"
+          className="inline-flex min-h-[38px] items-center gap-1.5 rounded-[4px] border-2 border-rule-strong bg-sheet px-3 text-[14px] font-semibold text-ink transition-[box-shadow,background-color] hover:shadow-lift data-[state=on]:bg-signal data-[state=on]:font-bold data-[state=on]:text-signal-ink [&_svg]:size-3.5"
         >
           {it.icon}
           {it.label}

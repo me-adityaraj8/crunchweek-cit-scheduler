@@ -1,18 +1,28 @@
-import { ArrowUpRight } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import { cn } from "@/lib/utils";
 
+/** A status in words on a coloured chip (the boards' badges: ALL, CLEAR, PROVEN OPTIMAL, DECIDED...). */
+export function Badge({ children, fill = "bg-white", className }: { children: ReactNode; fill?: string; className?: string }) {
+  return (
+    <span className={cn("inline-flex shrink-0 items-center rounded-[3px] border-2 border-[#111] px-2 py-[3px] text-[11px] font-extrabold uppercase leading-none tracking-[0.06em] text-[#111]", fill, className)}>
+      {children}
+    </span>
+  );
+}
+
 /**
- * A headline metric: a small caps label, one big figure and a chart of its own. `hero` fills the card
- * with the signal colour; give it to one card per page so it is the first thing you read.
+ * A headline metric: a caps label with a status badge, one big figure ("190 / 190"), a chart of its
+ * own and a note. With `to` the whole card opens that page. `hero` fills it with the accent; give it
+ * to at most one card per page.
  */
 export function MetricCard({
   label,
   value,
   unit,
   note,
+  badge,
   hero,
   to,
   children,
@@ -22,42 +32,62 @@ export function MetricCard({
   value: ReactNode;
   unit?: ReactNode;
   note?: ReactNode;
+  badge?: ReactNode;
   hero?: boolean;
   to?: string;
   children?: ReactNode;
   className?: string;
 }) {
-  return (
-    <section
-      aria-label={label}
-      className={cn(
-        "flex min-w-0 flex-col rounded-[6px] border-2 border-rule-strong p-4 sm:p-5",
-        hero ? "glow on-light bg-signal text-signal-ink shadow-float" : "bg-sheet text-ink shadow-mount",
-        className,
-      )}
-    >
+  const body = (
+    <>
       <div className="flex items-start justify-between gap-3">
-        <h2 className={cn("eyebrow pt-1", hero && "text-signal-ink/75")}>{label}</h2>
-        {to && (
-          <Link
-            to={to}
-            aria-label={`Open ${label.toLowerCase()}`}
-            className={cn(
-              "press -mr-1 -mt-1 grid size-8 shrink-0 place-items-center rounded-[4px] border-2 shadow-mount [&_svg]:size-4",
-              hero ? "border-signal-ink bg-signal-ink text-signal [--shade:var(--signal-ink)]" : "border-rule-strong bg-sheet text-ink",
-            )}
-          >
-            <ArrowUpRight />
-          </Link>
-        )}
+        <h2 className="pt-0.5 text-[12px] font-extrabold uppercase tracking-[0.08em]">{label}</h2>
+        {badge}
       </div>
-      <div className={cn("flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1", hero ? "mt-4" : "mt-3")}>
-        <span className={cn("font-black tracking-[-0.035em] [font-stretch:108%]", hero ? "text-[56px] sm:text-[64px]" : "text-[40px] sm:text-[44px]", "leading-none")}>{value}</span>
-        {unit && <span className={cn("text-[14px] font-bold", hero ? "text-signal-ink/75" : "text-ink-3")}>{unit}</span>}
+      <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+        <span className="text-[52px] font-black leading-[0.9] tracking-[-0.04em] sm:text-[60px]">{value}</span>
+        {unit && <span className={cn("text-[20px] font-bold", hero ? "text-signal-ink/75" : "text-ink-3")}>{unit}</span>}
       </div>
-      {note && <p className={cn("mt-2 text-[12.5px] leading-[17px]", hero ? "text-signal-ink/80" : "text-ink-2")}>{note}</p>}
-      {children && <div className="mt-auto pt-5">{children}</div>}
+      {children && <div>{children}</div>}
+      {note && <p className={cn("mt-auto text-[13px] leading-[1.4]", hero ? "text-signal-ink/80" : "text-ink-2")}>{note}</p>}
+    </>
+  );
+  const cls = cn(
+    "flex min-w-0 flex-col gap-3.5 rounded-sheet border-2 border-rule-strong p-[18px] shadow-float",
+    hero ? "on-light bg-signal text-signal-ink" : "bg-sheet text-ink",
+    to && "lift",
+    className,
+  );
+  return to ? (
+    <Link to={to} aria-label={label} className={cls}>
+      {body}
+    </Link>
+  ) : (
+    <section aria-label={label} className={cls}>
+      {body}
     </section>
+  );
+}
+
+/** A filled share of a bordered track. */
+export function ProgressBar({ value, max, label }: { value: number; max: number; label: string }) {
+  return (
+    <div className="h-3.5 overflow-hidden rounded-[3px] border-2 border-rule-strong bg-sheet-2" role="img" aria-label={label}>
+      <div className="h-full bg-ink" style={{ width: `${max ? Math.min(100, (value / max) * 100) : 0}%` }} />
+    </div>
+  );
+}
+
+/** Counts as small labelled chips: "22 approved", "1 alternative"... */
+export function CountChips({ items }: { items: { label: string; value: number; fill: string }[] }) {
+  return (
+    <ul className="flex flex-wrap gap-1.5">
+      {items.map((i) => (
+        <li key={i.label} className={cn("rounded-[3px] border-2 border-[#111] px-2 py-[3px] text-[12px] font-bold text-[#111]", i.fill)}>
+          {i.value} {i.label}
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -82,17 +112,13 @@ export function RuleTicks({ ticks, hero }: { ticks: Tick[]; hero?: boolean }) {
   const broken = ticks.filter((t) => !t.ok).length;
   return (
     <div>
-      <ul className="flex h-9 items-end gap-[3px]" onMouseLeave={() => setOn(null)}>
+      <ul className="flex gap-[3px]" onMouseLeave={() => setOn(null)}>
         {ticks.map((t) => (
           <li
             key={t.key}
             onMouseEnter={() => setOn(t)}
             title={`${t.key} ${t.label}: ${t.ok ? "holds" : "broken"}`}
-            className={cn(
-              "flex-1 rounded-[2px] transition-[height,opacity] duration-150 ease-out",
-              t.ok ? (hero ? "h-full bg-signal-ink" : "h-full bg-ink") : "h-1/3 bg-stop",
-              on && on.key !== t.key && "opacity-45",
-            )}
+            className={cn("h-3.5 flex-1 rounded-[2px] border-2 border-[#111] transition-opacity duration-150", t.ok ? "bg-clear-vivid" : "bg-stop-vivid", on && on.key !== t.key && "opacity-45")}
           />
         ))}
       </ul>
@@ -123,7 +149,7 @@ export function MiniColumns({ columns, max, mark, unit = "", hero }: { columns: 
             <span
               className={cn(
                 "block w-full rounded-t-[3px] transition-opacity duration-150",
-                c.value === 0 ? "h-[3px] rounded-[2px] bg-rule" : hero ? "bg-signal-ink" : peak > 0 && c.value === peak ? "bg-mark outline-2 outline-rule-strong -outline-offset-2" : "bg-ink",
+                c.value === 0 ? "h-1 rounded-none bg-ink" : hero ? "bg-signal-ink" : peak > 0 && c.value === peak ? "border-2 border-rule-strong bg-mark" : "bg-ink",
                 on && on.key !== c.key && "opacity-45",
               )}
               style={c.value ? { height: `${Math.max(8, (c.value / top) * 100)}%` } : undefined}
@@ -171,7 +197,7 @@ export function RingMeter({ value, max, size = 92, caption }: { value: number; m
       <span className="absolute inset-0 grid place-items-center text-center">
         <span>
           <span className="block text-[18px] font-black leading-none">{Math.round(share * 100)}%</span>
-          {caption && <span className="mt-0.5 block text-[10px] font-bold uppercase tracking-[0.08em] text-ink-3">{caption}</span>}
+          {caption && <span className="mt-0.5 block font-mono text-[10px] font-medium uppercase tracking-[0.08em] text-ink-3">{caption}</span>}
         </span>
       </span>
     </div>

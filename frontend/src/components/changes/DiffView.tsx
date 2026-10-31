@@ -42,7 +42,7 @@ export function MoveBoard({ p }: { p: Proposal }) {
             <BoardText>{m.session_id}</BoardText>
             <BoardText dim className="hidden sm:block">{(m.groups ?? []).join(" ")}</BoardText>
             <BoardText dim className="col-span-2 row-start-2 tabular-nums sm:col-span-1 sm:row-start-auto">{slot(m.before, summary)}</BoardText>
-            <span role="cell" aria-hidden className="hidden text-on-anthracite-2 sm:block">→</span>
+            <span role="cell" aria-hidden className="hidden text-ink-3 sm:block">→</span>
             <BoardText className="col-span-2 tabular-nums text-signal sm:col-span-1">{slot(m.after, summary)}</BoardText>
             <span role="cell" className="col-start-2 row-start-1 justify-self-end text-[12.5px] sm:col-start-auto sm:row-start-auto sm:justify-self-start">
               <SplitFlap value={c.board} length={7} tone={c.tone} delay={i * 60} label={c.label} />

@@ -39,7 +39,8 @@ def dashboard(db: Session = Depends(get_db), user: User = Depends(current_user))
     v = state.active_version(db, row)
     ex = state.latest_exams(db, row)
     pending = pending_for(db, user, v)
-    mine = sum(1 for b in bookings.live_requests(db) if b.created_by == user.id)
+    mine = (sum(1 for b in bookings.live_requests(db) if b.created_by == user.id) +
+            sum(1 for r in ds.requests.values() if bookings.owns_dataset_request(user, r)))
     base = {"dataset_id": ds.dataset_id, "pending": pending, "exams_scheduled": len(ex.exams) if ex else 0,
             "exams_total": len(ds.exams), "total": len(ds.sessions), "my_requests": mine}
     if v is None:
@@ -66,7 +67,7 @@ def dashboard(db: Session = Depends(get_db), user: User = Depends(current_user))
         used = sum(sum(x) for x in grid[rid].values())
         util.append({"room_id": rid, "name": r.get("name", rid), "type": r["type"], "capacity": r["capacity"],
                      "used_hours": used, "total_hours": total_hours, "pct": round(100 * used / total_hours, 1)})
-    return DashboardOut(has_timetable=True, version_id=v.id, hard_count=len(conflicts), soft=v.soft,
+    return DashboardOut(has_timetable=True, version_id=v.id, solver_status=v.solver_status, hard_count=len(conflicts), soft=v.soft,
                         soft_total=v.soft_total, placed=len(assign), conflicts=[asdict(c) for c in conflicts[:100]],
                         utilisation=util, grid=grid, fest=bookings.summary(db, ds, v), **base)
 

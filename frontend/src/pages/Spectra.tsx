@@ -329,12 +329,12 @@ export default function Spectra() {
                     <BoardRow index={rank} onClick={() => setOpen(b)} active={open?.id === b.id} highlight={flash === b.id} className={cn(flash === b.id && "bg-anthracite-2")}>
                       <BoardText dim className="hidden tabular-nums sm:block">{rank + 1}</BoardText>
                       <BoardText>
-                        <span className="text-on-anthracite-2 sm:hidden">{rank + 1}. </span>
+                        <span className="text-ink-3 sm:hidden">{rank + 1}. </span>
                         {b.id}
                       </BoardText>
                       <span role="cell" className="col-span-2 row-start-2 min-w-0 sm:col-span-1 sm:row-start-auto">
                         <span className="block truncate text-[13.5px] font-semibold">{b.title}</span>
-                        <span className="block truncate text-[12px] text-on-anthracite-2">{b.reason}</span>
+                        <span className="block truncate text-[12px] text-ink-2">{b.reason}</span>
                       </span>
                       <BoardText dim className="hidden sm:block">{categoryLabel(b.category)}</BoardText>
                       <BoardText dim className="hidden tabular-nums sm:block">{when(b, summary)}</BoardText>
@@ -346,7 +346,7 @@ export default function Spectra() {
                   </div>
                 );
               })}
-              {shown.length === 0 && <div className="px-5 py-6 text-[13.5px] text-on-anthracite-2">No requests with this status.</div>}
+              {shown.length === 0 && <div className="px-5 py-6 text-[13.5px] text-ink-2">No requests with this status.</div>}
             </Board>
           ) : (
             summary && <VenueLanes summary={summary} />

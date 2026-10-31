@@ -74,11 +74,11 @@ function SlotMap({
                   aria-label={label}
                   title={label}
                   className={cn(
-                    "grid h-7 place-items-center rounded-[4px] text-[10.5px] font-bold tabular-nums transition-[box-shadow] [font-stretch:80%]",
-                    s.kind === "here" && "bg-signal text-signal-ink",
-                    s.kind === "ok" && "border border-clear/40 bg-clear-soft text-ink hover:shadow-[0_0_0_1.5px_var(--ink)]",
-                    s.kind === "blocked" && "border border-stop/30 bg-stop-soft text-stop hover:shadow-[0_0_0_1.5px_var(--stop)]",
-                    s.kind === "none" && "bg-platform-2/60",
+                    "grid h-6 place-items-center rounded-[2px] border-2 text-[10px] font-bold tabular-nums transition-[box-shadow]",
+                    s.kind === "here" && "border-[#111] bg-signal text-[#111] shadow-mount",
+                    s.kind === "ok" && "border-rule-strong bg-sheet text-ink hover:shadow-mount",
+                    s.kind === "blocked" && "border-[#111] bg-stop-vivid text-[#111] hover:shadow-mount",
+                    s.kind === "none" && "border-transparent bg-rule",
                     picked === key && "shadow-[0_0_0_2px_var(--ink)]",
                   )}
                 >
@@ -90,9 +90,9 @@ function SlotMap({
         ))}
       </div>
       <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-[11.5px] text-ink-2">
-        <span className="flex items-center gap-1.5"><span className="size-3 rounded-[3px] bg-signal" /> Current slot</span>
-        <span className="flex items-center gap-1.5"><span className="size-3 rounded-[3px] border border-clear/40 bg-clear-soft" /> Free, with the soft penalty it adds</span>
-        <span className="flex items-center gap-1.5"><span className="size-3 rounded-[3px] border border-stop/30 bg-stop-soft" /> Breaks a hard rule</span>
+        <span className="flex items-center gap-1.5"><span className="size-3.5 rounded-[2px] border-2 border-[#111] bg-signal" /> Chosen</span>
+        <span className="flex items-center gap-1.5"><span className="size-3.5 rounded-[2px] border-2 border-rule-strong bg-sheet" /> Allowed, the number is the soft penalty it adds</span>
+        <span className="flex items-center gap-1.5"><span className="size-3.5 rounded-[2px] border-2 border-[#111] bg-stop-vivid" /> Breaks a hard rule</span>
         {duration > 1 && <span>Starts only; the session runs {duration} periods.</span>}
       </div>
     </div>
@@ -131,18 +131,18 @@ function SessionExplain({ item, days, periods, onClose }: { item: GridItem; days
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap gap-2">
-        <span className="inline-flex h-7 items-center gap-1.5 rounded-[3px] border-2 border-rule-strong px-2.5 text-[12.5px] font-semibold">
+        <span className="inline-flex h-8 items-center gap-1.5 rounded-[4px] border-2 border-rule-strong bg-sheet-2 px-2.5 text-[14px] font-bold">
           <KindBullet kind={item.kind} size="sm" /> {KIND[item.kind].label}
         </span>
-        <span className="inline-flex h-7 items-center rounded-[3px] border-2 border-rule-strong px-2.5 text-[12.5px] font-semibold tabular-nums">
+        <span className="inline-flex h-8 items-center rounded-[4px] border-2 border-rule-strong bg-sheet-2 px-2.5 text-[14px] font-bold tabular-nums">
           {dayShort(e.day)} {spanLabel(e.start_period, e.duration, periods)}
         </span>
-        <span className="inline-flex h-7 items-center rounded-[3px] border-2 border-rule-strong px-2.5 text-[12.5px] font-semibold">{e.room_id}</span>
-        {e.week7_moved && <span className="inline-flex h-7 items-center rounded-[3px] border-2 border-rule-strong bg-signal px-2.5 text-[12.5px] font-bold text-signal-ink">Moved for Week 7</span>}
+        <span className="inline-flex h-8 items-center rounded-[4px] border-2 border-rule-strong bg-sheet-2 px-2.5 text-[14px] font-bold">{e.room_id}</span>
+        {e.week7_moved && <span className="inline-flex h-8 items-center rounded-[3px] border-2 border-rule-strong bg-signal px-2.5 text-[12.5px] font-bold text-signal-ink">Moved for Week 7</span>}
       </div>
 
       <section>
-        <h3 className="mb-2 text-[14px] font-bold">Why it's here</h3>
+        <h3 className="mb-2.5 text-[12px] font-extrabold uppercase tracking-[0.08em]">Why it's here</h3>
         {q.isLoading ? (
           <Loading rows={3} />
         ) : q.isError ? (
@@ -151,7 +151,7 @@ function SessionExplain({ item, days, periods, onClose }: { item: GridItem; days
           <ul className="flex flex-col gap-2">
             {q.data!.facts.map((f, i) => (
               <li key={i} className="flex items-start gap-2 text-[13.5px] leading-[20px]">
-                <Check className="mt-0.5 size-4 shrink-0 text-clear" />
+                <span className="mt-px grid size-[18px] shrink-0 place-items-center rounded-[3px] border-2 border-[#111] bg-clear-vivid text-[#111]"><Check className="size-2.5" strokeWidth={4} /></span>
                 {f}
               </li>
             ))}
@@ -167,14 +167,14 @@ function SessionExplain({ item, days, periods, onClose }: { item: GridItem; days
               <Loader2 className="size-4 animate-spin" /> Rewording the checker's facts…
             </p>
           ) : w.data?.words ? (
-            <blockquote className="rounded-[4px] border-l-[3px] border-signal bg-signal-soft px-3 py-2 text-[13.5px] leading-[20px]">{w.data.words}</blockquote>
+            <blockquote className="rounded-[4px] border-2 border-rule-strong bg-signal-soft px-3 py-2 text-[13.5px] leading-[20px]">{w.data.words}</blockquote>
           ) : null}
         </div>
       </section>
 
       {q.data && (
         <section>
-          <h3 className="mb-1 text-[14px] font-bold">Every other start time</h3>
+          <h3 className="mb-1 border-t-2 border-rule-strong pt-3.5 text-[12px] font-extrabold uppercase tracking-[0.08em]">Every other slot</h3>
           <p className="mb-3 text-[12.5px] text-ink-2">Select a slot to see what blocks it{canMove ? ", or to propose moving the session there" : ""}.</p>
           <SlotMap
             days={days}
@@ -279,6 +279,10 @@ export function ExplainDrawer({ item, days, periods, onClose }: { item: GridItem
         ))
       }
     >
+      <div className="-mx-5 -mt-4 mb-4 flex items-center justify-between border-b-2 border-rule-strong bg-signal px-5 py-3 text-signal-ink">
+        <span className="text-[15px] font-extrabold tracking-[0.08em]">WHY HERE?</span>
+        <span className="text-[12px] font-bold">From the rule checker</span>
+      </div>
       {item && e && (
         <button
           type="button"

@@ -19,7 +19,7 @@ const where = (u: User) => [ROLE[u.role], u.department, u.faculty_id].filter(Boo
 function Who({ u, tag }: { u: User; tag?: string }) {
   return (
     <div className="flex min-w-0 flex-1 items-center gap-3">
-      <span className="grid size-8 shrink-0 place-items-center rounded-full bg-anthracite text-[12px] font-bold text-on-anthracite">
+      <span className="grid size-8 shrink-0 place-items-center rounded-[4px] border-2 border-rule-strong bg-platform text-[12px] font-black text-ink">
         {u.name.replace(/^(Dr\.|Prof\.)\s+/, "").slice(0, 1).toUpperCase()}
       </span>
       <div className="min-w-0 leading-tight">
