@@ -45,7 +45,7 @@ def test_sample_disruption_minimal_and_valid(ds, raw, V, base, fest, sample_disr
 def test_repair_keeps_spectra_bookings_valid(ds, base, fest, sample_disruption):
     ds2 = apply_changes(ds, sample_disruption)
     r = repair(ds2, base, fest, 60)
-    viol, _, stats = check_fest(ds2, r.assign, [asdict(d) for d in fest.decisions], fest.overrides)
+    viol, _, stats = check_fest(ds2, r.assign, [asdict(d) for d in fest.decisions], r.overrides)
     assert viol == [] and stats["priority_inversions"] == []
 
 
@@ -78,3 +78,31 @@ def test_conflict_text_lists_days_in_week_order(ds, base):
                                           "periods": list(range(1, 10)), "reason": "x"}]})
     text = next(c.text for c in repair(ds2, base, None, 30).conflicts if f in c.text)
     assert text.index("MON") < text.index("TUE") < text.index("FRI")
+
+
+def _crowded(ds, base):
+    """Base timetable with a lecture in AUD MON P4, so BR-01 has to displace it in Week 7."""
+    from backend.app.core.checker import check_move
+    for sid, s in ds.sessions.items():
+        if "auditorium" in s["room_types"] and s["duration"] == 1 and not s.get("basket_slot") and not s.get("fixed_slot"):
+            if not check_move(ds, base, sid, "MON", 4, "AUD"):
+                return sid, {**base, sid: ("MON", 4, "AUD")}
+    raise AssertionError("no lecture can sit in AUD MON P4")
+
+
+def test_repair_with_week7_overrides(ds, raw, V, base, sample_disruption):
+    sid, crowded = _crowded(ds, base)
+    fest = decide_fest(ds, crowded)
+    assert fest.overrides
+    ds2 = apply_changes(ds, sample_disruption)
+    hit = {v.detail.split(":")[0] for v in check_timetable(ds2, crowded) if v.rule in ("H7", "H8")}
+    r = repair(ds2, crowded, fest, 60)
+    assert r.status == "ok"
+    assert r.assign[sid] == crowded[sid] or sid in hit          # displaced class keeps its normal slot
+    assert r.moved <= len(hit) + 1
+    viol, _, stats = check_fest(ds2, r.assign, [asdict(d) for d in fest.decisions], r.overrides)
+    assert viol == [] and stats["priority_inversions"] == []
+    sched = {"dataset_id": ds.dataset_id, "sessions": rows(r.assign),
+             "fest_week": {"bookings": [asdict(d) for d in fest.decisions], "session_overrides": r.overrides}}
+    rep = V.run(V.apply_disruption(raw, sample_disruption), sched, baseline=_sched(ds, crowded))
+    assert rep["hard_violation_count"] == 0, rep["hard_violations"][:3]
