@@ -34,11 +34,14 @@ def read_assign(tm, solver) -> Assign:
 
 
 def solve_timetable(ds: Dataset, time_limit_s: float, baseline: Assign | None = None, move_weight: int = 0,
-                    blocked: set[tuple[str, str, int]] = frozenset(), workers: int = 8) -> SolveResult:
+                    blocked: set[tuple[str, str, int]] = frozenset(), workers: int = 8,
+                    blocked_groups: set[tuple[str, str, int]] = frozenset()) -> SolveResult:
     """Place every session. With move_weight > 0, each session that leaves its baseline slot costs
-    move_weight (on top of the soft penalty). `blocked` holds (room, day, period) cells already taken."""
+    move_weight (on top of the soft penalty). `blocked` holds (room, day, period) cells already taken;
+    `blocked_groups` holds (group, day, period) cells where a group must stay free."""
     t0 = time.monotonic()
-    tm = build(ds, blocked=frozenset(blocked), baseline=baseline, move_weight=move_weight)
+    tm = build(ds, blocked=frozenset(blocked), baseline=baseline, move_weight=move_weight,
+               blocked_groups=frozenset(blocked_groups))
     if tm.empty:
         return SolveResult("infeasible", None, {}, 0, int((time.monotonic() - t0) * 1000))
     status, solver = run_model(tm, time_limit_s, workers, sum(tm.soft_terms) + sum(tm.move_terms))

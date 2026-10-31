@@ -9,8 +9,9 @@ from ..core.model import LAST_TEACHING, Assign, Dataset, block
 KIND_USE = {"lecture": "lecture", "tutorial": "tutorial", "lab": "lab"}
 
 
-def candidates(ds: Dataset, s: dict, blocked: frozenset | set = frozenset()) -> list[tuple[str, int, str]]:
-    """Every (day, start, room) that passes the single-session hard rules."""
+def candidates(ds: Dataset, s: dict, blocked: frozenset | set = frozenset(), relax: bool = False) -> list[tuple[str, int, str]]:
+    """Every (day, start, room) that passes the single-session hard rules. relax=True keeps placements
+    that break faculty/room unavailability or blocked cells (used to explain infeasibility)."""
     dur = s["duration"]
     fx = s.get("fixed_slot")
     use = KIND_USE.get(s["kind"], s["kind"])
@@ -28,10 +29,10 @@ def candidates(ds: Dataset, s: dict, blocked: frozenset | set = frozenset()) -> 
                 continue
             if fx and (fx["day"] != day or fx["start_period"] != start):
                 continue
-            if any((day, p) in ds.fac_un[s["faculty_id"]] for p in per):
+            if not relax and any((day, p) in ds.fac_un[s["faculty_id"]] for p in per):
                 continue
             for r in rooms:
-                if any((day, p) in ds.room_un[r["id"]] or (r["id"], day, p) in blocked for p in per):
+                if not relax and any((day, p) in ds.room_un[r["id"]] or (r["id"], day, p) in blocked for p in per):
                     continue
                 out.append((day, start, r["id"]))
     return out
@@ -46,7 +47,10 @@ class TimetableModel:
     move_terms: list = field(default_factory=list)
 
 
-def build(ds: Dataset, blocked=frozenset(), baseline: Assign | None = None, move_weight: int = 0) -> TimetableModel:
+def build(ds: Dataset, blocked=frozenset(), baseline: Assign | None = None, move_weight: int = 0,
+          blocked_groups=frozenset()) -> TimetableModel:
+    """blocked: (room, day, period) cells taken by bookings; blocked_groups: (group, day, period) cells
+    where a group must stay free (bookings mandatory for them)."""
     m = cp_model.CpModel()
     x: dict[str, dict] = {}
     empty = []
@@ -121,8 +125,10 @@ def build(ds: Dataset, blocked=frozenset(), baseline: Assign | None = None, move
             for g in basket_groups[b]:
                 grp_cells[(g, day, p)].append(occ)
 
-    for vs in grp_cells.values():
-        if len(vs) > 1:
+    for key, vs in grp_cells.items():
+        if key in blocked_groups:
+            m.Add(sum(vs) == 0)
+        elif len(vs) > 1:
             m.Add(sum(vs) <= 1)
     for (f, day), terms in fac_day.items():
         m.Add(sum(terms) <= ds.faculty[f].get("max_hours_per_day", 4))
