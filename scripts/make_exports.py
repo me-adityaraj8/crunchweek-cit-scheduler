@@ -35,7 +35,8 @@ def main() -> None:
     a = ap.parse_args()
     out = Path(a.out)
 
-    with httpx.Client(base_url=a.base_url.rstrip("/") + "/api", timeout=320) as c:
+    with httpx.Client(base_url=a.base_url.rstrip("/") + "/api", timeout=320,
+                      limits=httpx.Limits(max_keepalive_connections=0)) as c:  # long solves: no idle reuse
         tok = call(c, "POST", "/auth/login", json={"email": "admin@cit.demo", "password": a.password})["token"]
         c.headers["Authorization"] = f"Bearer {tok}"
         call(c, "POST", "/admin/reset")

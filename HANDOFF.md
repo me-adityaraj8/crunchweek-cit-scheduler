@@ -116,11 +116,12 @@ Run: API on :8000 as above, then `cd frontend && npm ci && npm run dev` → http
 
 ## Deployment (2026-10-31, Aditya)
 - Vercel project **velora** (renamed from crunchweek-cit-scheduler), connected to the GitHub repo: every push to `main` deploys to production.
-- Live API: https://crunchweek-cit-scheduler.vercel.app/api/health (public). `velora-campus.vercel.app` is reserved as an alias but must be added as a project domain in the dashboard (Settings → Domains) to be public and follow new deploys.
+- Live: **https://velora-campus.vercel.app** (`/api/health`, `/api/docs`). The old crunchweek-cit-scheduler.vercel.app address still works.
 - `vercel.json` uses Vercel **services** (CLI 59 rejects the old top-level `functions`): one `api` service at the repo root, `/api/(.*)` routed to it, maxDuration 300. Add the frontend as a second service at `/` when it lands.
 - The function has **2 CPUs** (`/api/health` shows `cpus`). With the default 8 workers the solver only reached soft 68 in 60 s; with `SOLVER_WORKERS=2` (set on Vercel) it reaches the optimum, soft 3, in ~49 s. Keep workers = CPUs.
-- Env on Vercel: `JWT_SECRET`, `GEMINI_API_KEY`, `SOLVER_WORKERS=2`. `DEMO_PASSWORD` not set (defaults to `demo1234`). **`DATABASE_URL` not set yet**: connect the Neon database "velora" in the Storage tab, then redeploy.
-- Long requests: a client can drop a 2–3 min request while it waits silently. Keep generate at 60 s; the frontend should show progress and allow a retry.
+- Env on Vercel: `JWT_SECRET`, `GEMINI_API_KEY`, `DATABASE_URL` (Neon "velora", pooled), `SOLVER_WORKERS=2`, `SOLVER_TIME_LIMIT_S=120` (60 s was sometimes not enough on 2 CPUs: soft 62 once). `DEMO_PASSWORD` not set (defaults to `demo1234`).
+- Live end-to-end check (`scripts/make_exports.py` against velora-campus): timetable optimal soft 3 (56 s), exams 41/41 penalty 0, Spectra 67/70 with 0 inversions, sample disruption 12 moved, validator 0 hard on both files.
+- Long requests: an idle connection can be dropped on the way while a solve runs. `make_exports.py` now opens a fresh connection per request. The frontend should show progress during generate (up to ~2 min) and allow a retry.
 
 ## Next steps
 1. Task 0, **owner: Aditya** (Varun's call, 2026-10-31): create the Vercel project and **try Vercel first**. The repo is on Aditya's GitHub, so importing it at vercel.com from his account is the simplest route. Send Varun the deployed URL and what `/api/health` and `make_exports.py` report. Step-by-step in README "Deploy to Vercel". **Set `JWT_SECRET` first** (32+ random chars, `python -c "import secrets; print(secrets.token_urlsafe(48))"`): a deployed app refuses to start without it, because the fallback secret is in this public repo. Neon via the Vercel Storage tab sets `DATABASE_URL`; Gemini key optional. Then open `/api/health` (add `?deep=1` to test the LLM) and run `scripts/make_exports.py --base-url <url>` to measure the solver on Vercel's CPUs. If the function is too big or too slow, use the Railway/Render fallback (see Deploy prep above).
