@@ -3,7 +3,8 @@ from datetime import datetime, timedelta, timezone
 
 import bcrypt
 import jwt
-from fastapi import Depends, Header
+from fastapi import Depends
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from .config import settings
@@ -33,11 +34,15 @@ def make_token(user: User) -> str:
     return jwt.encode({"sub": str(user.id), "role": user.role, "exp": exp}, settings.jwt_secret, algorithm="HS256")
 
 
-def current_user(authorization: str | None = Header(default=None), db: Session = Depends(get_db)) -> User:
-    if not authorization or not authorization.lower().startswith("bearer "):
+# a security scheme (not a plain header) so /api/docs shows an Authorize button for the login token
+bearer = HTTPBearer(auto_error=False, description="Paste the token from POST /api/auth/login")
+
+
+def current_user(creds: HTTPAuthorizationCredentials | None = Depends(bearer), db: Session = Depends(get_db)) -> User:
+    if creds is None:
         raise ApiError(401, "unauthenticated", "Log in first")
     try:
-        claims = jwt.decode(authorization.split(" ", 1)[1], settings.jwt_secret, algorithms=["HS256"])
+        claims = jwt.decode(creds.credentials, settings.jwt_secret, algorithms=["HS256"])
     except jwt.PyJWTError:
         raise ApiError(401, "unauthenticated", "Your session has expired, log in again")
     user = db.get(User, int(claims["sub"]))

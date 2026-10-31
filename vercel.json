@@ -1,6 +1,9 @@
 {
   "functions": {
-    "api/index.py": { "maxDuration": 300 }
+    "api/index.py": {
+      "maxDuration": 300,
+      "excludeFiles": "{frontend/**,backend/tests/**,docs/**,exports/**,scripts/**,starter_pack/data/csv/**,*.pdf}"
+    }
   },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index" }

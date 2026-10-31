@@ -20,7 +20,10 @@ def make_engine(url: str):
     url = _url(url)
     if url.startswith("sqlite"):
         return create_engine(url, connect_args={"check_same_thread": False})
-    return create_engine(url, pool_pre_ping=True, pool_size=2, max_overflow=2)
+    # prepare_threshold=None: no server-side prepared statements, which break behind Neon's pooled
+    # (PgBouncer) connection string
+    return create_engine(url, pool_pre_ping=True, pool_size=2, max_overflow=2,
+                         connect_args={"prepare_threshold": None})
 
 
 engine = make_engine(settings.database_url)

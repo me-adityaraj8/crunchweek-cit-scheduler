@@ -1,5 +1,6 @@
 """Settings from environment variables. Every variable here is listed in .env.example."""
 import os
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -23,11 +24,21 @@ _load_dotenv()
 
 DEV_SECRET = "dev-only-secret-set-JWT_SECRET-in-production"
 MIN_SECRET_LEN = 32
+# Neon's Vercel integration sets DATABASE_URL (POSTGRES_URL on older setups)
+_DB_URL = os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL") or ""
+# On Vercel only /tmp is writable, so without a database URL the app still starts, on a throwaway SQLite file
+_SERVERLESS = bool(os.environ.get("VERCEL"))
+
+
+def _default_db() -> str:
+    folder = Path(tempfile.gettempdir()) if _SERVERLESS else REPO_ROOT
+    return f"sqlite:///{folder / ('cit-scheduler.db' if _SERVERLESS else 'local.db')}"
 
 
 @dataclass(frozen=True)
 class Settings:
-    database_url: str = os.environ.get("DATABASE_URL") or f"sqlite:///{REPO_ROOT / 'local.db'}"
+    database_url: str = _DB_URL or _default_db()
+    temporary_db: bool = _SERVERLESS and not _DB_URL
     jwt_secret: str = os.environ.get("JWT_SECRET") or DEV_SECRET
     demo_password: str = os.environ.get("DEMO_PASSWORD") or "demo1234"
     gemini_api_key: str = os.environ.get("GEMINI_API_KEY", "")
