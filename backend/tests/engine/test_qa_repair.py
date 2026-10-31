@@ -202,3 +202,30 @@ def test_timeout_on_an_impossible_change_still_names_the_cause(ds, base_assign, 
     assert r.status == "infeasible" and any("CS-LAB" in c.text for c in r.conflicts)
     r2 = repair(ds, base_assign, None, 10)               # feasible problem that "timed out"
     assert r2.status == "timeout"
+
+
+def test_booking_in_a_week7_only_free_cell_does_not_force_permanent_moves(ds, base_assign, base_fest):
+    """A booking can sit in a cell that a class only vacated for Week 7. Repairing an unchanged dataset
+    must not move that class for good."""
+    from backend.app.solver.fest import Decision
+    sid, (d, p, rm) = next((s, v) for s, v in sorted(base_assign.items())
+                           if ds.sessions[s]["duration"] == 1 and v[2].startswith("LH") and v[1] <= 9)
+    fake = FestResult([Decision("BR-12", "approved", d, p, p, rm, reason="x")], [])
+    r = repair(ds, base_assign, fake, 30)
+    assert r.status == "ok" and r.moved == 0, [m for m in r.diff]
+
+
+def test_simple_repairs_are_fast(ds, base_assign, base_fest, sample_disruption):
+    import time
+    t0 = time.monotonic()
+    r = repair(apply_changes(ds, sample_disruption), base_assign, base_fest, 60)
+    took = time.monotonic() - t0
+    assert r.status == "ok" and r.proven_minimal
+    assert took < 15, f"repair took {took:.1f}s"
+
+
+def test_fixed_sessions_stay_put(ds, base_assign):
+    from backend.app.solver.timetable import solve_timetable
+    keep = dict(list(sorted(base_assign.items()))[:150])
+    r = solve_timetable(ds, 20, baseline=base_assign, move_weight=1000, fixed=keep)
+    assert r.assign and all(r.assign[s] == v for s, v in keep.items())

@@ -47,12 +47,15 @@ class TimetableModel:
     empty: list[str] = field(default_factory=list)   # sessions with no candidate at all
     soft_terms: list = field(default_factory=list)
     move_terms: list = field(default_factory=list)
+    pref_terms: list = field(default_factory=list)   # tie-break: keep these group cells free
+    pref_max: int = 0                               # largest value pref_terms can sum to
 
 
 def build(ds: Dataset, blocked=frozenset(), baseline: Assign | None = None, move_weight: int = 0,
-          blocked_groups=frozenset()) -> TimetableModel:
+          blocked_groups=frozenset(), prefer_free: dict | None = None, fixed: Assign | None = None) -> TimetableModel:
     """blocked: (room, day, period) cells taken by bookings; blocked_groups: (group, day, period) cells
-    where a group must stay free (bookings mandatory for them)."""
+    where a group must stay free (bookings mandatory for them); prefer_free: (group, day, period) -> weight
+    for cells better left free; fixed: sessions pinned to one placement (repair's small neighbourhood)."""
     m = cp_model.CpModel()
     x: dict[str, dict] = {}
     empty = []
@@ -66,6 +69,8 @@ def build(ds: Dataset, blocked=frozenset(), baseline: Assign | None = None, move
 
     for sid, s in ds.sessions.items():
         cands = candidates(ds, s, blocked)
+        if fixed and sid in fixed:
+            cands = [c for c in cands if c == tuple(fixed[sid])]
         if not cands:
             empty.append(sid)
             continue
@@ -127,6 +132,11 @@ def build(ds: Dataset, blocked=frozenset(), baseline: Assign | None = None, move
             for g in basket_groups[b]:
                 grp_cells[(g, day, p)].append(occ)
 
+    pref, pref_max = [], 0
+    for cell, w in (prefer_free or {}).items():
+        if grp_cells.get(cell) and cell not in blocked_groups:
+            pref.append(w * sum(grp_cells[cell]))
+            pref_max += w
     for key, vs in grp_cells.items():
         if key in blocked_groups:
             m.Add(sum(vs) == 0)
@@ -182,4 +192,5 @@ def build(ds: Dataset, blocked=frozenset(), baseline: Assign | None = None, move
             m.Add(extra >= sum(vs) - 1)
             soft.append(3 * extra)
 
-    return TimetableModel(model=m, x=x, empty=empty, soft_terms=soft, move_terms=move)
+    return TimetableModel(model=m, x=x, empty=empty, soft_terms=soft, move_terms=move, pref_terms=pref,
+                          pref_max=pref_max)

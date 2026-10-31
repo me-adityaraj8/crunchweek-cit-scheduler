@@ -9,10 +9,11 @@ from dataclasses import asdict, dataclass, field
 from typing import Literal
 
 from ..core.checker import check_fest, soft_score
-from ..core.model import Assign, Dataset
+from ..core.model import Assign, Dataset, block
 from .fest import Decision, FestResult, decide_fest
 from .infeasible import Conflict, explain_infeasible, quick_conflicts
-from .timetable import solve_timetable
+from .model_builder import candidates
+from .timetable import SolveResult, solve_timetable
 
 MOVE_WEIGHT = 1000
 
@@ -43,23 +44,49 @@ class RepairResult:
         return self.fest.overrides if self.fest else []
 
 
-def commitments(ds: Dataset, fest, extra_requests=()) -> tuple[set, set]:
+def commitments(ds: Dataset, fest, extra_requests=(), baseline: Assign | None = None) -> tuple[set, set]:
     """Cells held by placed Spectra bookings in the normal timetable: (room, day, p), plus (group, day, p)
-    for groups a booking is mandatory for. Bookings that displaced classes are left out of the room
-    cells: in the normal timetable those cells still belong to the displaced classes."""
+    for groups a booking is mandatory for. A cell the normal timetable already uses is left out: its class
+    only moved for Week 7 (displacement), and holding the cell would move that class for good."""
     rooms, groups = set(), set()
     if fest is None:
         return rooms, groups
     reqs = {**ds.requests, **{r["id"]: r for r in extra_requests}}
+    used = set()
+    for sid, (day, start, room) in (baseline or {}).items():
+        s = ds.sessions.get(sid)
+        if s and isinstance(start, int):
+            used.update((room, day, p) for p in block(start, s["duration"]))
     for d in fest.decisions:
         if d.status not in ("approved", "alternative_offered") or not d.room_id:
             continue
         for p in range(d.start_period, d.end_period + 1):
-            if not d.displaces:
+            if not d.displaces and (d.room_id, d.day, p) not in used:
                 rooms.add((d.room_id, d.day, p))
             for g in reqs.get(d.request_id, {}).get("mandatory_for_groups", []):
                 groups.add((g, d.day, p))
     return rooms, groups
+
+
+def _solve_near(ds: Dataset, base: Assign, rooms, groups, time_limit_s: float) -> tuple[SolveResult, bool]:
+    """Minimal-move solve. Sessions whose old slot is no longer allowed must move (a lower bound). First try
+    moving only those (plus their elective-basket partners) with everything else pinned: a tiny model, and if
+    it reaches the lower bound it is provably minimal. Otherwise solve the whole timetable."""
+    must = {sid for sid, b in base.items()
+            if tuple(b) not in set(candidates(ds, ds.sessions[sid], rooms))}
+    baskets = {ds.sessions[s].get("basket_slot") for s in must} - {None}
+    free = must | {s for s in base if ds.sessions[s].get("basket_slot") in baskets}
+    near = solve_timetable(ds, min(time_limit_s, 20), baseline=base, move_weight=MOVE_WEIGHT, blocked=rooms,
+                           blocked_groups=groups, fixed={s: v for s, v in base.items() if s not in free})
+    if near.assign is not None:
+        moved = sum(1 for s, v in base.items() if tuple(near.assign[s]) != tuple(v))
+        if moved == len(must):
+            return near, True
+    full = solve_timetable(ds, time_limit_s, baseline=base, move_weight=MOVE_WEIGHT, blocked=rooms,
+                           blocked_groups=groups)
+    if full.assign is None and near.assign is not None:
+        return near, False
+    return full, full.status == "optimal"
 
 
 def _where(d: Decision) -> str:
@@ -85,14 +112,13 @@ def repair(ds_after: Dataset, baseline: Assign, fest: FestResult | None, time_li
     quick = quick_conflicts(ds_after)
     if quick:
         return RepairResult("infeasible", None, soft_before=soft_before, conflicts=quick)
-    rooms, groups = commitments(ds_after, fest, extra_requests)
-    res = solve_timetable(ds_after, time_limit_s, baseline=base, move_weight=MOVE_WEIGHT,
-                          blocked=rooms, blocked_groups=groups)
+    rooms, groups = commitments(ds_after, fest, extra_requests, base)
+    res, proven = _solve_near(ds_after, base, rooms, groups, time_limit_s)
     released = False
     if res.assign is None and res.status == "infeasible" and (rooms or groups):
         released = True
         rooms, groups = set(), set()
-        res = solve_timetable(ds_after, time_limit_s, baseline=base, move_weight=MOVE_WEIGHT)
+        res, proven = _solve_near(ds_after, base, rooms, groups, time_limit_s)
     if res.assign is None:
         conflicts = explain_infeasible(ds_after, rooms, groups, time_limit_s)
         if res.status == "timeout" and all(c.code == "unknown" for c in conflicts):
@@ -119,4 +145,4 @@ def repair(ds_after: Dataset, baseline: Assign, fest: FestResult | None, time_li
     return RepairResult("ok", new, diff, len(moved),
                         sum(1 for m in moved if m.before[:2] != m.after[:2]),
                         sum(1 for m in moved if m.before[:2] == m.after[:2]),
-                        soft_before, res.soft_total, conflicts, new_fest, res.status == "optimal")
+                        soft_before, res.soft_total, conflicts, new_fest, proven)
