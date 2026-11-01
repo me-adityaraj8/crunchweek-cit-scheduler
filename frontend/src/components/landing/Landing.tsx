@@ -1,4 +1,4 @@
-import { ArrowRight, Bot, Building2, CalendarClock, ClipboardCheck, Database, GraduationCap, PartyPopper, ScrollText, ShieldCheck, Sparkles, UsersRound, type LucideIcon } from "lucide-react";
+import { ArrowRight, ArrowUp, ArrowUpRight, Bot, Building2, CalendarClock, ClipboardCheck, Database, GraduationCap, PartyPopper, ScrollText, ShieldCheck, Sparkles, UsersRound, type LucideIcon } from "lucide-react";
 import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from "react";
 import { useHealth } from "@/api/hooks";
 import { Logo } from "@/components/ui/logo";
@@ -239,41 +239,67 @@ function VeloSection() {
     return () => io.disconnect();
   }, []);
 
-  useGsap(root, ({ reduce }) => {
+  useGsap(root, ({ reduce, desktop }) => {
     if (reduce) {
       setMood("happy");
       return;
     }
+    const el = root.current!;
+    const stage = el.querySelector(".vx-stage")!;
     const t = gsap
       .timeline({ paused: true, defaults: { ease: "power3.out", duration: 0.45 } })
       .call(() => setMood("listening"))
-      .from(".vx-user", { autoAlpha: 0, x: 40 })
+      .from(".vx-user", { autoAlpha: 0, x: 40, rotateY: -25, transformOrigin: "100% 50%" })
       .call(() => setMood("thinking"), [], "+=0.15")
-      .from(".vx-chip", { autoAlpha: 0, scale: 0.7, stagger: 0.06, duration: 0.3, ease: "back.out(2.4)" })
+      .from(".vx-chip", { autoAlpha: 0, scale: 0.7, rotateX: -60, stagger: 0.06, duration: 0.3, ease: "back.out(2.4)" })
       .call(() => setMood("speaking"), [], "+=0.2")
       .from(".vx-reply", { autoAlpha: 0, y: 12 })
-      .from(".vx-room", { autoAlpha: 0, y: 18, stagger: 0.1 }, "-=0.15")
-      .from(".vx-next", { autoAlpha: 0, y: 8, stagger: 0.06, duration: 0.3 }, "-=0.1")
+      // the two rooms fold down onto the card like tiles flipped over
+      .from(".vx-room", { autoAlpha: 0, rotateX: -80, y: -10, transformOrigin: "50% 0%", stagger: 0.12, duration: 0.6, ease: "back.out(1.4)" }, "-=0.15")
+      .from(".vx-next", { autoAlpha: 0, y: 8, stagger: 0.06, duration: 0.3 }, "-=0.2")
       .call(() => setMood("happy"));
     tl.current = t;
-    ScrollTrigger.create({ trigger: root.current!.querySelector(".vx-chat"), start: "top 75%", once: true, onEnter: () => void t.play(0) });
-    gsap.from(".vx-orb", { scale: 0.6, autoAlpha: 0, rotate: -20, duration: 0.9, ease: "expo.out", scrollTrigger: { trigger: root.current, start: "top 70%", once: true } });
-    gsap.from(".vx-point", { autoAlpha: 0, x: -16, stagger: 0.07, duration: 0.5, ease: "power3.out", scrollTrigger: { trigger: root.current, start: "top 60%", once: true } });
-    return () => void (tl.current = null);
+    ScrollTrigger.create({ trigger: stage, start: "top 75%", once: true, onEnter: () => void t.play(0) });
+
+    // the card arrives turned and pulled apart in depth, and settles flat as the section scrolls in
+    const scrub = { trigger: stage, start: "top bottom", end: "center 55%", scrub: 0.6 };
+    gsap.fromTo(".vx-chat", { rotateY: desktop ? -24 : -10, rotateX: desktop ? 16 : 8, z: -160 }, { rotateY: 0, rotateX: 0, z: 0, ease: "none", scrollTrigger: scrub });
+    gsap.fromTo(".vx-layer", { z: (i) => 50 + i * 35 }, { z: 0, ease: "none", scrollTrigger: scrub });
+    gsap.fromTo(".vx-slab", { x: 26, y: 26 }, { x: 8, y: 8, ease: "none", scrollTrigger: scrub });
+    gsap.from(".vx-orb", { scale: 0.6, autoAlpha: 0, rotate: -20, duration: 0.9, ease: "expo.out", scrollTrigger: { trigger: el, start: "top 70%", once: true } });
+    gsap.to(".vx-float", { y: -40, ease: "none", scrollTrigger: { trigger: el, start: "top bottom", end: "bottom top", scrub: true } });
+    gsap.from(".vx-fact", { autoAlpha: 0, y: 10, stagger: 0.08, duration: 0.5, ease: "power3.out", scrollTrigger: { trigger: el, start: "top 60%", once: true } });
+
+    // on a desktop pointer the card leans toward it, a few degrees, and springs back on leave
+    if (!desktop || !finePointer()) return () => void (tl.current = null);
+    const tilt = el.querySelector<HTMLElement>(".vx-tilt")!;
+    const rx = gsap.quickTo(tilt, "rotateX", { duration: 0.6, ease: "power3" });
+    const ry = gsap.quickTo(tilt, "rotateY", { duration: 0.6, ease: "power3" });
+    const move = (e: globalThis.PointerEvent) => {
+      const r = tilt.getBoundingClientRect();
+      ry(gsap.utils.clamp(-1, 1, (e.clientX - r.left) / r.width * 2 - 1) * 7);
+      rx(gsap.utils.clamp(-1, 1, (e.clientY - r.top) / r.height * 2 - 1) * -6);
+    };
+    const leave = () => {
+      rx(0);
+      ry(0);
+    };
+    stage.addEventListener("pointermove", move as EventListener);
+    stage.addEventListener("pointerleave", leave);
+    return () => {
+      tl.current = null;
+      stage.removeEventListener("pointermove", move as EventListener);
+      stage.removeEventListener("pointerleave", leave);
+    };
   });
 
-  const points: [string, string][] = [
-    ["Typed or spoken", "English or Hinglish, from a text box or the mic."],
-    ["Knows where you are", "Your role, the page you're on and what you asked a minute ago."],
-    ["Finds, explains, drafts", "The rule checker decides. Anything that changes data is a card you confirm once."],
-    ["Role-checked tools", "23 typed tools over the same services as the app, with a keyword fallback when offline."],
-  ];
+  const facts = ["English, Hinglish or voice", "23 role-checked tools", "Nothing changes until you confirm"];
 
   return (
     <section ref={root} id="velo" className="lx-velo scroll-mt-20 overflow-hidden border-y-2 border-rule-strong py-20 sm:py-28" aria-labelledby="velo-title">
       <div className="mx-auto grid max-w-[1240px] items-center gap-12 px-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-16">
         <div className="flex min-w-0 flex-col gap-7">
-          <div className="flex items-center gap-5">
+          <div className="vx-float flex items-center gap-5">
             {near ? (
               <OrbView mood={mood} size="panel" className="vx-orb size-[92px] sm:size-[112px]" />
             ) : (
@@ -282,32 +308,37 @@ function VeloSection() {
             <span className="vx-mood font-mono text-[11px] font-semibold uppercase tracking-[0.1em]">Velo · {mood}</span>
           </div>
           <Heading id="velo-title" eyebrow="05 · AI assistant" title="Meet Velo. It knows the rules." lede="Ask for a room, a reason or a change in plain words. Velo answers with things you can act on, and never decides on its own." />
-          <ul className="grid gap-4 sm:grid-cols-2">
-            {points.map(([t, d]) => (
-              <li key={t} className="vx-point flex gap-3">
-                <span className="mt-1.5 size-2 shrink-0 rotate-45 bg-signal" />
-                <span>
-                  <b className="block text-[15px] font-extrabold">{t}</b>
-                  <span className="text-[14px] leading-relaxed text-ink-2">{d}</span>
-                </span>
+          <ul className="flex flex-wrap gap-2">
+            {facts.map((f) => (
+              <li key={f} className="vx-fact flex items-center gap-2 rounded-[4px] border-2 border-rule px-3 py-1.5 text-[13.5px] font-semibold text-ink-2">
+                <span className="size-1.5 shrink-0 rotate-45 bg-signal" />
+                {f}
               </li>
             ))}
           </ul>
         </div>
 
         {/* a turn, laid out the way the Velo panel lays it out */}
-        <div className="vx-chat min-w-0 overflow-hidden rounded-[6px] border-2 border-rule-strong bg-sheet shadow-panel">
-          <div className="flex items-center justify-between gap-3 border-b-2 border-rule-strong bg-sheet-2 px-4 py-2.5">
+        <div className="vx-stage min-w-0 py-4 [perspective:1400px]">
+        <div className="vx-tilt relative [transform-style:preserve-3d]">
+        <div className="vx-chat relative rounded-[6px] border-2 border-rule-strong bg-sheet [transform-style:preserve-3d]">
+          {/* a solid block behind the card: its hard shadow, which shows its depth as the card turns */}
+          <span aria-hidden className="vx-slab absolute inset-0 -z-[1] rounded-[6px] bg-[var(--shade)] [transform:translate3d(8px,8px,-2px)]" />
+          <div className="flex items-center justify-between gap-3 rounded-t-[4px] border-b-2 border-rule-strong bg-sheet-2 px-4 py-2.5">
             <span className="flex items-center gap-2 text-[13px] font-extrabold">
               <StillOrb mood="idle" className="size-5" /> Velo
             </span>
             <span className="rounded-[3px] border-2 border-rule px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-3">On Find a room</span>
           </div>
-          <div className="flex flex-col gap-3 p-4 sm:p-5">
-            <p className="vx-user ml-auto max-w-[85%] rounded-[6px] rounded-br-[2px] bg-ink px-3.5 py-2.5 text-[14px] leading-snug text-platform">
-              Need a room for 60 people tomorrow 4 to 6, projector chahiye
-            </p>
-            <div className="flex flex-wrap items-center gap-1.5">
+          <div className="flex flex-col gap-3 p-4 [transform-style:preserve-3d] sm:p-5">
+            {/* depth (vx-layer) and the entrance (vx-user) sit on different elements, so a ScrollTrigger
+                refresh restoring one never freezes the other mid-pose */}
+            <div className="vx-layer flex justify-end">
+              <p className="vx-user max-w-[85%] rounded-[6px] rounded-br-[2px] bg-ink px-3.5 py-2.5 text-[14px] leading-snug text-platform">
+                Need a room for 60 people tomorrow 4 to 6, projector chahiye
+              </p>
+            </div>
+            <div className="vx-layer flex flex-wrap items-center gap-1.5">
               <span className="vx-chip font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-3">Understood</span>
               {["Find a room", "Tue", "4–6 pm", "60 people", "projector"].map((c) => (
                 <span key={c} className="vx-chip rounded-[3px] border-2 border-rule-strong bg-signal-soft px-1.5 py-0.5 text-[12px] font-bold">
@@ -316,7 +347,7 @@ function VeloSection() {
               ))}
             </div>
             <p className="vx-reply text-[15px] leading-snug">Two lecture halls fit and are free then. LH-3 is the closer one.</p>
-            <div className="grid gap-2.5 sm:grid-cols-2">
+            <div className="vx-layer grid gap-2.5 [perspective:800px] sm:grid-cols-2">
               {[
                 ["LH-3", "120 seats · projector", true],
                 ["LH-4", "120 seats · projector", false],
@@ -338,6 +369,8 @@ function VeloSection() {
               ))}
             </div>
           </div>
+        </div>
+        </div>
         </div>
       </div>
     </section>
@@ -423,9 +456,93 @@ function Closing({ onStart }: { onStart: () => void }) {
   );
 }
 
+const REPO = "https://github.com/me-adityaraj8/crunchweek-cit-scheduler";
+
+/** The foot of the page: where to go, a role to try, the live status, and who made it. A giant
+ * outlined wordmark rises out of the bottom edge as you reach it. */
+function Footer({ onTry }: { onTry: (id: DemoId) => void }) {
+  const { solver, assistant } = useStatuses();
+  const explore: [string, string][] = [
+    ["Product", "#product"],
+    ["Services", "#services"],
+    ["How it works", "#how"],
+    ["Velo AI", "#velo"],
+    ["Roles", "#roles"],
+  ];
+  const roles: [DemoId, string][] = [
+    ["admin", "Dean's Office"],
+    ["coordinator", "Coordinator"],
+    ["faculty", "Faculty"],
+    ["club", "Club"],
+  ];
+  const link = "ft-link inline-flex w-fit items-center gap-1.5 text-[14.5px] font-semibold text-ink-2 hover:text-ink";
+  return (
+    <footer className="lx-footer relative overflow-hidden border-t-2 border-rule-strong bg-sheet">
+      <div className="mx-auto grid max-w-[1240px] grid-cols-2 gap-x-6 gap-y-10 px-4 pb-12 pt-16 sm:px-6 lg:grid-cols-[1.5fr_1fr_1fr_1fr] lg:gap-8">
+        <div className="col-span-2 flex max-w-[360px] flex-col gap-5 lg:col-span-1">
+          <a href="#top" className="flex w-fit items-center gap-3 rounded-[4px]" aria-label="Velora, back to top">
+            <Logo size={40} title="" />
+            <span className="leading-tight">
+              <span className="block text-[17px] font-black tracking-[0.04em]">VELORA</span>
+              <span className="block text-[12px] font-medium text-ink-3">Chilika Institute of Technology</span>
+            </span>
+          </a>
+          <p className="text-[14.5px] leading-relaxed text-ink-2">Timetables, exams and venue bookings for CIT, decided by one rulebook and explained in plain words.</p>
+          <div className="flex w-fit flex-wrap items-center gap-x-4 gap-y-2 rounded-[4px] border-2 border-rule px-3 py-2">
+            <StatusDot tone={solver[1]} label={`Solver ${solver[0]}`} />
+            <span className="h-3.5 w-0.5 bg-rule" />
+            <StatusDot tone={assistant[1]} label={`Velo ${assistant[0]}`} />
+          </div>
+        </div>
+        <nav aria-label="Explore" className="flex flex-col gap-3">
+          <span className="eyebrow">Explore</span>
+          {explore.map(([label, href]) => (
+            <a key={href} href={href} className={link}>
+              {label}
+            </a>
+          ))}
+        </nav>
+        <div className="flex flex-col gap-3">
+          <span className="eyebrow">Try a role</span>
+          {roles.map(([id, label]) => (
+            <button key={id} type="button" onClick={() => onTry(id)} className={cn(link, "group")}>
+              {label}
+              <ArrowRight className="size-3.5 -translate-x-1 opacity-0 transition-[opacity,transform] duration-200 group-hover:translate-x-0 group-hover:opacity-100" />
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-col gap-3">
+          <span className="eyebrow">Project</span>
+          <a href={REPO} target="_blank" rel="noreferrer" className={cn(link, "group")}>
+            Source code <ArrowUpRight className="size-3.5 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+          </a>
+          <a href={`${REPO}#readme`} target="_blank" rel="noreferrer" className={cn(link, "group")}>
+            How to run it <ArrowUpRight className="size-3.5 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+          </a>
+          <a href="#top" className={cn(link, "group")}>
+            Back to top <ArrowUp className="size-3.5 transition-transform duration-200 group-hover:-translate-y-0.5" />
+          </a>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-[1240px] px-4 sm:px-6" aria-hidden>
+        <div className="ft-mark select-none text-center text-[23vw] font-black uppercase leading-[0.78] tracking-[-0.06em] lg:text-[280px]">Velora</div>
+      </div>
+
+      <div className="relative border-t-2 border-rule-strong bg-sheet">
+        <div className="mx-auto flex max-w-[1240px] flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-5 sm:px-6">
+          <span className="text-[13px] font-medium text-ink-3">© 2026 Velora · Chilika Institute of Technology</span>
+          <span className="flex items-center gap-3 text-[13px] font-semibold text-ink-2">
+            Made by <span className="ft-plate">Galaxy Flare</span>
+          </span>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
 /** Everything under the hero: the product story, the services, how it works and the roles. */
 export function LandingSections({ onTry, onStart }: { onTry: (id: DemoId) => void; onStart: () => void }) {
-  const { solver } = useStatuses();
   return (
     <>
       <Marquee />
@@ -447,15 +564,7 @@ export function LandingSections({ onTry, onStart }: { onTry: (id: DemoId) => voi
       <Statement />
       <Roles onTry={onTry} />
       <Closing onStart={onStart} />
-      <footer className="border-t-2 border-rule-strong bg-sheet">
-        <div className="mx-auto flex max-w-[1240px] flex-wrap items-center justify-between gap-4 px-4 py-6 sm:px-6">
-          <div className="flex items-center gap-2.5">
-            <Logo size={28} title="" />
-            <span className="text-[13px] font-semibold text-ink-2">Velora · Chilika Institute of Technology</span>
-          </div>
-          <StatusDot tone={solver[1]} label={`Solver ${solver[0]}`} />
-        </div>
-      </footer>
+      <Footer onTry={onTry} />
     </>
   );
 }
@@ -489,7 +598,11 @@ export function useLandingMotion(page: React.RefObject<HTMLElement | null>) {
       .from(q(".lx-hero .lx-wi"), { yPercent: 110, rotate: 3, duration: 0.75, stagger: 0.045 }, 0.05)
       .from(q(".lx-plate"), { autoAlpha: 0, scale: 1.35, rotate: -10, duration: 0.6, ease: "back.out(1.6)" }, 0.3)
       .from(q("[data-hero]"), { autoAlpha: 0, y: 18, duration: 0.6, stagger: 0.06, ease: "power3.out" }, 0.4)
-      .from(q("[data-hero-card]"), { autoAlpha: 0, y: 40, rotateX: 12, transformPerspective: 1200, transformOrigin: "50% 100%", duration: 0.85 }, 0.2);
+      // the log-in card: it rises, its tab fills, then its contents follow in reading order
+      .from(q("[data-hero-card]"), { autoAlpha: 0, y: 24, duration: 0.7 }, 0.15)
+      .from(q(".lx-tab-fill"), { scaleX: 0, transformOrigin: "0% 50%", duration: 0.55, clearProps: "transform" }, 0.4)
+      .from(q("[data-hero-row]"), { autoAlpha: 0, y: 8, duration: 0.45, stagger: 0.3, ease: "power3.out" }, 0.5)
+      .from(q("[data-hero-tile]"), { autoAlpha: 0, y: 14, duration: 0.5, stagger: 0.06, ease: "power3.out", clearProps: "transform" }, 0.58);
 
     // ---- hero: out, in layers (copy fastest, card slower, grid slowest)
     const out = { trigger: q(".lx-hero")[0], start: "top top", end: "bottom top", scrub: true };
@@ -565,6 +678,10 @@ export function useLandingMotion(page: React.RefObject<HTMLElement | null>) {
     gsap.from(q(".lx-closing-title"), { scale: 0.85, transformOrigin: "0% 50%", ease: "none", scrollTrigger: { trigger: closing, start: "top bottom", end: "top 40%", scrub: 0.3 } });
     gsap.from(q(".lx-closing .lx-wi"), { yPercent: 115, stagger: 0.06, duration: 0.9, ease: "expo.out", scrollTrigger: { trigger: closing, start: "top 70%", once: true } });
     gsap.from(q(".lx-closing-cta"), { autoAlpha: 0, y: 30, duration: 0.7, ease: "power3.out", scrollTrigger: { trigger: closing, start: "top 55%", once: true } });
+
+    // ---- footer: the wordmark rises out of the bottom edge
+    const footer = q(".lx-footer")[0];
+    gsap.from(q(".ft-mark"), { yPercent: 45, ease: "none", scrollTrigger: { trigger: footer, start: "top bottom", end: "bottom bottom", scrub: 0.4 } });
 
     // ---- the main button leans toward the pointer a few pixels, then springs back
     const magnet = el.querySelector<HTMLElement>("[data-magnetic]");

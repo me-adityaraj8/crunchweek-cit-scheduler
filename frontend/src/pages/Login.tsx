@@ -183,12 +183,25 @@ interface DemoRole {
   options: AccountOption[];
 }
 
+// the four tiles are known before the accounts load: only their counts and lists come from the API
+const ROLE_TILES: Omit<DemoRole, "count" | "listLabel" | "options">[] = [
+  { id: "admin", title: "Dean's Office", chip: "ADMIN", description: "Generate timetables, approve changes, decide Spectra week.", icon: ShieldCheck, fill: "bg-signal on-light" },
+  { id: "coordinator", title: "Coordinator", chip: "COORD", description: "Book rooms for department events and approve your labs.", icon: Building2, fill: "bg-k-event-tint" },
+  { id: "faculty", title: "Faculty", chip: "FACULTY", description: "Your timetable, time you can't teach, and change requests.", icon: GraduationCap, fill: "bg-k-lecture-tint" },
+  { id: "club", title: "Club", chip: "CLUB", description: "Request venues by typing or speaking, in English or Hinglish.", icon: UsersRound, fill: "bg-k-lab-tint" },
+];
+const COUNTED: Record<Exclude<DemoId, "admin">, [string, string]> = {
+  coordinator: ["departments", "DEPARTMENT"],
+  faculty: ["faculty", "FACULTY MEMBER"],
+  club: ["clubs", "CLUB"],
+};
+
 /** One click into any role, no sign-up (for judges and anyone trying the app). Four small cards; the
  * one you pick grows in place to show its accounts and the log-in button (after Skiper UI's
  * "minimal card expand"). A click outside or Esc folds it back. */
 function DemoCards({ onDone, request }: { onDone: () => void; request: { id: DemoId; n: number } | null }) {
   const { login } = useAuth();
-  const { data: accounts, isLoading, isError, refetch } = useDemoAccounts();
+  const { data: accounts, isError, refetch } = useDemoAccounts();
   const [open, setOpen] = useState<DemoRole["id"] | null>(null);
   const [pick, setPick] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
@@ -197,15 +210,16 @@ function DemoCards({ onDone, request }: { onDone: () => void; request: { id: Dem
   const last = useRef<DemoRole["id"] | null>(null);
 
   const roles = accounts ? byRole(accounts) : null;
-  const cards: DemoRole[] = roles
-    ? ([
-        roles.admin && { id: "admin", title: "Dean's Office", chip: "ADMIN", count: "1 account", listLabel: "", description: "Generate timetables, approve changes, decide Spectra week.", icon: ShieldCheck, fill: "bg-signal on-light", options: [{ value: roles.admin.email, label: "Dean's Office" }] },
-        roles.coordinator.length > 0 && { id: "coordinator", title: "Coordinator", chip: "COORD", count: `${roles.coordinator.length} departments`, listLabel: `DEPARTMENT · ${roles.coordinator.length}`, description: "Book rooms for department events and approve your labs.", icon: Building2, fill: "bg-k-event-tint", options: roles.coordinator },
-        roles.faculty.length > 0 && { id: "faculty", title: "Faculty", chip: "FACULTY", count: `${roles.faculty.length} faculty`, listLabel: `FACULTY MEMBER · ${roles.faculty.length}`, description: "Your timetable, time you can't teach, and change requests.", icon: GraduationCap, fill: "bg-k-lecture-tint", options: roles.faculty },
-        roles.club.length > 0 && { id: "club", title: "Club", chip: "CLUB", count: `${roles.club.length} clubs`, listLabel: `CLUB · ${roles.club.length}`, description: "Request venues by typing or speaking, in English or Hinglish.", icon: UsersRound, fill: "bg-k-lab-tint", options: roles.club },
-      ].filter(Boolean) as DemoRole[])
-    : [];
-  const active = cards.find((c) => c.id === open) ?? null;
+  const cards: DemoRole[] = ROLE_TILES.flatMap((t) => {
+    if (!roles) return [{ ...t, count: "", listLabel: "", options: [] }];
+    if (t.id === "admin")
+      return roles.admin ? [{ ...t, count: "1 account", listLabel: "", options: [{ value: roles.admin.email, label: "Dean's Office" }] }] : [];
+    const options = roles[t.id];
+    const [unit, list] = COUNTED[t.id];
+    return options.length ? [{ ...t, count: `${options.length} ${unit}`, listLabel: `${list} · ${options.length}`, options }] : [];
+  });
+  // a tile picked before the accounts arrive opens as soon as they do
+  const active = cards.find((c) => c.id === open && c.options.length) ?? null;
   const email = active ? (pick[active.id] ?? active.options[0]?.value ?? "") : "";
   const who = active?.options.find((o) => o.value === email)?.label ?? active?.title;
 
@@ -268,11 +282,11 @@ function DemoCards({ onDone, request }: { onDone: () => void; request: { id: Dem
   return (
     <div className="flex flex-col gap-3">
       <div className="relative grid min-h-[264px] grid-cols-2 gap-3" aria-label="Demo accounts">
-        {isLoading && Array.from({ length: 4 }, (_, i) => <div key={i} className="skeleton h-[126px] rounded-[4px]" />)}
         {cards.map((c) =>
-          c.id === open ? (
-            <div key={c.id} className="h-[126px]" aria-hidden />
+          c.id === active?.id ? (
+            <div key={c.id} data-hero-tile className="h-[126px]" aria-hidden />
           ) : (
+            <div key={c.id} data-hero-tile>
             <motion.button
               key={c.id}
               layoutId={`demo-${c.id}`}
@@ -283,8 +297,9 @@ function DemoCards({ onDone, request }: { onDone: () => void; request: { id: Dem
                 setError(null);
               }}
               aria-expanded={false}
-              aria-label={`${c.title} demo, ${c.count}`}
-              className={cn("press flex h-[126px] flex-col justify-between rounded-[6px] border-2 border-rule-strong p-3.5 text-left text-ink shadow-float", c.fill)}
+              aria-busy={!c.count}
+              aria-label={c.count ? `${c.title} demo, ${c.count}` : `${c.title} demo`}
+              className={cn("press flex h-[126px] w-full flex-col justify-between rounded-[6px] border-2 border-rule-strong p-3.5 text-left text-ink shadow-float", c.fill)}
               transition={{ type: "spring", stiffness: 420, damping: 36 }}
             >
               <span className="flex w-full items-start justify-between">
@@ -292,16 +307,26 @@ function DemoCards({ onDone, request }: { onDone: () => void; request: { id: Dem
                   <c.icon className="size-6" strokeWidth={2.2} />
                 </motion.span>
                 <span className="grid size-7 place-items-center rounded-full border-2 border-rule-strong bg-sheet/70">
-                  <MoreHorizontal className="size-4" />
+                  {c.id === open ? <Loader2 className="size-4 animate-spin" /> : <MoreHorizontal className="size-4" />}
                 </span>
               </span>
               <span>
                 <motion.span layoutId={`demo-title-${c.id}`} className="block text-[17px] font-extrabold leading-tight">
                   {c.title}
                 </motion.span>
-                <span className="block text-[12.5px] font-semibold text-ink-2">{c.count}</span>
+                {/* the count settles in when the accounts arrive; until then a quiet rule holds its line */}
+                <span className="block h-[18px] text-[12.5px] font-semibold text-ink-2">
+                  {c.count ? (
+                    <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25 }}>
+                      {c.count}
+                    </motion.span>
+                  ) : (
+                    <span className="mt-[7px] block h-[3px] w-14 rounded-full bg-current opacity-25" />
+                  )}
+                </span>
               </span>
             </motion.button>
+            </div>
           ),
         )}
         <AnimatePresence>
@@ -512,7 +537,7 @@ export default function Login() {
                       mode === m ? "text-signal-ink" : "text-ink-3",
                     )}
                   >
-                    {mode === m && <motion.span layoutId="auth-tab" className="absolute inset-0 -z-[1] bg-signal" transition={{ type: "spring", stiffness: 500, damping: 40 }} />}
+                    {mode === m && <motion.span layoutId="auth-tab" className="lx-tab-fill absolute inset-0 -z-[1] bg-signal" transition={{ type: "spring", stiffness: 500, damping: 40 }} />}
                     {m === "login" ? "Log in" : "Create account"}
                   </button>
                 ))}
@@ -531,14 +556,14 @@ export default function Login() {
                   >
                     {mode === "login" ? (
                       <>
-                        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+                        <div data-hero-row className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
                           <h2 className="text-[14px] font-extrabold uppercase tracking-[0.06em] text-ink">Demo for judges</h2>
                           <span className="flex items-center gap-2 text-[13px] text-ink-3">
                             Pick a role · password <CopyPassword />
                           </span>
                         </div>
                         <DemoCards onDone={done} request={request} />
-                        <details className="group rounded-[4px] border-2 border-rule-strong text-ink">
+                        <details data-hero-row className="group rounded-[4px] border-2 border-rule-strong text-ink">
                           <summary className="flex cursor-pointer list-none items-center justify-between px-3.5 py-3 text-[14px] font-bold text-ink transition-colors hover:bg-signal-soft">
                             Use an email and password instead
                             <ArrowDown className="size-4 transition-transform duration-200 group-open:rotate-180" />
