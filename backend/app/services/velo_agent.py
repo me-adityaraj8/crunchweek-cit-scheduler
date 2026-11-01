@@ -14,6 +14,7 @@ import secrets
 import time
 from datetime import datetime, timedelta, timezone
 
+from fastapi.encoders import jsonable_encoder
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -258,7 +259,7 @@ def run(db: Session, user: User, body: VeloIn) -> dict | None:
         c.memory.pop("draft_text", None)
     db.add(VeloMessage(conversation_id=c.id, role="user", content=body.text, payload={"page": body.page}))
     db.add(VeloMessage(conversation_id=c.id, role="assistant", content=reply,
-                       payload={"tools": used, "cards": cards, "errors": errors}))
+                       payload=jsonable_encoder({"tools": used, "cards": cards, "errors": errors})))
     db.flush()
     _summarise(db, c)
     c.updated_at = _now()
@@ -281,7 +282,8 @@ def record(db: Session, user: User, body: VeloIn, out: dict) -> str:
             a.conversation_id = c.id
     db.add(VeloMessage(conversation_id=c.id, role="user", content=body.text, payload={"page": body.page}))
     db.add(VeloMessage(conversation_id=c.id, role="assistant", content=out["reply"],
-                       payload={"tools": [], "cards": out.get("cards", []), "errors": [], "mode": out.get("mode")}))
+                       payload=jsonable_encoder({"tools": [], "cards": out.get("cards", []), "errors": [],
+                                                 "mode": out.get("mode")})))     # cards can hold datetimes
     db.flush()
     _summarise(db, c)
     c.updated_at = _now()
