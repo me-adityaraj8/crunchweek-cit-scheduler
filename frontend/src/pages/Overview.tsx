@@ -7,7 +7,9 @@ import type { Dashboard, Entry } from "@/api/types";
 import { Board, BoardRow, BoardText } from "@/components/board/Board";
 import { Code, KindBullet, StatusChip } from "@/components/board/signals";
 import { SplitFlap, type FlapTone } from "@/components/board/SplitFlap";
+import { DotMatrix } from "@/components/dashboard/DotMatrix";
 import { GenerateCard } from "@/components/dashboard/GenerateCard";
+import { FacultyLoad, GroupDays } from "@/components/dashboard/LoadViews";
 import { Badge, CountChips, MetricCard, MiniColumns, ProgressBar, RingMeter, RuleTicks, StackBar, type Part, type Tick } from "@/components/dashboard/Metrics";
 import { Empty, ErrorState, Loading, PageHeader, Panel, SectionTitle } from "@/components/states";
 import { Button } from "@/components/ui/button";
@@ -272,33 +274,6 @@ function SpectraTable() {
   );
 }
 
-/** Rooms by share of teaching hours used; labs in lilac. */
-function BusiestRooms({ d }: { d: Dashboard }) {
-  const top = [...d.utilisation].sort((a, b) => b.pct - a.pct).slice(0, 6);
-  const hours = d.utilisation[0]?.total_hours ?? 0;
-  return (
-    <Panel title="Busiest rooms" tint="bg-k-lecture-tint" className="min-w-0 flex-[1_1_320px]">
-      <ul className="flex flex-col gap-3">
-        {top.map((r) => (
-          <li key={r.room_id} className="grid grid-cols-[92px_minmax(0,1fr)_52px] items-center gap-2.5">
-            <span className="truncate text-[14px] font-bold" title={r.name}>
-              {r.room_id}
-            </span>
-            <span className="h-4 overflow-hidden rounded-[3px] border-2 border-rule-strong bg-sheet-2">
-              <span
-                className={cn("block h-full border-r-2 border-rule-strong", r.type.startsWith("lab") || r.type === "workshop" ? "bg-k-lab-tint" : "bg-k-lecture-tint")}
-                style={{ width: `${Math.max(2, r.pct)}%` }}
-              />
-            </span>
-            <span className="text-right text-[14px] font-bold tabular-nums">{Math.round(r.pct)}%</span>
-          </li>
-        ))}
-      </ul>
-      <p className="mt-4 border-t-2 border-dashed border-rule-strong pt-3 text-[13px] text-ink-2">Share of the {hours} teaching hours used. Lilac bars are labs.</p>
-    </Panel>
-  );
-}
-
 /** Midsems placed, and how they spread over Monday to Saturday. */
 function MidsemCard({ d }: { d: Dashboard }) {
   const { data } = useExams();
@@ -327,16 +302,23 @@ function MidsemCard({ d }: { d: Dashboard }) {
   );
 }
 
+function RoomUse({ d }: { d: Dashboard }) {
+  const { data: summary } = useSummary();
+  return <DotMatrix rooms={d.utilisation} grid={d.grid} days={summary?.days ?? [...DAYS]} lunchAfter={summary?.lunch_after} />;
+}
+
 function AdminOverview({ d }: { d: Dashboard }) {
   if (!d.has_timetable) return <GenerateCard />;
   return (
     <>
       <AdminMetrics d={d} />
       <Conflicts d={d} />
+      <RoomUse d={d} />
       <div className="flex flex-wrap items-start gap-6">
-        <SpectraTable />
-        <BusiestRooms d={d} />
+        <FacultyLoad className="min-w-0 flex-[1_1_480px]" />
+        <GroupDays className="min-w-0 flex-[1_1_480px]" />
       </div>
+      <SpectraTable />
       <div className="flex flex-wrap items-stretch gap-6">
         <Waiting d={d} />
         <MidsemCard d={d} />
@@ -346,6 +328,7 @@ function AdminOverview({ d }: { d: Dashboard }) {
 }
 
 function CoordinatorOverview({ d }: { d: Dashboard }) {
+  const user = useUser();
   const { data: summary } = useSummary();
   return (
     <>
@@ -356,7 +339,15 @@ function CoordinatorOverview({ d }: { d: Dashboard }) {
           <MyBookings compact />
         </div>
       </div>
-      {d.has_timetable && <BusiestRooms d={d} />}
+      {d.has_timetable && (
+        <>
+          <RoomUse d={d} />
+          <div className="flex flex-wrap items-start gap-6">
+            <FacultyLoad department={user.department} className="min-w-0 flex-[1_1_480px]" />
+            <GroupDays department={user.department} className="min-w-0 flex-[1_1_480px]" />
+          </div>
+        </>
+      )}
     </>
   );
 }
