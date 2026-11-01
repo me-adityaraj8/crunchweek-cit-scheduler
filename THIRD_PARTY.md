@@ -31,7 +31,7 @@
 | clsx | 2.1.1 | MIT | Class names |
 | tailwind-merge | 3.7.0 | MIT | Class names |
 | Tailwind CSS, @tailwindcss/vite | 4.1.18 | MIT | Styling |
-| Inter variable font (@fontsource-variable/inter) | 5.3.0 | OFL-1.1 | Text and headings |
+| Space Grotesk variable font (@fontsource-variable/space-grotesk) | 5.2.10 | OFL-1.1 | Text and headings |
 | Geist Mono variable font (@fontsource-variable/geist-mono) | 5.3.0 | OFL-1.1 | Codes, caps labels, the split-flap boards |
 | GSAP + ScrollTrigger (gsap) | 3.13.0 | GSAP Standard License (free, incl. commercial) | Landing page motion (entrances, reveals, product preview, scroll rail) |
 | three.js (three) | 0.186.1 | MIT | 3D rendering for Velo's animated orb |
