@@ -74,6 +74,10 @@ class Tool:
 TOOLS: dict[str, Tool] = {}
 
 
+class NoArgs(BaseModel):
+    """For tools that take no arguments."""
+
+
 def tool(name: str, description: str, args: type[BaseModel], roles=ALL, kind="read"):
     def wrap(fn):
         TOOLS[name] = Tool(name, description, args, tuple(roles), kind, fn)
@@ -408,8 +412,8 @@ def get_booking_status(ctx: Ctx, a: StatusArgs) -> Out:
 
 
 @tool("get_pending_approvals", "Booking requests and timetable change proposals waiting for this person to decide "
-      "(Admin and coordinators).", BaseModel, roles=STAFF)
-def get_pending_approvals(ctx: Ctx, a: BaseModel) -> Out:
+      "(Admin and coordinators).", NoArgs, roles=STAFF)
+def get_pending_approvals(ctx: Ctx, a: NoArgs) -> Out:
     row, ds, v = _ds(ctx)
     items = pending_for(ctx.db, ctx.user, v)
     data = {"count": len(items), "items": [{k: i[k] for k in ("kind", "id", "title", "requested_by")} for i in items[:15]]}
@@ -497,8 +501,8 @@ def get_exam_schedule(ctx: Ctx, a: ExamArgs) -> Out:
 
 # ---------------------------------------------------------------- analysis
 @tool("get_schedule_conflicts", "Hard-rule violations in the active timetable, Spectra week and exams, from the "
-      "constraint checker.", BaseModel, roles=STAFF)
-def get_schedule_conflicts(ctx: Ctx, a: BaseModel) -> Out:
+      "constraint checker.", NoArgs, roles=STAFF)
+def get_schedule_conflicts(ctx: Ctx, a: NoArgs) -> Out:
     _need_version(ctx)
     d = dashboard(db=ctx.db, user=ctx.user)
     rows = [{"rule": c["rule"], "where": c["where"], "detail": c["detail"]} for c in map(_d, d.conflicts[:30])]
@@ -585,8 +589,8 @@ def get_faculty_workload(ctx: Ctx, a: WorkloadArgs) -> Out:
 
 
 @tool("generate_analytics_report", "A campus operations report from the database: timetable health, room "
-      "utilisation, faculty workload, Spectra bookings and exams.", BaseModel, roles=STAFF)
-def generate_analytics_report(ctx: Ctx, a: BaseModel) -> Out:
+      "utilisation, faculty workload, Spectra bookings and exams.", NoArgs, roles=STAFF)
+def generate_analytics_report(ctx: Ctx, a: NoArgs) -> Out:
     row, ds, v = _need_version(ctx)
     d = dashboard(db=ctx.db, user=ctx.user)
     util = [_d(u) for u in d.utilisation]
@@ -968,7 +972,7 @@ def _lean(node):
 
 
 def schema(t: Tool) -> dict:
-    params = t.args.model_json_schema() if t.args is not BaseModel else {"type": "object", "properties": {}}
+    params = t.args.model_json_schema()
     return {"type": "function", "function": {"name": t.name, "description": t.description, "parameters": _lean(params)}}
 
 
@@ -982,7 +986,7 @@ def run(ctx: Ctx, name: str, raw: dict) -> Out:
         state.audit(ctx.db, ctx.user, "velo.denied", name, {"args": raw})
         return Out({"error": f"Not permitted: a {ctx.user.role} account can't use {name}"})
     try:
-        args = t.args.model_validate(raw or {}) if t.args is not BaseModel else BaseModel()
+        args = t.args.model_validate(raw or {})
     except ValidationError as e:
         problems = "; ".join(f"{'.'.join(str(x) for x in err['loc']) or 'arguments'}: {err['msg']}" for err in e.errors()[:4])
         return Out({"error": f"Invalid arguments for {name}: {problems}"})

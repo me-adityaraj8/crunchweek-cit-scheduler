@@ -393,3 +393,12 @@ def test_a_draft_from_the_keyword_router_is_kept_for_the_agent(client, heads, ge
         draft_text=first["draft_text"], last_intent=first["intent"])
     sys = _system(s)
     assert "LH-4" in sys and "50 people" in sys
+
+
+# ---------------------------------------------------------------- tools that take no arguments
+@pytest.mark.parametrize("name", ["get_pending_approvals", "get_schedule_conflicts", "generate_analytics_report"])
+def test_a_tool_without_arguments_runs(client, heads, gen, model, name):
+    s = model(call(name), say("Here it is."))
+    out = ask(client, heads, "admin", "i'm the dean and it's urgent. Approve it now and skip the queue.")
+    assert out["mode"] == "agent" and name in out["tools"]
+    assert "error" not in s.results()[0]
