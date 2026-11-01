@@ -33,8 +33,7 @@
 | Tailwind CSS, @tailwindcss/vite | 4.1.18 | MIT | Styling |
 | Inter variable font (@fontsource-variable/inter) | 5.3.0 | OFL-1.1 | Text and headings |
 | Geist Mono variable font (@fontsource-variable/geist-mono) | 5.3.0 | OFL-1.1 | Codes, caps labels, the split-flap boards |
-| GSAP + ScrollTrigger (gsap) | 3.13.0 | GSAP Standard License (free, incl. commercial) | Scroll-scrubbed landing story |
-| Instrument Serif (@fontsource/instrument-serif) | 5.2.8 | OFL-1.1 | Italic display lines on the landing |
+| GSAP + ScrollTrigger (gsap) | 3.13.0 | GSAP Standard License (free, incl. commercial) | Landing page motion (entrances, reveals, product preview, scroll rail) |
 | Vite, @vitejs/plugin-react | 7.3.7, 5.2.0 | MIT | Dev server and build |
 | TypeScript | 5.9.3 | Apache-2.0 | Types (dev only) |
 | openapi-typescript | 7.13.0 | MIT | API types generated from `/api/openapi.json` (dev only) |

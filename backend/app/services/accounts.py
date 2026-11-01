@@ -43,7 +43,7 @@ def check_password(pw: str) -> None:
 def link(db: Session, role: str, department: str | None, faculty_id: str | None,
          user_id: int | None = None) -> tuple[str | None, str | None]:
     """(department, faculty_id) for an account with this role, checked against the loaded dataset.
-    Each faculty member can have one own account; the demo faculty account doesn't count."""
+    Each faculty member and each department can have one own account; demo accounts don't count."""
     _, ds = state.active_dataset(db)
     if role == "faculty":
         f = ds.faculty.get(faculty_id or "")
@@ -59,16 +59,22 @@ def link(db: Session, role: str, department: str | None, faculty_id: str | None,
         depts = state.teaching_departments(ds)
         if department not in depts:
             raise bad_request(f"Pick the department this coordinator is for: {', '.join(depts)}")
+        q = select(User.id).where(User.role == "coordinator", User.department == department, ~User.email.endswith(DEMO_DOMAIN))
+        if user_id is not None:
+            q = q.where(User.id != user_id)
+        if db.scalar(q.limit(1)) is not None:
+            raise conflict(f"{department} already has a coordinator account. Ask the Admin if that isn't right.")
         return department, None
     return None, None
 
 
-def signup(db: Session, name: str, email: str, password: str, role: str, faculty_id: str | None) -> User:
+def signup(db: Session, name: str, email: str, password: str, role: str, faculty_id: str | None,
+           department: str | None = None) -> User:
     email, name = clean_email(email), clean_name(name)
     check_password(password)
     if db.scalar(select(User.id).where(User.email == email)) is not None:
         raise conflict(_TAKEN)
-    department, faculty_id = link(db, role, None, faculty_id)
+    department, faculty_id = link(db, role, department, faculty_id)
     u = User(email=email, name=name, role=role, department=department, faculty_id=faculty_id,
              password_hash=hash_password(password))
     db.add(u)
@@ -77,7 +83,7 @@ def signup(db: Session, name: str, email: str, password: str, role: str, faculty
     except IntegrityError:      # the same address signed up twice at the same moment
         db.rollback()
         raise conflict(_TAKEN)
-    state.audit(db, u, "account.signup", f"user:{u.id}", {"role": role, "faculty_id": faculty_id})
+    state.audit(db, u, "account.signup", f"user:{u.id}", {"role": role, "faculty_id": faculty_id, "department": department})
     return u
 
 

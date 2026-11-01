@@ -52,7 +52,7 @@ export interface paths {
         put?: never;
         /**
          * Signup
-         * @description Make your own account (club representative or faculty) and log straight in.
+         * @description Make your own account (club representative, faculty or coordinator) and log straight in.
          */
         post: operations["signup_api_auth_signup_post"];
         delete?: never;
@@ -70,7 +70,7 @@ export interface paths {
         };
         /**
          * Signup Options
-         * @description What the sign-up form offers: the faculty members of the loaded dataset.
+         * @description What the sign-up form offers: the faculty members and teaching departments of the loaded dataset.
          */
         get: operations["signup_options_api_auth_signup_options_get"];
         put?: never;
@@ -1699,8 +1699,8 @@ export interface components {
         };
         /**
          * SignupIn
-         * @description Anyone can sign up for the roles that only ask for things. An Admin gives out coordinator and
-         *     admin, the roles that approve (PUT /users/{id}).
+         * @description Anyone can sign up as a club, a faculty member or a department coordinator (one own account per
+         *     department). An Admin gives out admin (PUT /users/{id}).
          */
         SignupIn: {
             /** Name */
@@ -1714,14 +1714,21 @@ export interface components {
              * @default club
              * @enum {string}
              */
-            role: "club" | "faculty";
+            role: "club" | "faculty" | "coordinator";
             /** Faculty Id */
             faculty_id?: string | null;
+            /** Department */
+            department?: string | null;
         };
         /** SignupOptions */
         SignupOptions: {
             /** Faculty */
             faculty: components["schemas"]["FacultyChoice"][];
+            /**
+             * Departments
+             * @default []
+             */
+            departments: string[];
         };
         /** Slot */
         Slot: {

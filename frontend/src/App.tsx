@@ -5,7 +5,7 @@ import { Empty, Loading } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { canSee } from "@/lib/roles";
-import Login from "@/pages/Login";
+const Login = lazy(() => import("@/pages/Login"));
 import { Link } from "react-router";
 import { MapPinOff } from "lucide-react";
 
@@ -54,7 +54,7 @@ function Stop({ children }: { children: ReactNode }) {
 export default function App() {
   return (
     <Routes>
-      <Route path="/login" element={<Login />} />
+      <Route path="/login" element={<Suspense fallback={<div className="min-h-dvh bg-platform" />}><Login /></Suspense>} />
       <Route
         element={
           <RequireAuth>

@@ -39,13 +39,14 @@ class DemoAccount(BaseModel):
 
 
 class SignupIn(BaseModel):
-    """Anyone can sign up for the roles that only ask for things. An Admin gives out coordinator and
-    admin, the roles that approve (PUT /users/{id})."""
+    """Anyone can sign up as a club, a faculty member or a department coordinator (one own account per
+    department). An Admin gives out admin (PUT /users/{id})."""
     name: str = Field(max_length=200)
     email: str = Field(max_length=200)
     password: str = Field(max_length=200)
-    role: Literal["club", "faculty"] = "club"
+    role: Literal["club", "faculty", "coordinator"] = "club"
     faculty_id: str | None = None       # required for faculty: which faculty member of the dataset you are
+    department: str | None = None       # required for coordinator: which teaching department
 
 
 class FacultyChoice(BaseModel):
@@ -56,6 +57,7 @@ class FacultyChoice(BaseModel):
 
 class SignupOptions(BaseModel):
     faculty: list[FacultyChoice]
+    departments: list[str] = []
 
 
 class PasswordIn(BaseModel):

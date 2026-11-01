@@ -77,7 +77,7 @@ def test_signup_refuses_bad_input(client):
     assert signup(client, password="é" * 40).status_code == 400          # 80 bytes: more than bcrypt reads
     assert signup(client, name=" ").status_code == 400
     assert signup(client, role="admin").status_code == 422               # approving roles are given, not taken
-    assert signup(client, role="coordinator").status_code == 422
+    assert signup(client, role="coordinator").status_code == 400         # no department picked
 
 
 def test_faculty_signup_links_one_account_per_faculty(client, heads):
@@ -153,3 +153,14 @@ def test_my_requests_include_the_dataset_requests_i_stand_for(client, heads):
     f12 = token(client, "f12@cit.demo")
     assert "BR-19" in mine(f12) and "BR-19" not in mine(heads["faculty"])
     assert client.get("/api/dashboard", headers=heads["club"]).json()["my_requests"] >= 1
+
+
+def test_coordinator_signup_links_one_account_per_department(client):
+    depts = client.get("/api/auth/signup-options").json()["departments"]
+    assert depts
+    dept = depts[-1]
+    assert signup(client, role="coordinator", department="NOPE").status_code == 400
+    r = signup(client, role="coordinator", department=dept)
+    assert r.status_code == 200
+    assert (r.json()["user"]["role"], r.json()["user"]["department"]) == ("coordinator", dept)
+    assert signup(client, role="coordinator", department=dept).status_code == 409

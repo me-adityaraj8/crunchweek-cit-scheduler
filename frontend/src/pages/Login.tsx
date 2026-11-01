@@ -1,74 +1,26 @@
-import { ArrowRight, Building2, GraduationCap, Loader2, MoonStar, MoreHorizontal, ShieldCheck, SunMedium, UsersRound, X, type LucideIcon } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
-import { lazy, Suspense, useEffect, useRef, useState, type FormEvent } from "react";
+import { ArrowDown, ArrowRight, Building2, Check, Copy, GraduationCap, Loader2, MoreHorizontal, ShieldCheck, UsersRound, X, type LucideIcon } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { errorMessage } from "@/api/client";
-import { useDemoAccounts, useHealth, useSignupOptions } from "@/api/hooks";
+import { useDemoAccounts, useSignupOptions } from "@/api/hooks";
 import type { SignupIn } from "@/api/types";
 import { Button } from "@/components/ui/button";
 import { Segmented } from "@/components/ui/controls";
 import { Field, Input, PasswordInput } from "@/components/ui/field";
-import { Logo } from "@/components/ui/logo";
+import { LandingHeader, LandingSections, StatusDot, useLandingMotion, useStatuses, type DemoId } from "@/components/landing/Landing";
+import { LoopText } from "@/components/ui/loop-text";
 import { Select } from "@/components/ui/select";
 import { byRole, type AccountOption } from "@/lib/accounts";
 import { useAuth } from "@/lib/auth";
 import { ROLE } from "@/lib/format";
-import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
-
-const Story = lazy(() => import("@/components/landing/Story"));
 
 const DEMO_PASSWORD = import.meta.env.VITE_DEMO_PASSWORD || "demo1234";
 
 type Mode = "login" | "signup";
 type SignupRole = SignupIn["role"] & string;
-type Tone = "clear" | "caution" | "stop" | "wait";
-
-/** Live status for the service tiles, from GET /api/health. */
-function useStatuses() {
-  const { data: health, isError } = useHealth();
-  const solver: [string, Tone] = isError ? ["OFFLINE", "stop"] : health ? (health.ok ? ["READY", "clear"] : ["CHECK", "stop"]) : ["…", "wait"];
-  const llm = health?.llm ?? "";
-  const assistant: [string, Tone] = isError
-    ? ["OFFLINE", "stop"]
-    : !health
-      ? ["…", "wait"]
-      : llm.startsWith("error")
-        ? ["FALLBACK", "caution"]
-        : llm.startsWith("not configured")
-          ? ["KEYWORDS", "caution"]
-          : ["READY", "clear"];
-  return { solver, assistant };
-}
-
-const TONE: Record<Tone, string> = {
-  clear: "bg-clear-vivid",
-  caution: "bg-caution-soft",
-  stop: "bg-stop-vivid",
-  wait: "bg-sheet-2",
-};
-
-/** What the app does: four equal tiles, each with its live status in words. */
-function ServiceTiles() {
-  const { solver, assistant } = useStatuses();
-  const tiles: [string, [string, Tone]][] = [
-    ["Timetable", solver],
-    ["Exams", solver],
-    ["Spectra week", solver],
-    ["Assistant", assistant],
-  ];
-  return (
-    <ul className="grid grid-cols-[repeat(auto-fit,minmax(128px,1fr))] gap-3" aria-label="Services">
-      {tiles.map(([name, [status, tone]]) => (
-        <li key={name} className="flex flex-col gap-2 rounded-[4px] border-2 border-rule-strong bg-sheet p-3 shadow-lift">
-          <span className="text-[12px] font-extrabold uppercase tracking-[0.06em]">{name}</span>
-          <span className={cn("w-fit rounded-[3px] border-2 border-[#111] px-[7px] py-0.5 text-[11px] font-extrabold tracking-[0.04em] text-[#111]", TONE[tone])}>{status}</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
 
 function Problem({ text }: { text: string | null }) {
   if (!text) return null;
@@ -116,18 +68,22 @@ function LoginForm({ onDone }: { onDone: () => void }) {
   );
 }
 
-/** Make your own account. Club representatives and faculty sign up here; an Admin gives the roles that approve. */
+/** Make your own account: a club representative, a faculty member or a department's coordinator.
+ * Only Admin accounts are given out by an Admin. */
 function SignupForm({ onDone }: { onDone: () => void }) {
   const { signup } = useAuth();
   const [role, setRole] = useState<SignupRole>("club");
   const [facultyId, setFacultyId] = useState<string>();
+  const [department, setDepartment] = useState<string>();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const options = useSignupOptions(role === "faculty");
+  const options = useSignupOptions(role !== "club");
   const faculty = options.data?.faculty ?? [];
+  const departments = options.data?.departments ?? [];
+  const listHint = options.isLoading ? "Loading the list" : options.isError ? "Couldn't load the list" : undefined;
 
   async function submit(ev: FormEvent) {
     ev.preventDefault();
@@ -135,10 +91,14 @@ function SignupForm({ onDone }: { onDone: () => void }) {
       setError("Pick which faculty member you are.");
       return;
     }
+    if (role === "coordinator" && !department) {
+      setError("Pick the department you coordinate.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
-      const user = await signup({ name, email: email.trim(), password, role, faculty_id: role === "faculty" ? facultyId : null });
+      const user = await signup({ name, email: email.trim(), password, role, faculty_id: role === "faculty" ? facultyId : null, department: role === "coordinator" ? department : null });
       toast.success("Account created", { description: `You're logged in as ${ROLE[user.role].toLowerCase()}.` });
       onDone();
     } catch (err) {
@@ -158,10 +118,11 @@ function SignupForm({ onDone }: { onDone: () => void }) {
             setError(null);
           }}
           items={[
-            { value: "club", label: "Club representative" },
-            { value: "faculty", label: "Faculty member" },
+            { value: "club", label: "Club" },
+            { value: "faculty", label: "Faculty" },
+            { value: "coordinator", label: "Coordinator" },
           ]}
-          className="grid w-full grid-cols-2"
+          className="grid w-full grid-cols-3"
         />
       </Field>
       {role === "faculty" && (
@@ -174,8 +135,20 @@ function SignupForm({ onDone }: { onDone: () => void }) {
               if (!name.trim()) setName(faculty.find((f) => f.id === id)?.name ?? "");
             }}
             options={faculty.map((f) => ({ value: f.id, label: f.name, hint: f.id, group: f.department }))}
-            placeholder={options.isLoading ? "Loading the faculty list" : options.isError ? "Couldn't load the faculty list" : "Choose your name"}
+            placeholder={listHint ?? "Choose your name"}
             disabled={!faculty.length}
+          />
+        </Field>
+      )}
+      {role === "coordinator" && (
+        <Field label="Which department do you coordinate?" htmlFor="signup-department" hint="You'll book rooms for its events and approve bookings of its labs. One account per department.">
+          <Select
+            id="signup-department"
+            value={department}
+            onValueChange={setDepartment}
+            options={departments.map((d) => ({ value: d, label: d }))}
+            placeholder={listHint ?? "Choose a department"}
+            disabled={!departments.length}
           />
         </Field>
       )}
@@ -192,13 +165,13 @@ function SignupForm({ onDone }: { onDone: () => void }) {
       <Button type="submit" variant="primary" size="lg" className="mt-1" disabled={busy}>
         {busy && <Loader2 className="animate-spin" />} Create account
       </Button>
-      <p className="text-[12.5px] text-ink-3">Coordinator and Admin accounts approve requests, so an Admin gives those roles.</p>
+      <p className="text-[12.5px] text-ink-3">Admin accounts are given by an Admin.</p>
     </form>
   );
 }
 
 interface DemoRole {
-  id: "admin" | "coordinator" | "faculty" | "club";
+  id: DemoId;
   title: string;
   chip: string;
   count: string;
@@ -212,7 +185,7 @@ interface DemoRole {
 /** One click into any role, no sign-up (for judges and anyone trying the app). Four small cards; the
  * one you pick grows in place to show its accounts and the log-in button (after Skiper UI's
  * "minimal card expand"). A click outside or Esc folds it back. */
-function DemoCards({ onDone }: { onDone: () => void }) {
+function DemoCards({ onDone, request }: { onDone: () => void; request: { id: DemoId; n: number } | null }) {
   const { login } = useAuth();
   const { data: accounts, isLoading, isError, refetch } = useDemoAccounts();
   const [open, setOpen] = useState<DemoRole["id"] | null>(null);
@@ -225,7 +198,7 @@ function DemoCards({ onDone }: { onDone: () => void }) {
   const roles = accounts ? byRole(accounts) : null;
   const cards: DemoRole[] = roles
     ? ([
-        roles.admin && { id: "admin", title: "Dean's Office", chip: "ADMIN", count: "1 account", listLabel: "", description: "Generate timetables, approve changes, decide Spectra week.", icon: ShieldCheck, fill: "bg-signal", options: [{ value: roles.admin.email, label: "Dean's Office" }] },
+        roles.admin && { id: "admin", title: "Dean's Office", chip: "ADMIN", count: "1 account", listLabel: "", description: "Generate timetables, approve changes, decide Spectra week.", icon: ShieldCheck, fill: "bg-signal on-light", options: [{ value: roles.admin.email, label: "Dean's Office" }] },
         roles.coordinator.length > 0 && { id: "coordinator", title: "Coordinator", chip: "COORD", count: `${roles.coordinator.length} departments`, listLabel: `DEPARTMENT · ${roles.coordinator.length}`, description: "Book rooms for department events and approve your labs.", icon: Building2, fill: "bg-k-event-tint", options: roles.coordinator },
         roles.faculty.length > 0 && { id: "faculty", title: "Faculty", chip: "FACULTY", count: `${roles.faculty.length} faculty`, listLabel: `FACULTY MEMBER · ${roles.faculty.length}`, description: "Your timetable, time you can't teach, and change requests.", icon: GraduationCap, fill: "bg-k-lecture-tint", options: roles.faculty },
         roles.club.length > 0 && { id: "club", title: "Club", chip: "CLUB", count: `${roles.club.length} clubs`, listLabel: `CLUB · ${roles.club.length}`, description: "Request venues by typing or speaking, in English or Hinglish.", icon: UsersRound, fill: "bg-k-lab-tint", options: roles.club },
@@ -234,6 +207,14 @@ function DemoCards({ onDone }: { onDone: () => void }) {
   const active = cards.find((c) => c.id === open) ?? null;
   const email = active ? (pick[active.id] ?? active.options[0]?.value ?? "") : "";
   const who = active?.options.find((o) => o.value === email)?.label ?? active?.title;
+
+  // "Try as …" further down the page opens that role's card
+  useEffect(() => {
+    if (!request) return;
+    last.current = request.id;
+    setOpen(request.id);
+    setError(null);
+  }, [request]);
 
   // fold back on Esc or a click outside (the account list opens in a portal, so it counts as inside)
   useEffect(() => {
@@ -379,117 +360,199 @@ function DemoCards({ onDone }: { onDone: () => void }) {
   );
 }
 
+/** The demo password with a one-click copy: the icon turns into a tick for a moment. */
+function CopyPassword() {
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (!copied) return;
+    const t = setTimeout(() => setCopied(false), 1600);
+    return () => clearTimeout(t);
+  }, [copied]);
+  return (
+    <button
+      type="button"
+      onClick={() => navigator.clipboard?.writeText(DEMO_PASSWORD).then(() => setCopied(true), () => {})}
+      className="inline-flex items-center gap-1.5 rounded-[3px] border-2 border-rule px-1.5 py-0.5 font-mono text-[12px] font-semibold text-ink-2 transition-colors hover:border-rule-strong hover:text-ink"
+      aria-label={`Copy the demo password, ${DEMO_PASSWORD}`}
+    >
+      {DEMO_PASSWORD}
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.span key={copied ? "y" : "n"} initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.4, opacity: 0 }} className="grid">
+          {copied ? <Check className="size-3.5 text-clear" /> : <Copy className="size-3.5" />}
+        </motion.span>
+      </AnimatePresence>
+      <span className="sr-only" aria-live="polite">
+        {copied ? "Copied" : ""}
+      </span>
+    </button>
+  );
+}
+
+/** Headline figures, straight from the loaded dataset's demo accounts. */
+function Figures() {
+  const { data } = useDemoAccounts();
+  const roles = data ? byRole(data) : null;
+  const figs: [string, number | undefined][] = [
+    ["faculty", roles?.faculty.length],
+    ["departments", roles?.coordinator.length],
+    ["clubs", roles?.club.length],
+  ];
+  return (
+    <dl className="grid max-w-[460px] grid-cols-3 divide-x-2 divide-rule border-y-2 border-rule py-3">
+      {figs.map(([label, n]) => (
+        <div key={label} className="px-4 first:pl-0">
+          <dt className="eyebrow">{label}</dt>
+          <dd className="mt-1 text-[28px] font-black leading-none tracking-[-0.03em] tabular-nums">{n ?? "–"}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
 export default function Login() {
   const { user, notice } = useAuth();
-  const { theme, toggle } = useTheme();
   const nav = useNavigate();
   const location = useLocation();
+  const reduce = useReducedMotion();
   const from = (location.state as { from?: string } | null)?.from ?? "/";
   const [mode, setMode] = useState<Mode>("login");
+  const [request, setRequest] = useState<{ id: DemoId; n: number } | null>(null);
+  const page = useRef<HTMLDivElement>(null);
+  const { solver } = useStatuses();
+  useLandingMotion(page);
 
   if (user) return <Navigate to={from} replace />;
   const done = () => {
     window.scrollTo(0, 0);
     nav(from, { replace: true });
   };
-  const enter = (smooth: boolean) => document.getElementById("enter")?.scrollIntoView({ behavior: smooth ? "smooth" : "auto" });
+  const toCard = () => {
+    const card = document.getElementById("login");
+    card?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" });
+    card?.focus({ preventScroll: true });
+  };
+  const tryRole = (id: DemoId) => {
+    setMode("login");
+    setRequest({ id, n: Date.now() });
+    toCard();
+  };
 
   return (
-    <div className="relative min-h-dvh bg-[#08070d]">
-      <a href="#enter" className="sr-only z-50 bg-sheet p-3 focus:not-sr-only focus:fixed focus:left-4 focus:top-4">
+    <div ref={page} className="lx-page min-h-dvh bg-platform text-ink">
+      <a href="#login" className="sr-only z-50 bg-sheet p-3 focus:not-sr-only focus:fixed focus:left-4 focus:top-4">
         Skip to log in
       </a>
-      {/* a fixed bar over the story: the brand, the theme, and a way straight to the log-in card */}
-      <header className="fixed inset-x-0 top-0 z-30 flex items-center justify-between gap-3 px-4 py-4 text-[#f2eee6] sm:px-8">
-        <div className="flex items-center gap-3">
-          <Logo size={40} title="" />
-          <div className="leading-tight">
-            <div className="text-[16px] font-black tracking-[0.04em]">VELORA</div>
-            <div className="hidden text-[12px] font-medium text-[#a29db3] sm:block">Chilika Institute of Technology</div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={toggle}
-            className="grid size-11 place-items-center rounded-full border border-white/25 bg-black/30 backdrop-blur transition-colors hover:bg-white/10"
-            aria-label="Switch theme"
-          >
-            {theme === "dark" ? <SunMedium className="size-[18px]" /> : <MoonStar className="size-[18px]" />}
-          </button>
-          <button type="button" onClick={() => enter(false)} className="h-11 rounded-full bg-[#f2eee6] px-5 text-[14px] font-extrabold text-[#08070d] transition-transform hover:-translate-y-0.5">
-            Log in
-          </button>
-        </div>
-      </header>
+      <LandingHeader onLogin={toCard} />
 
-      <Suspense fallback={<div className="h-dvh" />}>
-        <Story onEnter={() => enter(true)} />
-      </Suspense>
+      <main id="top">
+        <section className="lx-hero relative overflow-hidden" aria-labelledby="hero-title">
+          <div aria-hidden className="lx-grid absolute inset-0 -z-10" />
+          <div aria-hidden className="lx-glow absolute -right-40 -top-40 -z-10 size-[680px] rounded-full" />
+          <div className="mx-auto grid max-w-[1240px] items-center gap-12 px-4 pb-20 pt-10 sm:px-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-14 lg:pb-28 lg:pt-16">
+            <div className="flex min-w-0 flex-col gap-7">
+              <span data-hero className="inline-flex w-fit items-center gap-3 rounded-full border-2 border-rule-strong bg-sheet px-3.5 py-1.5">
+                <StatusDot tone={solver[1]} label={`Solver ${solver[0]}`} />
+                <span className="h-3.5 w-0.5 bg-rule" />
+                <span className="text-[12.5px] font-semibold text-ink-2">Spectra week &apos;27 · CIT</span>
+              </span>
+              <h1 id="hero-title" data-hero className="lx-h text-[42px] font-black uppercase leading-[0.94] tracking-[-0.045em] sm:text-[62px] xl:text-[74px]">
+                Campus time,
+                <br />
+                solved and
+                <br />
+                <span className="lx-plate mt-2">
+                  <LoopText words={["explained.", "clash-free.", "on time.", "approved."]} label="explained." />
+                </span>
+              </h1>
+              <p data-hero className="max-w-[540px] text-[17px] leading-relaxed text-ink-2">
+                Timetables, midsem exams, Spectra-week bookings and disruptions for CIT. The solver decides, and every decision comes with its reason.
+              </p>
+              <div data-hero className="flex flex-wrap items-center gap-3">
+                <span data-magnetic className="inline-block">
+                  <Button variant="primary" size="xl" onClick={toCard} className="group">
+                    Try a demo role <ArrowRight className="transition-transform duration-200 group-hover:translate-x-1" />
+                  </Button>
+                </span>
+                <Button variant="outline" size="xl" asChild className="group">
+                  <a href="#product">
+                    See how it works <ArrowDown className="transition-transform duration-200 group-hover:translate-y-0.5" />
+                  </a>
+                </Button>
+              </div>
+              <div data-hero>
+                <Figures />
+              </div>
+            </div>
 
-      {/* the end of the story: the log-in card */}
-      <div
-        id="enter"
-        className="relative z-[1] mx-auto grid min-h-dvh w-full max-w-[1240px] scroll-mt-0 grid-cols-1 content-center gap-x-10 gap-y-7 px-4 pb-16 pt-24 text-[#f2eee6] sm:px-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]"
-      >
-        <div className="flex min-w-0 flex-col gap-6 lg:col-start-1 lg:row-start-1">
-          <p className="font-mono text-[12px] font-semibold uppercase tracking-[0.22em] text-[#a29db3]">07 — Enter</p>
-          <h2 className="text-[48px] font-black leading-[0.9] tracking-[-0.05em] sm:text-[72px] xl:text-[88px]">
-            Enter{" "}
-            <em className="bg-[linear-gradient(100deg,#ff8a3d,#ff3fa4_50%,#7b4dff)] bg-clip-text pr-2 font-[Instrument_Serif] font-normal italic tracking-[-0.02em] text-transparent">Velora.</em>
-          </h2>
-          <p className="max-w-[520px] text-[17px] leading-[1.5] text-[#cdc8d8]">
-            Timetables, midsem exams, Spectra-week bookings and disruptions for CIT. The solver decides, and every decision comes with its reason.
-          </p>
-        </div>
+            <section
+              id="login"
+              tabIndex={-1}
+              data-hero-card
+              className="lx-card min-w-0 scroll-mt-24 overflow-hidden rounded-[6px] border-2 border-rule-strong bg-sheet shadow-hero focus:outline-none"
+              aria-label={mode === "login" ? "Log in" : "Create an account"}
+            >
+              <div className="grid grid-cols-2 border-b-2 border-rule-strong bg-sheet-2" role="group" aria-label="Log in or create an account">
+                {(["login", "signup"] as const).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    aria-pressed={mode === m}
+                    onClick={() => setMode(m)}
+                    className={cn(
+                      "lx-tab relative isolate h-[58px] px-4 text-left text-[15px] sm:px-5 font-black uppercase tracking-[-0.01em] transition-colors duration-200 focus-visible:outline-offset-[-6px] sm:text-[20px]",
+                      m === "signup" && "border-l-2 border-rule-strong",
+                      mode === m ? "text-signal-ink" : "text-ink-3",
+                    )}
+                  >
+                    {mode === m && <motion.span layoutId="auth-tab" className="absolute inset-0 -z-[1] bg-signal" transition={{ type: "spring", stiffness: 500, damping: 40 }} />}
+                    {m === "login" ? "Log in" : "Create account"}
+                  </button>
+                ))}
+              </div>
 
-        <section
-          className="min-w-0 self-center overflow-hidden rounded-[6px] border-2 border-rule-strong bg-sheet shadow-hero lg:col-start-2 lg:row-span-2 lg:row-start-1"
-          aria-label={mode === "login" ? "Log in" : "Create an account"}
-        >
-          <div className="grid grid-cols-2 border-b-2 border-rule-strong" role="group" aria-label="Log in or create an account">
-            {(["login", "signup"] as const).map((m) => (
-              <button
-                key={m}
-                type="button"
-                aria-pressed={mode === m}
-                onClick={() => setMode(m)}
-                className={cn(
-                  "h-[60px] px-5 text-left text-[18px] font-black uppercase tracking-[-0.01em] transition-colors duration-150 focus-visible:outline-offset-[-6px] sm:px-[22px] sm:text-[22px]",
-                  m === "signup" && "border-l-2 border-rule-strong",
-                  mode === m ? "bg-signal text-signal-ink" : "bg-sheet-2 text-ink-3 hover:bg-signal-soft hover:text-ink",
-                )}
-              >
-                {m === "login" ? "Log in" : "Create account"}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex flex-col gap-5 p-5 sm:p-[22px]">
-            {notice && <p className="rounded-[4px] border-2 border-rule-strong bg-signal-soft px-3 py-2 text-[13px]">{notice}</p>}
-            {mode === "login" ? (
-              <>
-                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                  <h2 className="text-[15px] font-extrabold uppercase tracking-[0.06em]">Demo for judges</h2>
-                  <span className="text-[13px] text-ink-3">Pick a role · password {DEMO_PASSWORD}</span>
-                </div>
-                <DemoCards onDone={done} />
-                <details className="rounded-[4px] border-2 border-rule-strong">
-                  <summary className="cursor-pointer list-none px-3.5 py-3 text-[14px] font-bold hover:bg-signal-soft">Use an email and password instead</summary>
-                  <div className="border-t-2 border-rule-strong p-3.5">
-                    <LoginForm onDone={done} />
-                  </div>
-                </details>
-              </>
-            ) : (
-              <SignupForm onDone={done} />
-            )}
+              <div className="flex flex-col gap-5 p-5 sm:p-[22px]">
+                {notice && <p className="rounded-[4px] border-2 border-rule-strong bg-signal-soft px-3 py-2 text-[13px]">{notice}</p>}
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.div
+                    key={mode}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.18, ease: "easeOut" }}
+                    className="flex flex-col gap-5"
+                  >
+                    {mode === "login" ? (
+                      <>
+                        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+                          <h2 className="text-[14px] font-extrabold uppercase tracking-[0.06em] text-ink">Demo for judges</h2>
+                          <span className="flex items-center gap-2 text-[13px] text-ink-3">
+                            Pick a role · password <CopyPassword />
+                          </span>
+                        </div>
+                        <DemoCards onDone={done} request={request} />
+                        <details className="group rounded-[4px] border-2 border-rule-strong text-ink">
+                          <summary className="flex cursor-pointer list-none items-center justify-between px-3.5 py-3 text-[14px] font-bold text-ink transition-colors hover:bg-signal-soft">
+                            Use an email and password instead
+                            <ArrowDown className="size-4 transition-transform duration-200 group-open:rotate-180" />
+                          </summary>
+                          <div className="border-t-2 border-rule-strong p-3.5">
+                            <LoginForm onDone={done} />
+                          </div>
+                        </details>
+                      </>
+                    ) : (
+                      <SignupForm onDone={done} />
+                    )}
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+            </section>
           </div>
         </section>
 
-        <div className="min-w-0 text-ink lg:col-start-1 lg:row-start-2">
-          <ServiceTiles />
-        </div>
-      </div>
+        <LandingSections onTry={tryRole} />
+      </main>
     </div>
   );
 }
+

@@ -330,3 +330,10 @@
   background-color: var(--signal-faint);
   box-shadow: 3px 3px 0 var(--signal);
 }
+
+/* the theme switch (ui/theme-toggle) grows the new theme out of the button instead of cross-fading */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}

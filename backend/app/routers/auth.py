@@ -28,18 +28,19 @@ def login(body: LoginIn, db: Session = Depends(get_db)):
 
 @router.post("/auth/signup", response_model=LoginOut)
 def signup(body: SignupIn, db: Session = Depends(get_db)):
-    """Make your own account (club representative or faculty) and log straight in."""
-    u = accounts.signup(db, body.name, body.email, body.password, body.role, body.faculty_id)
+    """Make your own account (club representative, faculty or coordinator) and log straight in."""
+    u = accounts.signup(db, body.name, body.email, body.password, body.role, body.faculty_id, body.department)
     db.commit()
     return LoginOut(token=make_token(u), user=user_out(u))
 
 
 @router.get("/auth/signup-options", response_model=SignupOptions)
 def signup_options(db: Session = Depends(get_db)):
-    """What the sign-up form offers: the faculty members of the loaded dataset."""
+    """What the sign-up form offers: the faculty members and teaching departments of the loaded dataset."""
     _, ds = state.active_dataset(db)
     return SignupOptions(faculty=[FacultyChoice(id=f["id"], name=f["name"], department=f["department"])
-                                  for f in ds.faculty.values()])
+                                  for f in ds.faculty.values()],
+                         departments=state.teaching_departments(ds))
 
 
 @router.get("/me", response_model=UserOut)

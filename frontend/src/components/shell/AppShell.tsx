@@ -1,4 +1,4 @@
-import { KeyRound, LogOut, Menu as MenuIcon, MoonStar, Search, SunMedium, UserRound } from "lucide-react";
+import { KeyRound, LogOut, Menu as MenuIcon, Search, UserRound } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router";
@@ -7,6 +7,7 @@ import { PasswordDialog } from "@/components/account/PasswordDialog";
 import { Drawer } from "@/components/ui/dialog";
 import { Logo } from "@/components/ui/logo";
 import { Tip } from "@/components/ui/overlay";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useAuth, useUser } from "@/lib/auth";
 import { ROLE } from "@/lib/format";
 import { LINES, PHONE, phoneLabel, type Stop } from "@/lib/roles";
@@ -125,12 +126,10 @@ function UserPlate() {
 }
 
 function ThemeButton() {
-  const { theme, toggle } = useTheme();
+  const { theme } = useTheme();
   return (
     <Tip label={theme === "dark" ? "Light theme" : "Night Shift"}>
-      <button onClick={toggle} className="press grid size-11 shrink-0 place-items-center rounded-[4px] border-2 border-rule-strong bg-sheet text-ink shadow-float" aria-label="Switch theme">
-        {theme === "dark" ? <SunMedium className="size-[18px]" /> : <MoonStar className="size-[18px]" />}
-      </button>
+      <ThemeToggle />
     </Tip>
   );
 }
