@@ -1,6 +1,6 @@
 import { ArrowRight, Building2, GraduationCap, Loader2, MoonStar, MoreHorizontal, ShieldCheck, SunMedium, UsersRound, X, type LucideIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { errorMessage } from "@/api/client";
@@ -9,7 +9,6 @@ import type { SignupIn } from "@/api/types";
 import { Button } from "@/components/ui/button";
 import { Segmented } from "@/components/ui/controls";
 import { Field, Input, PasswordInput } from "@/components/ui/field";
-import { LoopText } from "@/components/ui/loop-text";
 import { Logo } from "@/components/ui/logo";
 import { Select } from "@/components/ui/select";
 import { byRole, type AccountOption } from "@/lib/accounts";
@@ -17,6 +16,8 @@ import { useAuth } from "@/lib/auth";
 import { ROLE } from "@/lib/format";
 import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
+
+const Story = lazy(() => import("@/components/landing/Story"));
 
 const DEMO_PASSWORD = import.meta.env.VITE_DEMO_PASSWORD || "demo1234";
 
@@ -387,41 +388,58 @@ export default function Login() {
   const [mode, setMode] = useState<Mode>("login");
 
   if (user) return <Navigate to={from} replace />;
-  const done = () => nav(from, { replace: true });
+  const done = () => {
+    window.scrollTo(0, 0);
+    nav(from, { replace: true });
+  };
+  const enter = (smooth: boolean) => document.getElementById("enter")?.scrollIntoView({ behavior: smooth ? "smooth" : "auto" });
 
   return (
-    <div className="platform-bg relative min-h-dvh">
-      <button
-        onClick={toggle}
-        className="press absolute right-4 top-4 z-10 grid size-11 place-items-center rounded-[4px] border-2 border-rule-strong bg-sheet text-ink shadow-float"
-        aria-label="Switch theme"
+    <div className="relative min-h-dvh bg-[#08070d]">
+      <a href="#enter" className="sr-only z-50 bg-sheet p-3 focus:not-sr-only focus:fixed focus:left-4 focus:top-4">
+        Skip to log in
+      </a>
+      {/* a fixed bar over the story: the brand, the theme, and a way straight to the log-in card */}
+      <header className="fixed inset-x-0 top-0 z-30 flex items-center justify-between gap-3 px-4 py-4 text-[#f2eee6] sm:px-8">
+        <div className="flex items-center gap-3">
+          <Logo size={40} title="" />
+          <div className="leading-tight">
+            <div className="text-[16px] font-black tracking-[0.04em]">VELORA</div>
+            <div className="hidden text-[12px] font-medium text-[#a29db3] sm:block">Chilika Institute of Technology</div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggle}
+            className="grid size-11 place-items-center rounded-full border border-white/25 bg-black/30 backdrop-blur transition-colors hover:bg-white/10"
+            aria-label="Switch theme"
+          >
+            {theme === "dark" ? <SunMedium className="size-[18px]" /> : <MoonStar className="size-[18px]" />}
+          </button>
+          <button type="button" onClick={() => enter(false)} className="h-11 rounded-full bg-[#f2eee6] px-5 text-[14px] font-extrabold text-[#08070d] transition-transform hover:-translate-y-0.5">
+            Log in
+          </button>
+        </div>
+      </header>
+
+      <Suspense fallback={<div className="h-dvh" />}>
+        <Story onEnter={() => enter(true)} />
+      </Suspense>
+
+      {/* the end of the story: the log-in card */}
+      <div
+        id="enter"
+        className="relative z-[1] mx-auto grid min-h-dvh w-full max-w-[1240px] scroll-mt-0 grid-cols-1 content-center gap-x-10 gap-y-7 px-4 pb-16 pt-24 text-[#f2eee6] sm:px-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]"
       >
-        {theme === "dark" ? <SunMedium className="size-[18px]" /> : <MoonStar className="size-[18px]" />}
-      </button>
-      {/* intro, card, tiles: on a phone the card comes straight after the headline */}
-      <div className="mx-auto grid min-h-dvh w-full max-w-[1240px] grid-cols-1 content-center gap-x-10 gap-y-7 px-4 py-16 sm:px-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
-        <div className="flex min-w-0 flex-col gap-7 lg:col-start-1 lg:row-start-1">
-          <div className="flex items-center gap-3">
-            <Logo size={52} title="" />
-            <div className="leading-tight">
-              <div className="text-[20px] font-black tracking-[0.01em]">VELORA</div>
-              <div className="text-[13px] font-medium text-ink-2">Chilika Institute of Technology</div>
-            </div>
-          </div>
-          <div>
-            <h1 className="text-[44px] font-black uppercase leading-[0.92] tracking-[-0.045em] sm:text-[60px] xl:text-[72px]">
-              Every room.
-              <br />
-              Every period.
-              <br />
-              <span className="mt-3 inline-block -rotate-[1.5deg] border-[3px] border-rule-strong bg-signal px-3.5 pb-1.5 pt-0.5 text-signal-ink shadow-panel">
-                <LoopText words={["On time.", "Clash-free.", "Explained.", "Approved."]} label="On time." className="py-[0.05em] leading-[1.02]" />
-              </span>
-            </h1>
-            <p className="mt-6 max-w-[520px] text-[17px] leading-[1.5] text-ink-2">
-              Timetables, midsem exams, Spectra-week bookings and disruptions for CIT. The solver decides, and every decision comes with its reason.
-            </p>
-          </div>
+        <div className="flex min-w-0 flex-col gap-6 lg:col-start-1 lg:row-start-1">
+          <p className="font-mono text-[12px] font-semibold uppercase tracking-[0.22em] text-[#a29db3]">07 — Enter</p>
+          <h2 className="text-[48px] font-black leading-[0.9] tracking-[-0.05em] sm:text-[72px] xl:text-[88px]">
+            Enter{" "}
+            <em className="bg-[linear-gradient(100deg,#ff8a3d,#ff3fa4_50%,#7b4dff)] bg-clip-text pr-2 font-[Instrument_Serif] font-normal italic tracking-[-0.02em] text-transparent">Velora.</em>
+          </h2>
+          <p className="max-w-[520px] text-[17px] leading-[1.5] text-[#cdc8d8]">
+            Timetables, midsem exams, Spectra-week bookings and disruptions for CIT. The solver decides, and every decision comes with its reason.
+          </p>
         </div>
 
         <section
@@ -468,7 +486,7 @@ export default function Login() {
           </div>
         </section>
 
-        <div className="min-w-0 lg:col-start-1 lg:row-start-2">
+        <div className="min-w-0 text-ink lg:col-start-1 lg:row-start-2">
           <ServiceTiles />
         </div>
       </div>

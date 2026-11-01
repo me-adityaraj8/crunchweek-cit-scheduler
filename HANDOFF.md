@@ -13,6 +13,7 @@ _Last updated: 2026-10-31 by Varun (Laptop 2)_
 - **Lane B (API + AI) is built and tested locally** (Laptop 2): see the Lane B section below.
 - **Lane C (frontend) is built and checked against the real API locally** (Laptop 2): see the Lane C section below.
 - Task 0 (deploy + hosting check) is not done.
+- **Landing (`/login`) is a scroll-driven 3D story** (2026-11-01, Varun): `frontend/src/components/landing/` holds the campus data, the GLSL, the R3F scene and the GSAP story (it reuses Velo's orb shaders). One story clock `story.t` (0–7) drives everything; the scene damps toward it every frame. The login card, demo tiles and sign-up are unchanged at the end (`#enter`, and the header's Log in jumps there). Reduced motion gives static sections with no 3D, and with no WebGL the 3D is replaced by a gradient backdrop.
 
 ## Engine API for Lane B (see PLAN.md Interfaces blocks)
 - `core.dataset`: `load_dataset(path|dict)`, `apply_changes(ds, change_file)` → raise `DatasetError` with a readable message for bad JSON, missing fields, wrong types or unknown faculty/room/session ids. Map it to HTTP 400.
