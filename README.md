@@ -1,329 +1,147 @@
-<div align="center">
+# Velora
 
-# 🗓️ Velora
+Campus scheduling for Chilika Institute of Technology: the weekly timetable, midsem exams, Spectra-week and regular-week venue bookings, and timetable repair after a disruption. A CP-SAT solver and a rule checker decide everything. The AI assistant, Velo, only reads requests, fills in forms and explains decisions.
 
-### Crunch Week — Chilika Institute of Technology
+**Live app: [velora-campus.vercel.app](https://velora-campus.vercel.app)** · password **`demo1234`** for every demo account
 
-**Timetable generation · Midsem exam scheduling · Spectra-week venue booking · Disruption handling**
+| | |
+| --- | --- |
+| [Demo accounts](#demo-accounts) | [Try it in five minutes](#try-it-in-five-minutes) |
+| [Architecture](#architecture) | [Project structure](#project-structure) |
+| [Tech stack](#tech-stack) | [Setup](#setup) |
+| [Exports and validator](#exports-and-validator) | [Known limitations](#known-limitations) |
 
-![Python](https://img.shields.io/badge/Python-3.12+-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.162-009688?style=for-the-badge&logo=fastapi&logoColor=white)
-![OR‑Tools](https://img.shields.io/badge/OR--Tools-CP--SAT-4285F4?style=for-the-badge&logo=google&logoColor=white)
-![Postgres](https://img.shields.io/badge/Postgres-Neon-336791?style=for-the-badge&logo=postgresql&logoColor=white)
-![Groq](https://img.shields.io/badge/Groq-gpt--oss--120b-F55036?style=for-the-badge)
-![Gemini](https://img.shields.io/badge/Gemini_3.5-Flash--Lite-8E75B2?style=for-the-badge&logo=google&logoColor=white)
+Declarations: [AI_USAGE.md](AI_USAGE.md) (models, prompts, coding tools) · [THIRD_PARTY.md](THIRD_PARTY.md) (libraries and borrowed code)
 
-**Live app: [velora-campus.vercel.app](https://velora-campus.vercel.app)** · demo password **`demo1234`** for every role ([accounts](#-accounts))
+## Demo accounts
 
-</div>
+Every account below uses the password `demo1234`, on the live app and locally. The login page's **Demo for judges** tiles log in with one click.
 
----
+| Role | Email | Can |
+| --- | --- | --- |
+| Admin (Dean's Office) | `admin@cit.demo` | Generate the timetable and exams, apply change files, approve changes, export, **Reset demo data** |
+| Department Coordinator | `<dept>.coord@cit.demo` for `cse`, `ece`, `ee`, `me`, `ce`, `ma`, `ph`, `hss` | Book rooms for department events, approve bookings of the department's labs |
+| Faculty | `f01@cit.demo` … `f40@cit.demo` | See their week, mark time they can't teach, ask for a class to move |
+| Club Representative | `robotics-club`, `coding-club`, `dramatics-society`, `music-club`, `e-cell` … `@cit.demo` (11 clubs, all on the login page) | Request venues in English or Hinglish, typed or spoken, and track the decision |
 
-## 📑 Table of Contents
+**Reset demo data** (Admin → Data and export, or `POST /api/admin/reset`) restores the starter dataset and clears every timetable, request and proposal. Accounts are kept.
 
-- [How It Works](#-how-it-works)
-- [Tech Stack](#-tech-stack)
-- [Getting Started](#-getting-started)
-- [Deploy to Vercel](#-deploy-to-vercel)
-- [Accounts](#-accounts)
-- [API Overview](#-api-overview)
-- [Rules Worth Knowing](#-rules-worth-knowing)
-- [Known Limitations](#-known-limitations)
-- [Repo Layout](#-repo-layout)
-- [Running the Validator](#-running-the-validator)
+## Try it in five minutes
 
----
+1. Log in as **Admin**. On **Overview**, press **Generate timetable** (about a minute). The dashboard then shows 0 hard violations, the soft penalty and room use.
+2. **Timetable**: switch between a student group, a faculty member and a room. Click any class to see why it sits there.
+3. **Find a room**: pick a day, a time and a size.
+4. **Changes**: drop in [`starter_pack/examples/sample_disruption.json`](starter_pack/examples/sample_disruption.json). Open the proposal to see the before/after diff, then press **Apply this change**.
+5. Log in as a **Club** and open Velo (bottom right). Try `Kal shaam 5 baje seminar hall chahiye 80 logon ke liye, Spectra week`. Velo drafts the booking, the rule checker decides it, and nothing is sent until you confirm.
 
-## ⚙️ How It Works
-
-> **The LLM talks, the solver decides, and every decision has a reason you can check.**
+## Architecture
 
 ```mermaid
 flowchart LR
-  subgraph Browser
-    UI[React SPA]
-  end
-  subgraph Backend[FastAPI app under /api]
-    API[routers<br/>auth · data · timetable · exams · bookings · changes · assistant · velo · export]
-    SVC[services<br/>state · bookings · proposals]
-    CORE[core<br/>dataset · checker · explain · export]
-    SOLV[solver<br/>timetable · exams · fest · repair · infeasibility<br/>OR-Tools CP-SAT]
-    LLM[llm<br/>parse_booking · parse_change · reword · Velo agent<br/>prompts/*.md + keyword fallback]
-  end
-  DB[(Postgres)]
-  GEM[Groq / Gemini APIs]
-  UI -- JSON + JWT --> API --> SVC
-  SVC --> SOLV --> CORE
-  SVC --> CORE
-  API --> LLM -- fields only --> SVC
-  LLM --> GEM
-  SVC --> DB
+  UI["React SPA<br/>(frontend/)"] -- "JSON + JWT, /api" --> R["FastAPI routers<br/>(backend/app/routers)"]
+  R --> S["Services<br/>bookings · proposals · state · Velo"]
+  S --> SV["CP-SAT solvers<br/>timetable · exams · Spectra week · repair"]
+  S --> C["Rule checker<br/>(mirrors starter_pack/validator.py)"]
+  SV --> C
+  S --> DB[("Postgres (Neon) in production<br/>SQLite locally")]
+  R --> L["LLM layer<br/>prompts + keyword fallback"]
+  L -. "form fields and tool calls only" .-> S
+  L --> AI["Groq · Gemini APIs"]
 ```
 
-### Key Design Principles
+- **Code decides, the LLM helps.** Every booking, move and repair goes through `backend/app/core/checker.py` and the solvers. LLM output has no status or approval field, and anything Velo prepares is a card the person confirms; the services then check it again.
+- **Works without AI.** If a key is missing, rate-limited or slow, keyword rules take over, and the manual booking form never calls an LLM.
+- **Priority order** for bookings: Exams > Classes > Institute events > Guest lectures > Department events > Club events. Ties go to the earlier request, and a role can't claim a higher category than its own.
+- **Changes need approval.** A disruption becomes a minimal-move proposal with a diff. The timetable changes only when the Admin applies it, after a fresh check.
+- **One booking at a time.** Bookings are decided in turn, so two people asking for the same room at once can't both get it.
 
-| Principle | Details |
-|-----------|---------|
-| **Checker is the single source of truth** | `core/checker.py` mirrors `starter_pack/validator.py` rule-for-rule (tests compare the two). Solver output, manual moves, AI drafts, and approvals all pass through it before anything is saved. |
-| **LLM is a helper, not the authority** | The LLM only fills in forms and rewords reasons — its output has no status or approval field. If it's down, slow, or returns junk, the assistant falls back to keyword rules and manual forms work unchanged. |
-| **Proposals, not surprises** | Disruptions (change files, faculty leave, requests) become **proposals**. The repair solver moves as few sessions as possible and shows the diff. Nothing changes until the Admin approves, and approval re-checks against the timetable active at that moment. |
+## Project structure
 
----
+```text
+backend/app/
+  core/        dataset loading, rule checker, explanations, schedule.json export
+  solver/      CP-SAT models: timetable, exams, Spectra week, minimal-move repair, infeasibility reasons
+  services/    application logic: bookings (and the booking queue), proposals, state, Velo and its tools
+  routers/     HTTP endpoints, one file per area
+  llm/         Gemini and Groq clients, parsers with keyword fallback, prompts/ (every prompt)
+  models.py    database tables      schemas.py  request and response shapes
+backend/tests/
+  engine/      solver and checker, compared with the official validator
+  api/         HTTP flows, roles, bookings, changes, Velo
+frontend/src/
+  pages/       one file per screen      components/  UI by area      api/  typed API client
+api/index.py   Vercel entry for the API          vercel.json  API + static build routing
+scripts/       make_exports.py (exports/ from a running app), eval_llm.py and eval_velo.py (assistant checks)
+starter_pack/  organisers' dataset, validator and examples (unchanged)
+exports/       schedule.json and schedule_after.json, produced by the app
+docs/          design notes and build plan
+```
 
-## 🧰 Tech Stack
+## Tech stack
 
-| Layer | Technologies |
-|-------|-------------|
-| **Backend** | Python 3.12+ · FastAPI · SQLAlchemy 2 · Pydantic 2 |
-| **Solver** | Google OR-Tools CP-SAT |
-| **Database** | Postgres (Neon) — or SQLite locally |
-| **Auth** | PyJWT + bcrypt |
-| **AI Assistant** | Groq `openai/gpt-oss-120b` for Velo's tool calling; Gemini 3.5 Flash-Lite for form filling, intent sorting and voice *(both optional)* |
-| **Frontend** | React 19 + Vite + TypeScript + Tailwind 4 · shadcn/ui-style components on Radix · TanStack Query · Motion |
+| Layer | Used |
+| --- | --- |
+| Backend | Python, FastAPI, SQLAlchemy, Pydantic, PyJWT, bcrypt |
+| Solver | Google OR-Tools CP-SAT |
+| Database | Postgres on Neon (production), SQLite (local) |
+| AI | Groq `openai/gpt-oss-120b` (Velo's tool calling), Google Gemini 3.5 Flash-Lite (form filling, intent sorting, voice) |
+| Frontend | React 19, TypeScript, Vite, Tailwind CSS 4, Radix UI, TanStack Query, Motion, GSAP, three.js |
+| Hosting | Vercel (Python function for `/api`, static build for the rest) |
 
-> 📄 Full list with licences → [THIRD_PARTY.md](THIRD_PARTY.md)  
-> 🎨 The visual design and its research → [frontend/DESIGN.md](frontend/DESIGN.md)
+Versions and licences are in [THIRD_PARTY.md](THIRD_PARTY.md).
 
----
+## Setup
 
-## 🚀 Getting Started
-
-### Prerequisites
-
-- **Python 3.12+**
-- **Node 20+** for the web frontend
-- *(Optional)* A Postgres database URL, a `GROQ_API_KEY` or a `GEMINI_API_KEY`
-
-### 1. Clone & set up the environment
+Needs Python 3.13 or 3.14 and Node 20.19+ (tested with Node 24). No API keys or database are needed to run locally.
 
 ```bash
-# Create a virtual environment
-python -m venv .venv
-
-# Install dependencies
+git clone https://github.com/me-adityaraj8/crunchweek-cit-scheduler.git
+cd crunchweek-cit-scheduler
+python3 -m venv .venv
 .venv/bin/pip install -r requirements-dev.txt        # Windows: .venv\Scripts\pip
+cp .env.example .env                                 # optional: every value has a local default
 ```
 
-### 2. Configure (optional)
-
-```bash
-cp .env.example .env       # every variable has a sensible local default
-```
-
-### 3. Start the server
+Run the API (terminal 1). It creates `local.db` (SQLite) and the demo accounts on first start.
 
 ```bash
 .venv/bin/python -m uvicorn backend.app.main:app --port 8000
 ```
 
-> 🌐 Open **http://localhost:8000/api/docs** for the interactive Swagger UI.  
-> Without a `DATABASE_URL`, the app uses a local SQLite file (`local.db`) and seeds demo data on first start.
-
-### 4. Start the web app
-
-In a second terminal:
+Run the web app (terminal 2), then open http://localhost:5173. It forwards `/api` to port 8000.
 
 ```bash
 cd frontend
 npm ci
-npm run dev          # http://localhost:5173, proxies /api to :8000
+npm run dev
 ```
 
-> 🔐 Create an account, or use a demo tile under "Demo for judges".  
-> To proxy to another API port, put `API_PROXY=http://localhost:8100` in `frontend/.env.local`. If the deployed `DEMO_PASSWORD` isn't `demo1234`, build with `VITE_DEMO_PASSWORD` set so the one-click buttons work.
+API docs (Swagger) are at http://localhost:8000/api/docs.
 
-### 5. Run the tests
+**Environment.** Every variable is listed with a comment in [`.env.example`](.env.example). For local runs all of them can stay empty. A deployed app needs `DATABASE_URL` and `JWT_SECRET`, and refuses to start without `JWT_SECRET`. `GROQ_API_KEY` and `GEMINI_API_KEY` turn on the AI features.
+
+**Tests.** The solver tests use time limits, so run one suite at a time.
 
 ```bash
-# API tests (~3 min)
 .venv/bin/python -m pytest backend/tests/api -q
-
-# Engine tests (~7 min)
 .venv/bin/python -m pytest backend/tests/engine -q -m "not slow"
-
-# Frontend unit tests, type check, production build
 cd frontend && npm test && npm run build
 ```
 
-### 6. Export & validate
+## Exports and validator
 
-Produce the two export files from a running app (local or deployed) and check them with the official validator:
+`exports/schedule.json` (the public dataset) and `exports/schedule_after.json` (after `sample_disruption.json`) were produced by the app. To produce them again from a running API, and to check them with the official validator:
 
 ```bash
 .venv/bin/python scripts/make_exports.py --base-url http://localhost:8000
+python3 starter_pack/validator.py --data starter_pack/data/cit_public.json --schedule exports/schedule.json
+python3 starter_pack/validator.py --data starter_pack/data/cit_public.json --schedule exports/schedule_after.json \
+  --disruption starter_pack/examples/sample_disruption.json --baseline exports/schedule.json
 ```
 
-### 7. Evaluate the AI assistant
+## Known limitations
 
-Score the booking/change assistant on tricky requests (uses Gemini if `GEMINI_API_KEY` is set, otherwise the keyword fallback):
-
-```bash
-.venv/bin/python scripts/eval_llm.py
-```
-
-### Deploying to a PaaS
-
-On Railway, Render, or Fly, the included `Procfile` starts the API with:
-
-```
-uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
-```
-
----
-
-## 🚢 Deploy to Vercel
-
-`vercel.json` deploys two services from this repo: the API as a Python function (FastAPI, up to 300 s per request) under `/api`, and a static build of `frontend/` (`npm run build`, output `frontend/dist`) for every other path, falling back to `index.html` so deep links like `/timetable?view=room&id=AUD` work on reload.
-
-1. **Create the project.** Either import the GitHub repo at vercel.com (Add New → Project; framework preset "Other"; leave the build settings alone), or deploy from a laptop with the CLI: `npm i -g vercel`, `vercel login`, `vercel link`.
-2. **Add a database.** In the project's Storage tab, connect Neon (Postgres). It sets `DATABASE_URL`. Without it the app still starts, on a throwaway SQLite file, and `/api/health` says so. That's fine for a first check, not for judges.
-3. **Set the environment variables** (Settings → Environment Variables, or `vercel env add NAME`):
-   - `JWT_SECRET`: required. A deployed app refuses to start without 32+ random characters. Generate one with `python -c "import secrets; print(secrets.token_urlsafe(48))"`.
-   - `DEMO_PASSWORD`: the password for every demo account. List it in the Demo accounts table below.
-   - `GROQ_API_KEY` and `GEMINI_API_KEY`: optional. Velo's agent uses Groq (`LLM_PROVIDER`), form filling and voice use Gemini. Without them the assistant uses keyword rules.
-   - `SOLVER_TIME_LIMIT_S` (default 60) and `SOLVER_WORKERS` (default 8). Lower the workers if the function has few CPUs.
-4. **Deploy** (the Deploy button, or `vercel deploy --prod`). Then open `https://<project>.vercel.app/api/health`: `ok` should be true, `db` should be `ok` (not "temporary"), and `llm` should be `configured`. `/api/docs` has an Authorize button: paste the token from `POST /api/auth/login`.
-5. **Measure the solver on Vercel's CPUs**, from any machine with this repo:
-   ```bash
-   python scripts/make_exports.py --base-url https://<project>.vercel.app --password <DEMO_PASSWORD> --out /tmp/vercel-check
-   ```
-   It prints the solve time and soft penalty, then runs the official validator on both files. A soft penalty well above 3, or a timeout, means too little CPU: raise `SOLVER_TIME_LIMIT_S` (at most about 280) or move the backend.
-
-If the deploy fails on function size, or the solver is too slow, move the backend to Railway or Render (the `Procfile` covers it). Keep the frontend on Vercel, and change the `/api/(.*)` rewrite in `vercel.json` to `https://<backend-host>/api/$1`.
-
----
-
-## 👥 Accounts
-
-### Your own account
-
-Anyone can **sign up** on the login page (*Create account*) with an email and a password of at least 8 characters, as a **club representative** or a **faculty member**. Faculty pick which faculty member they are, and each faculty member can have one own account. You're logged in straight away; the key button next to your name changes your password.
-
-Coordinator and Admin are the roles that approve requests, so nobody can sign up as one. An Admin gives those roles under **Settings → People**, which lists every account; a change applies from the person's next click.
-
-### Demo accounts (for judges)
-
-Every demo account uses the password **`demo1234`**, on the live app and locally (it's set by `DEMO_PASSWORD`). It's shared, so the app won't change it.  
-The Admin's **"Reset Demo Data"** (`POST /api/admin/reset`) restores the starter dataset and removes every timetable, request, and proposal, people's own included. Every account stays.
-
-The login page's **Demo for judges** section has one tile per role. Coordinator, Faculty and Club each have a dropdown, since the accounts come from the loaded dataset: one coordinator per department, one account per faculty member, one per club that makes venue requests.
-
-| Role | Accounts (examples) | What to try |
-|------|---------------------|-------------|
-| 🔑 **Admin** (Dean's office) | `admin@cit.demo` | Generate timetable & exams, decide Spectra week, upload change files, approve proposals, export, reset |
-| 🏫 **Dept. Coordinator** | `cse.coord@cit.demo`, `ece.coord@cit.demo`, … (8 departments: `<dept>.coord@cit.demo`) | Book rooms for department events, approve your department's lab bookings, move your department's sessions. Two coordinators show that nobody approves their own request |
-| 👨‍🏫 **Faculty** | `f01@cit.demo` … `f40@cit.demo` (faculty id) | Own timetable, mark unavailability, ask the assistant to move a class |
-| 🎭 **Club Rep** | `robotics-club@cit.demo`, `dramatics-society@cit.demo`, … (11 clubs) | Submit venue requests by typing or speaking, in English or Hinglish; cancel them; see status & reason |
-
----
-
-## 🔌 API Overview
-
-All routes live under `/api` and require `Authorization: Bearer <token>` except login, sign-up (and its faculty list), the demo-account list, and health.  
-Errors always return: `{"error": {"code", "message", "details"}}`.
-
-<details>
-<summary><strong>📋 Click to expand full route table</strong></summary>
-
-| Area | Routes |
-|------|--------|
-| **Auth** | `POST /auth/login` · `POST /auth/signup` · `GET /auth/signup-options` · `GET /me` · `POST /auth/password` · `GET /auth/demo-accounts` · `GET /users` *(Admin)* · `PUT /users/{id}` *(Admin: give a role)* |
-| **Data** | `POST /data/dataset` *(Admin; JSON file)* · `GET /data/summary` · `GET/PUT /settings` *(priority order, lab owners)* · `POST /admin/reset` |
-| **Timetable** | `POST /timetable/generate` · `GET /timetable?view=group\|faculty\|room\|all&id=&week=regular\|spectra` · `POST /timetable/check-move` · `POST /timetable/manual` · `GET /explain/session/{id}` |
-| **Views** | `GET /dashboard` · `GET /rooms/free?day&from&to&capacity&needs&types&week` |
-| **Exams** | `POST /exams/generate` · `GET /exams` |
-| **Spectra Week** | `POST /bookings/check` · `POST /bookings` · `GET /bookings?mine=1` · `POST /bookings/{id}/cancel` · `POST /bookings/{id}/decide` · `POST /fest/decide-all` · `GET /fest` · `GET /explain/booking/{id}` |
-| **Changes** | `POST /changes/file` · `POST /changes` · `POST /faculty/unavailability` · `GET /changes` · `GET /changes/{id}` · `POST /changes/{id}/approve` · `POST /changes/{id}/reject` |
-| **Assistant** | `POST /assistant/booking` · `POST /assistant/change` · `POST /velo` (Velo) · `POST /velo/actions/{id}/confirm` · `POST /velo/actions/{id}/discard` |
-| **Export** | `GET /export/schedule.json?after=0\|1` |
-| **Health** | `GET /health?deep=1` |
-
-</details>
-
----
-
-## 📏 Rules Worth Knowing
-
-### Priority Order
-
-> **Exams > Classes > Institute Events > Guest Lectures > Department Events > Club Events**
-
-Ties go to the earlier submission. A role can't claim more than its cap (e.g. a club asking for "institute event" is treated as a club event, and the reason says so). The Admin can reorder the list in settings.
-
-### Approval Flow
-
-- **Code decides every booking** — a booking of a department's lab waits for that coordinator; if the coordinator made it, it waits for the Admin.
-- **Timetable changes** wait for the Admin.
-- **Nobody approves their own request.**
-- **Bookings are decided one at a time.** When two people ask for the same room at once, from any device, the second waits for the first to be decided, so they can't both get it.
-- The Admin's own change files and manual moves are shown as proposals — the Admin applies them after reviewing the diff.
-
-### App Bookings & Classes
-
-App bookings **never** move classes. Only the dataset's approved institute events may displace a class, and then only for Week 7 (`session_overrides`).
-
----
-
-## ⚠️ Known Limitations
-
-| Limitation | Details |
-|-----------|---------|
-| **Auth** | No email check and no "forgot password" email (there's no mail service), and no login rate limit. Own and demo accounts share one campus, so "Reset Demo Data" also clears requests made from own accounts. |
-| **Long solves** | Solves run inside the request (no job queue); the solver time limit is set by `SOLVER_TIME_LIMIT_S`. |
-| **CPU-dependent quality** | Solution quality depends on CPU cores. With one core the timetable is valid but less optimised in the same time. |
-| **AI fallback** | Without `GROQ_API_KEY` and `GEMINI_API_KEY`, the assistant uses keyword rules — fine for plain requests, weaker on vague or conditional ones. |
-
----
-
-## 📁 Repo Layout
-
-```
-📦 crunchweek-cit-scheduler
-├── 🔧 backend/
-│   ├── app/
-│   │   ├── core/          # Dataset loading, checker (mirrors validator), explanations, export
-│   │   ├── solver/        # CP-SAT timetable, exams, Spectra-week, repair, infeasibility
-│   │   ├── services/      # State, accounts, bookings, proposals — what the routers call
-│   │   ├── routers/       # HTTP endpoints
-│   │   └── llm/           # Gemini and Groq clients, prompts/, parsers with keyword fallback
-│   └── tests/
-│       ├── engine/        # Solver + checker vs validator
-│       └── api/           # HTTP flow tests
-├── 🌐 api/
-│   └── index.py           # Vercel function entry; vercel.json routes /api/* to it
-├── 🎨 frontend/           # React SPA: src/pages (one per screen), src/components (board, timetable,
-│                          #   booking, changes, ui), src/api (typed client); DESIGN.md is the design system
-├── 📜 scripts/
-│   └── make_exports.py    # Drives the app's API to produce exports/
-├── 📦 starter_pack/       # Organisers' starter pack: dataset, validator, examples (never edited)
-├── 📤 exports/            # schedule.json and schedule_after.json produced by the app
-└── 📖 docs/               # DESIGN.md (product + system design), PLAN.md (build plan)
-```
-
----
-
-## ✅ Running the Validator
-
-Validate the generated schedules against the official starter-pack validator:
-
-```bash
-# Validate the base schedule
-python starter_pack/validator.py \
-  --data starter_pack/data/cit_public.json \
-  --schedule exports/schedule.json
-
-# Validate the post-disruption schedule
-python starter_pack/validator.py \
-  --data starter_pack/data/cit_public.json \
-  --schedule exports/schedule_after.json \
-  --disruption starter_pack/examples/sample_disruption.json \
-  --baseline exports/schedule.json
-```
-
----
-
-<div align="center">
-
-**Built for the CIT Crunch Week Hackathon** 🏗️
-
-</div>
+- **AI depends on outside APIs.** On Groq's free tier the daily token limit can run out. Velo then answers with its keyword rules, which handle plain requests but are weaker on vague or conditional ones.
+- **Solves run inside the request.** There is no background job queue; a solve is bounded by `SOLVER_TIME_LIMIT_S`. With fewer CPU cores the timetable stays valid but may be less optimised in the same time.
+- **Accounts.** No email verification, password-reset email or login rate limit. Reset demo data also clears requests made from self-created accounts.
+- **Booking queue.** Tested with simultaneous requests on SQLite. On Postgres it uses a transaction-level advisory lock, which hasn't been load-tested.

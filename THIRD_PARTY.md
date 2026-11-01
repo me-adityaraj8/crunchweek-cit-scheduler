@@ -40,4 +40,21 @@
 | TypeScript | 5.9.3 | Apache-2.0 | Types (dev only) |
 | openapi-typescript | 7.13.0 | MIT | API types generated from `/api/openapi.json` (dev only) |
 | Vitest, Testing Library (react, dom), jsdom | 3.2.7, 16.3.3, 10.4.2, 26.1.0 | MIT | Frontend tests (dev only) |
-| @types/three | 0.186.0 | MIT | Types for three.js (dev only) |
+| @types/three, @types/node, @types/react, @types/react-dom | 0.186.0, 22.20.5, 19.2.18, 19.2.7 | MIT | Type definitions (dev only) |
+
+## Code and patterns from other sources
+
+| Source | Licence | Where | What |
+| --- | --- | --- | --- |
+| Ashima Arts / Stefan Gustavson, 3D simplex noise (GLSL) | MIT | `frontend/src/components/velo/live/shaders.ts` | The noise function that shapes Velo's orb, included as published |
+| Skiper UI components | — | `frontend/src/components/ui/cursor.tsx`, `frontend/src/lib/hooks.ts` (`useLoop`), the demo tiles in `frontend/src/pages/Login.tsx` | Interaction patterns followed: a spring cursor follower, a looping counter, and a card that expands in place |
+| shadcn/ui | MIT | `frontend/src/components/ui/` | Component structure (Radix primitives + class-variance-authority) |
+
+## Data, tools and services
+
+| Item | Used for |
+| --- | --- |
+| CrunchWeek starter pack (`starter_pack/`), provided by the organisers | Dataset, official `validator.py`, examples. Unchanged |
+| Vercel | Hosting (Python function for the API, static frontend) |
+| Neon | Hosted Postgres |
+| Groq API, Google Gemini API | LLM calls, declared in [AI_USAGE.md](AI_USAGE.md) |
