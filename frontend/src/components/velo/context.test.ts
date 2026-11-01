@@ -37,5 +37,6 @@ describe("starters and labels", () => {
   it("turns a room card into a sentence the parser reads", () => {
     expect(bookText("SH-1", "Friday", "16:00", "18:00", 80)).toBe("Book SH-1 on Friday from 16:00 to 18:00 for 80 people");
     expect(bookText("LH-2", "Tuesday", "10:00", "12:00")).toBe("Book LH-2 on Tuesday from 10:00 to 12:00");
+    expect(bookText("SH-1", "Friday", "16:00", "18:00", 80, "spectra")).toBe("Book SH-1 on Friday from 16:00 to 18:00 for 80 people for Spectra week");
   });
 });

@@ -151,11 +151,30 @@ def test_navigation_respects_the_role(client, heads, gen, model):
 
 # ---------------------------------------------------------------- actions run once, only on confirm
 def _book(client, heads, model, who="club"):
-    model(call("create_booking_draft", title="Robo demo", day="THU", from_period=10, to_period=11, attendance=40),
-          say("Ready to send."))
+    model(call("create_booking_draft", title="Robo demo", day="THU", from_period=10, to_period=11, attendance=40,
+               week="spectra"), say("Ready to send."))
     out = ask(client, heads, who, "book a room thursday 6 to 8 pm for 40 people for our robo demo")
     action = next(c for c in out["cards"] if c["kind"] == "action")
     return out, action["data"]
+
+
+def test_a_booking_without_a_week_asks_for_it(client, heads, gen, model):
+    s = model(call("create_booking_draft", title="Robo demo", day="THU", from_period=10, to_period=11, attendance=40),
+              say("Is this for Spectra week or a regular week?"))
+    out = ask(client, heads, "club", "book a room thursday 6 to 8 pm for 40 people for our robo demo")
+    assert s.results()[0]["week_needed"] is True
+    assert not any(c["kind"] in ("action", "preview") for c in out["cards"])
+
+
+def test_a_regular_week_booking_shows_free_rooms(client, heads, gen, model):
+    s = model(call("create_booking_draft", title="Club meet", day="TUE", from_period=6, to_period=6, attendance=50,
+                   week="regular"), say("Bookings are for Spectra week; these rooms are free."))
+    out = ask(client, heads, "club", "book a room tuesday 2 pm for 50 people, regular week")
+    res = s.results()[0]
+    assert res["bookable"] is False and "Spectra" in res["note"]
+    rooms = next(c for c in out["cards"] if c["kind"] == "rooms")["data"]
+    assert rooms["week"] == "regular" and rooms["people"] == 50 and rooms["bookable"] is False
+    assert not any(c["kind"] == "action" for c in out["cards"])
 
 
 def test_booking_needs_confirm_and_runs_once(client, heads, gen, model):

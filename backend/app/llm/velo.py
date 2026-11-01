@@ -83,7 +83,7 @@ def rules(text: str, focus: dict | None, booking_open: bool) -> str | None:
     if _has(_BOOK, t):
         return "book_venue"
     if booking_open and _has(r"\d|\b(hour|ghant|people|log|students|tomorrow|kal|today|aaj|morning|evening|shaam|"
-                             r"mon|tue|wed|thu|fri|yes|no|any time|hall|room|projector|mic|stage)", t):
+                             r"mon|tue|wed|thu|fri|yes|no|any time|hall|room|projector|mic|stage|spectra|regular|week)", t):
         return "book_venue"
     return None
 

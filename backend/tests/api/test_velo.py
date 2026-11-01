@@ -47,6 +47,8 @@ def test_keyword_routes(text, intent):
 
 def test_short_answers_continue_a_booking():
     assert route.rules("120 people", None, booking_open=True) == "book_venue"
+    assert route.rules("Spectra week", None, booking_open=True) == "book_venue"
+    assert route.rules("Regular week", None, booking_open=True) == "book_venue"
     assert route.rules("2 ghante", None, booking_open=True) == "book_venue"
     assert route.rules("120 people", None, booking_open=False) is None
 
@@ -101,8 +103,13 @@ def test_booking_by_conversation_then_preview_saves_nothing(client, heads, gen):
     assert first["intent"] == "book_venue" and kinds(first) == ["draft"]
     assert "how many" in first["reply"].lower() and first["draft_text"]
     second = ask(client, heads, "club", "80 people", draft_text=first["draft_text"], last_intent="book_venue")
-    assert second["intent"] == "book_venue" and kinds(second) == ["preview"]
-    prev = second["cards"][0]["data"]
+    assert second["intent"] == "book_venue" and kinds(second) == ["draft"]
+    assert "spectra week" in second["reply"].lower() and "regular week" in second["reply"].lower()
+    assert {"Spectra week", "Regular week"} <= set(second["suggestions"])
+    third = ask(client, heads, "club", "Spectra week", draft_text=second["draft_text"], last_intent="book_venue")
+    assert third["intent"] == "book_venue" and kinds(third) == ["preview"]
+    assert any(c["label"] == "Spectra week" for c in third["understood"])
+    prev = third["cards"][0]["data"]
     assert prev["draft"]["attendance"] == 80 and prev["draft"]["windows"][0]["day"] == "FRI"
     assert prev["check"]["valid"] is True
     after = client.get("/api/bookings", params={"mine": True}, headers=heads["club"]).json()
@@ -110,6 +117,33 @@ def test_booking_by_conversation_then_preview_saves_nothing(client, heads, gen):
     # the browser sends the confirmed draft to the usual endpoint, which decides
     sent = client.post("/api/bookings", json=prev["draft"], headers=heads["club"])
     assert sent.status_code == 200, sent.text
+
+
+def test_saying_the_week_up_front_skips_the_question(client, heads, gen):
+    out = ask(client, heads, "club", "book a seminar hall for spectra friday 4 to 6 pm for 80 people for a robotics talk")
+    assert kinds(out) == ["preview"] and "which week" not in out["reply"].lower()
+
+
+def test_a_long_request_is_not_taken_as_the_event_name(client, heads, gen):
+    first = ask(client, heads, "club", "tue ke liye lecture hall 5-6 book krdo , 50 bando ke liye")
+    second = ask(client, heads, "club", "50 people", draft_text=first["draft_text"], last_intent="book_venue")
+    assert second["cards"][0]["data"]["draft"]["title"] == "Venue request"
+
+
+def test_a_regular_week_booking_shows_free_rooms_instead(client, heads, gen):
+    before = client.get("/api/bookings", params={"mine": True}, headers=heads["club"]).json()
+    first = ask(client, heads, "club", "book a classroom tuesday 2 to 3 pm for 50 people for a club meet")
+    assert kinds(first) == ["draft"] and "which week" in first["reply"].lower()
+    out = ask(client, heads, "club", "Regular week", draft_text=first["draft_text"], last_intent="book_venue")
+    assert out["intent"] == "book_venue" and kinds(out) == ["rooms"]
+    rooms = out["cards"][0]["data"]
+    assert rooms["week"] == "regular" and rooms["day"] == "TUE" and rooms["people"] == 50 and rooms["bookable"] is False
+    assert "spectra week" in out["reply"].lower() and "Make it a Spectra week request" in out["suggestions"]
+    assert any(c["label"] == "Regular week" for c in out["understood"])
+    back = ask(client, heads, "club", "Make it a Spectra week request", draft_text=out["draft_text"], last_intent="book_venue")
+    assert kinds(back) == ["preview"]       # the last week said wins
+    after = client.get("/api/bookings", params={"mine": True}, headers=heads["club"]).json()
+    assert len(after) == len(before)
 
 
 def test_status_and_cancel_preview(client, heads, gen):

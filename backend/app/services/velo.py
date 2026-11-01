@@ -122,6 +122,40 @@ def _draft_chips(ds: Dataset, d: dict, guessed: set[str]) -> list[dict]:
     return chips
 
 
+_SPECTRA = r"spectra|\bfest\b|week ?7"
+_REGULAR = r"regular|normal week|usual week|this week|next week|every week|weekly"
+
+
+def _week(text: str) -> str | None:
+    """The week the person last named: "spectra", "regular", or None when they haven't said."""
+    t = text.lower()
+    last = {w: max((m.end() for m in re.finditer(pat, t)), default=-1) for w, pat in (("spectra", _SPECTRA), ("regular", _REGULAR))}
+    best = max(last, key=last.get)
+    return best if last[best] >= 0 else None
+
+
+def _regular_week(t: Turn, ds: Dataset, d: dict, guessed: set[str], chips: list[dict], text: str, llm: str) -> dict:
+    """Venue requests exist only for Spectra week; for a regular week, show what is free then instead."""
+    w = d["windows"][0]
+    a = w["from_period"]
+    b = min(w["to_period"], a + (d.get("duration_periods") or w["to_period"] - a + 1) - 1)
+    types = [] if "room_types" in guessed else d["room_types"] or []
+    rooms = rooms_free(day=w["day"], from_period=a, to_period=b, capacity=d["attendance"] or 1,
+                       needs=",".join(d["needs"]), types=",".join(types), week="regular", db=t.db, _=t.user)
+    slot = when(ds, w["day"], a, b)
+    reply = ("Venue requests can only be sent for Spectra week (Week 7), so a regular week can't be booked here. "
+             + (f"{len(rooms)} {'room is' if len(rooms) == 1 else 'rooms are'} free {slot} in the normal timetable"
+                + (f" for {d['attendance']} people" if d["attendance"] else "") + "." if rooms else
+                f"No room is free {slot} in the normal timetable with what you asked for."))
+    want = d.get("requested_room")
+    if want:
+        reply += f" {want} is free then." if any(r["id"] == want for r in rooms) else f" {want} is not free then."
+    return {"reply": reply, "understood": chips, "draft_text": text, "_llm": llm,
+            "cards": [card("rooms", day=w["day"], start=a, end=b, when=slot, people=d["attendance"], needs=d["needs"],
+                           week="regular", total=len(rooms), rooms=rooms[:6], bookable=False)],
+            "suggestions": ["Make it a Spectra week request"]}
+
+
 def book_venue(t: Turn) -> dict:
     row, ds = state.active_dataset(t.db)
     carry = t.body.last_intent == "book_venue" and t.body.draft_text and not re.search(
@@ -130,7 +164,7 @@ def book_venue(t: Turn) -> dict:
     p = parse_booking(ds, text, t.user.role, t.body.today)
     d, guessed = p["draft"], set(p["guessed_fields"])
     if (re.match(r"\s*(book|reserve|need|free|find|i want)\b", d["title"], re.I) or len(d["title"]) > 80
-            or p["llm"] != "ok" and d["title"].strip().lower() in text.lower()):
+            or p["llm"] != "ok" and d["title"].rstrip("…").strip().lower() in re.sub(r"\s+", " ", text).lower()):
         d["title"] = "Venue request"          # the keyword parser keeps the whole sentence; that is not a title
     chips = _draft_chips(ds, d, guessed)
     if p["follow_up"]:
@@ -138,6 +172,16 @@ def book_venue(t: Turn) -> dict:
         return {"reply": p["follow_up"], "understood": chips, "draft_text": text, "_llm": p["llm"],
                 "cards": [card("draft", draft=d, guessed=sorted(guessed), notes=p["notes"], question=p["follow_up"])],
                 "suggestions": hints}
+    week = _week(text)
+    if week is None:
+        return {"reply": "Which week is this for: Spectra week (Week 7) or a regular week? Venue requests can only be sent for "
+                         "Spectra week; for a regular week I can show which rooms are free.",
+                "understood": chips, "draft_text": text, "_llm": p["llm"],
+                "cards": [card("draft", draft=d, guessed=sorted(guessed), notes=p["notes"], question="Which week?")],
+                "suggestions": ["Spectra week", "Regular week"]}
+    chips.append(chip("Spectra week" if week == "spectra" else "Regular week"))
+    if week == "regular":
+        return _regular_week(t, ds, d, guessed, chips, text, p["llm"])
     v = state.require_version(t.db, row)
     full = {**d, "attendance": d["attendance"], "room_types": d["room_types"] or []}
     if not full["room_types"]:

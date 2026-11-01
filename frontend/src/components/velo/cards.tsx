@@ -153,7 +153,10 @@ function RoomsCard({ d }: { d: Data }) {
   const from = periodLabel(d.start, summary?.periods);
   const to = periodEnd(d.end, summary?.periods);
   return (
-    <Shell eyebrow={`Free ${d.when}`} aside={<span className="text-[12px] font-bold text-ink-3">{d.total} found</span>}>
+    <Shell
+      eyebrow={`Free ${d.when}${d.week === "spectra" ? " · Spectra week" : d.week === "regular" ? " · Regular week" : ""}`}
+      aside={<span className="text-[12px] font-bold text-ink-3">{d.total} found</span>}
+    >
       {rooms.length === 0 ? (
         <p className="px-3 py-3 text-[13px] text-ink-2">Nothing fits that slot.</p>
       ) : (
@@ -170,9 +173,11 @@ function RoomsCard({ d }: { d: Data }) {
                   {roomTypeLabel(r.type)} · {r.capacity} seats{r.features.length ? ` · ${r.features.map(featureLabel).join(", ")}` : ""}
                 </p>
               </div>
-              <Button size="sm" variant="outline" className="hover:bg-signal" aria-label={`Book ${r.name}`} onClick={() => send(bookText(r.id, dayName(d.day), from, to, d.people))}>
-                Book
-              </Button>
+              {d.bookable !== false && (
+                <Button size="sm" variant="outline" className="hover:bg-signal" aria-label={`Book ${r.name}`} onClick={() => send(bookText(r.id, dayName(d.day), from, to, d.people, d.week))}>
+                  Book
+                </Button>
+              )}
             </li>
           ))}
         </ul>
