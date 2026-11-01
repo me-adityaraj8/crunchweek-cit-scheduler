@@ -134,28 +134,6 @@ def _week(text: str) -> str | None:
     return best if last[best] >= 0 else None
 
 
-def _regular_week(t: Turn, ds: Dataset, d: dict, guessed: set[str], chips: list[dict], text: str, llm: str) -> dict:
-    """Venue requests exist only for Spectra week; for a regular week, show what is free then instead."""
-    w = d["windows"][0]
-    a = w["from_period"]
-    b = min(w["to_period"], a + (d.get("duration_periods") or w["to_period"] - a + 1) - 1)
-    types = [] if "room_types" in guessed else d["room_types"] or []
-    rooms = rooms_free(day=w["day"], from_period=a, to_period=b, capacity=d["attendance"] or 1,
-                       needs=",".join(d["needs"]), types=",".join(types), week="regular", db=t.db, _=t.user)
-    slot = when(ds, w["day"], a, b)
-    reply = ("Venue requests can only be sent for Spectra week (Week 7), so a regular week can't be booked here. "
-             + (f"{len(rooms)} {'room is' if len(rooms) == 1 else 'rooms are'} free {slot} in the normal timetable"
-                + (f" for {d['attendance']} people" if d["attendance"] else "") + "." if rooms else
-                f"No room is free {slot} in the normal timetable with what you asked for."))
-    want = d.get("requested_room")
-    if want:
-        reply += f" {want} is free then." if any(r["id"] == want for r in rooms) else f" {want} is not free then."
-    return {"reply": reply, "understood": chips, "draft_text": text, "_llm": llm,
-            "cards": [card("rooms", day=w["day"], start=a, end=b, when=slot, people=d["attendance"], needs=d["needs"],
-                           week="regular", total=len(rooms), rooms=rooms[:6], bookable=False)],
-            "suggestions": ["Make it a Spectra week request"]}
-
-
 def book_venue(t: Turn) -> dict:
     row, ds = state.active_dataset(t.db)
     carry = t.body.last_intent == "book_venue" and t.body.draft_text and not re.search(
@@ -174,16 +152,13 @@ def book_venue(t: Turn) -> dict:
                 "suggestions": hints}
     week = _week(text)
     if week is None:
-        return {"reply": "Which week is this for: Spectra week (Week 7) or a regular week? Venue requests can only be sent for "
-                         "Spectra week; for a regular week I can show which rooms are free.",
+        return {"reply": "Which week is this for: Spectra week (Week 7) or a regular week?",
                 "understood": chips, "draft_text": text, "_llm": p["llm"],
                 "cards": [card("draft", draft=d, guessed=sorted(guessed), notes=p["notes"], question="Which week?")],
                 "suggestions": ["Spectra week", "Regular week"]}
     chips.append(chip("Spectra week" if week == "spectra" else "Regular week"))
-    if week == "regular":
-        return _regular_week(t, ds, d, guessed, chips, text, p["llm"])
     v = state.require_version(t.db, row)
-    full = {**d, "attendance": d["attendance"], "room_types": d["room_types"] or []}
+    full = {**d, "attendance": d["attendance"], "room_types": d["room_types"] or [], "week": week}
     if not full["room_types"]:
         return {"reply": "No bookable room fits that many people with those needs. Try fewer people or fewer needs.",
                 "understood": chips, "draft_text": text, "_llm": p["llm"],

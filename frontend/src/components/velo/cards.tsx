@@ -195,6 +195,7 @@ function DraftRows({ draft, guessed, question }: { draft: Data; guessed: string[
   const w = (draft.windows ?? [])[0];
   const rows: [string, string | null, string][] = [
     ["Event", draft.title && draft.title !== "Venue request" ? draft.title : null, "title"],
+    ["Week", draft.week === "regular" ? "Regular week" : draft.week === "spectra" ? "Spectra week" : null, "week"],
     ["When", w ? `${dayName(w.day)} ${periodLabel(w.from_period, summary?.periods)}–${periodEnd(w.to_period, summary?.periods)}` : null, "windows"],
     ["People", draft.attendance ? String(draft.attendance) : null, "attendance"],
     ["Length", draft.duration_periods ? `${draft.duration_periods} hour${draft.duration_periods > 1 ? "s" : ""}` : null, "duration_periods"],

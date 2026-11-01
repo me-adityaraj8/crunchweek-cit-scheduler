@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { errorMessage } from "@/api/client";
 import { checkBooking, useSubmitBooking } from "@/api/hooks";
 import type { BookingCheck, Decision, Summary, Window } from "@/api/types";
-import { ChipToggle } from "@/components/ui/controls";
+import { ChipToggle, Segmented } from "@/components/ui/controls";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { Select } from "@/components/ui/select";
@@ -14,7 +14,7 @@ import { CATEGORY, featureLabel, roomTypeLabel } from "@/lib/format";
 import { useDebounced } from "@/lib/hooks";
 import { dayShort, periodLabel } from "@/lib/time";
 import { cn } from "@/lib/utils";
-import { missing, toDraft, type Category, type FormState } from "./draft";
+import { missing, toDraft, type BookingWeek, type Category, type FormState } from "./draft";
 import { Ticket } from "./Ticket";
 
 const ROLE_CAP: Record<string, Category> = {
@@ -145,6 +145,18 @@ export function BookingForm({
         </div>
         <Field label="Event title" htmlFor="b-title" guessed={guessed.has("title")}>
           <Input id="b-title" value={form.title} maxLength={200} onChange={(e) => up({ title: e.target.value })} placeholder="e.g. Robotics workshop" />
+        </Field>
+        <Field label="Week" hint={form.week === "spectra" ? "Spectra week (Week 7), alongside the fest." : "An ordinary teaching week. Classes always keep their rooms."}>
+          <Segmented
+            aria-label="Week"
+            size="sm"
+            value={form.week}
+            onChange={(v: BookingWeek) => up({ week: v })}
+            items={[
+              { value: "spectra", label: "Spectra week" },
+              { value: "regular", label: "Regular week" },
+            ]}
+          />
         </Field>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="People" htmlFor="b-att" guessed={guessed.has("attendance")}>

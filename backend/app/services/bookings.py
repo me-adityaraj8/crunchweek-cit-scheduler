@@ -64,7 +64,7 @@ def as_request(d: dict, user: User, rid: str, submitted_at: str, series_id: str 
             "windows": [dict(w) for w in d["windows"]], "room_types": list(d["room_types"]),
             "needs": list(d["needs"]), "requested_room": d.get("requested_room") or None,
             "mandatory_for_groups": list(d["mandatory_for_groups"]), "series_id": series_id,
-            "raw_text": d.get("raw_text")}
+            "raw_text": d.get("raw_text"), "week": d.get("week") or "spectra"}
 
 
 # ---------------------------------------------------------------- the booking queue
@@ -128,8 +128,29 @@ def live_requests(db: Session) -> list[BookingRequest]:
     return list(db.scalars(select(BookingRequest).order_by(BookingRequest.id)))
 
 
-def extras(db: Session) -> list[dict]:
-    return [b.data for b in live_requests(db) if b.status not in CLOSED]
+def extras(db: Session, week: str = "spectra") -> list[dict]:
+    """Open app requests for one week: Spectra week (decided with the dataset's requests) or a regular week."""
+    return [b.data for b in live_requests(db) if b.status not in CLOSED and b.data.get("week", "spectra") == week]
+
+
+def _regular(ds: Dataset) -> Dataset:
+    """The dataset without its Spectra requests: a regular week has only the app's own requests."""
+    return dataclasses.replace(ds, requests={})
+
+
+def decide_regular(db: Session, ds: Dataset, version: TimetableVersion) -> FestResult:
+    """Decide regular-week requests by the same priority order, against the normal timetable. App
+    requests never move a class, so classes always keep their rooms."""
+    assign = state.to_assign(version.assignments)
+    extra = extras(db, "regular")
+    res = decide_fest(_regular(ds), assign, extra_requests=extra, time_limit_s=10)
+    viol = check_fest(_with_extras(_regular(ds), extra), assign, [asdict(d) for d in res.decisions], res.overrides)[0]
+    if viol:
+        raise ApiError(500, "check_failed", "Regular-week booking decisions failed the hard-rule check",
+                       {"violations": [asdict(v) for v in viol[:30]]})
+    apply_to_requests(db, ds, res)
+    db.flush()
+    return res
 
 
 # ---------------------------------------------------------------- deciding
@@ -189,6 +210,7 @@ def redecide(db: Session, ds: Dataset, version: TimetableVersion, user: User | N
     stats = verify(ds, assign, fest, extra)
     version.fest = {**state.fest_to_json(fest), "cache": cache}
     apply_to_requests(db, ds, fest)
+    decide_regular(db, ds, version)
     state.audit(db, user, "fest.decide", f"version:{version.id}",
                 {"approved": stats["approved"], "alternatives": stats["alternatives"], "rejected": stats["rejected"]})
     db.flush()
@@ -210,6 +232,7 @@ def adopt(db: Session, ds: Dataset, version: TimetableVersion, raw: dict | None,
         else:
             version.fest = state.fest_to_json(fest)
             apply_to_requests(db, ds, fest)
+            decide_regular(db, ds, version)
             db.flush()
             return
     redecide(db, ds, version, user)
@@ -251,7 +274,8 @@ def _out(ds: Dataset, req: dict, source: str, status: str, decision: dict | None
             "duration_periods": req["duration_periods"], "windows": req["windows"], "room_types": req["room_types"],
             "needs": req["needs"], "requested_room": req.get("requested_room"),
             "mandatory_for_groups": req.get("mandatory_for_groups", []), "series_id": req.get("series_id"),
-            "raw_text": req.get("raw_text"), "submitted_at": req["submitted_at"], "status": status,
+            "raw_text": req.get("raw_text"), "submitted_at": req["submitted_at"],
+            "week": req.get("week", "spectra"), "status": status,
             "reason": reason, "decision": decision, "approver": b.approver if b else None,
             "can_cancel": bool(b is not None and b.status not in CLOSED and
                                (b.created_by == user.id or user.role == "admin")),
@@ -317,9 +341,10 @@ def check(db: Session, ds: Dataset, version: TimetableVersion, draft: dict, user
         return {"valid": False, "category": cat, "category_note": note, "placement": None,
                 "violations": problems, "alternatives": [], "free_rooms": []}
     assign = state.to_assign(version.assignments)
-    extra = extras(db)
-    fest = decide_fest(ds, assign, extra_requests=extra + [req], time_limit_s=10,
-                       cache=dict((version.fest or {}).get("cache") or {}))
+    regular = req["week"] == "regular"
+    extra = extras(db, req["week"])
+    fest = decide_fest(_regular(ds) if regular else ds, assign, extra_requests=extra + [req], time_limit_s=10,
+                       cache=None if regular else dict((version.fest or {}).get("cache") or {}))
     mine = next(d for d in fest.decisions if d.request_id == "DRAFT")
     others = FestResult([d for d in fest.decisions if d.request_id != "DRAFT"], fest.overrides)
     view = week_view(ds, assign, fest.overrides)

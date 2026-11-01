@@ -40,7 +40,7 @@ function RequestRow({ b, highlight }: { b: Booking; highlight: boolean }) {
           {b.reason}
         </p>
         <p className="mt-0.5 text-[12px] text-ink-3">
-          {categoryLabel(b.category)}
+          {b.week === "regular" ? "Regular week" : "Spectra week"} · {categoryLabel(b.category)}
           {b.category !== b.requested_category ? ` (asked for ${categoryLabel(b.requested_category).toLowerCase()})` : ""}, {b.attendance} people, sent {fmtDateTime(b.submitted_at)}
           {b.approver ? `. Needs approval from ${b.approver}` : ""}
         </p>
@@ -140,7 +140,7 @@ export default function Book() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Book a venue"
-        lede="Spectra week venue requests. Write it in plain English or Hinglish, or fill the form yourself. The code checks every change as you make it, and decides by priority when you submit."
+        lede="Venue requests for Spectra week or a regular teaching week. Write it in plain English or Hinglish, or fill the form yourself. The code checks every change as you make it, and decides by priority when you submit."
       />
       {isLoading ? (
         <Loading rows={8} />

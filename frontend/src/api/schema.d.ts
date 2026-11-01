@@ -896,6 +896,12 @@ export interface components {
             repeat_days: string[];
             /** Raw Text */
             raw_text?: string | null;
+            /**
+             * Week
+             * @default spectra
+             * @enum {string}
+             */
+            week: "regular" | "spectra";
         };
         /** BookingEntry */
         BookingEntry: {
@@ -960,6 +966,12 @@ export interface components {
             raw_text?: string | null;
             /** Submitted At */
             submitted_at: string;
+            /**
+             * Week
+             * @default spectra
+             * @enum {string}
+             */
+            week: "regular" | "spectra";
             /** Status */
             status: string;
             /**

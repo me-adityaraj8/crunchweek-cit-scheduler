@@ -166,15 +166,13 @@ def test_a_booking_without_a_week_asks_for_it(client, heads, gen, model):
     assert not any(c["kind"] in ("action", "preview") for c in out["cards"])
 
 
-def test_a_regular_week_booking_shows_free_rooms(client, heads, gen, model):
-    s = model(call("create_booking_draft", title="Club meet", day="TUE", from_period=6, to_period=6, attendance=50,
-                   week="regular"), say("Bookings are for Spectra week; these rooms are free."))
-    out = ask(client, heads, "club", "book a room tuesday 2 pm for 50 people, regular week")
-    res = s.results()[0]
-    assert res["bookable"] is False and "Spectra" in res["note"]
-    rooms = next(c for c in out["cards"] if c["kind"] == "rooms")["data"]
-    assert rooms["week"] == "regular" and rooms["people"] == 50 and rooms["bookable"] is False
-    assert not any(c["kind"] == "action" for c in out["cards"])
+def test_a_regular_week_booking_is_drafted_for_that_week(client, heads, gen, model):
+    s = model(call("create_booking_draft", title="Club meet", day="TUE", from_period=11, to_period=11, attendance=50,
+                   week="regular"), say("Ready to send."))
+    out = ask(client, heads, "club", "book a room tuesday 7 pm for 50 people, regular week")
+    assert s.results()[0]["draft"]["week"] == "regular"
+    action = next(c for c in out["cards"] if c["kind"] == "action")["data"]
+    assert any(x["label"] == "Week" and x["value"] == "Regular week" for x in action["lines"])
 
 
 def test_booking_needs_confirm_and_runs_once(client, heads, gen, model):

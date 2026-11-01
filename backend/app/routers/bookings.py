@@ -74,7 +74,7 @@ def fest_board(db: Session = Depends(get_db), user: User = Depends(current_user)
     rooms = sorted(r["id"] for r in ds.rooms.values() if "event" in r["allowed_uses"])
     return FestOut(version_id=v.id if v else None, decided=f is not None,
                    summary=bookings.summary(db, ds, v) if f else None,
-                   requests=bookings.list_requests(db, ds, v, user), overrides=f.overrides if f else [], rooms=rooms)
+                   requests=[r for r in bookings.list_requests(db, ds, v, user) if r["week"] == "spectra"], overrides=f.overrides if f else [], rooms=rooms)
 
 
 @router.get("/explain/booking/{request_id}", response_model=ExplainBookingOut)

@@ -71,5 +71,5 @@ export function starters(role: Role): { title: string; prompt: string }[] {
 
 /** "Book this" on a room card becomes a plain sentence, so it shows in the thread like anything you type. */
 export function bookText(room: string, day: string, from: string, to: string, people?: number | null, week?: string): string {
-  return `Book ${room} on ${day} from ${from} to ${to}` + (people ? ` for ${people} people` : "") + (week === "spectra" ? " for Spectra week" : "");
+  return `Book ${room} on ${day} from ${from} to ${to}` + (people ? ` for ${people} people` : "") + (week === "spectra" ? " for Spectra week" : week === "regular" ? " for a regular week" : "");
 }

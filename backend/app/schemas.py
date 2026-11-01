@@ -289,6 +289,7 @@ class BookingDraft(BaseModel):
     requested_category: Category = "club_event"
     repeat_days: list[str] = []          # "every Mon and Wed": the same window on each of these days
     raw_text: str | None = None
+    week: Literal["regular", "spectra"] = "spectra"   # Spectra week (Week 7) or an ordinary teaching week
 
 
 class DecisionOut(BaseModel):
@@ -333,6 +334,7 @@ class BookingOut(BaseModel):
     series_id: str | None = None
     raw_text: str | None = None
     submitted_at: str
+    week: Literal["regular", "spectra"] = "spectra"
     status: str
     reason: str = ""
     decision: DecisionOut | None = None

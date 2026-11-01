@@ -130,18 +130,17 @@ def test_a_long_request_is_not_taken_as_the_event_name(client, heads, gen):
     assert second["cards"][0]["data"]["draft"]["title"] == "Venue request"
 
 
-def test_a_regular_week_booking_shows_free_rooms_instead(client, heads, gen):
+def test_a_regular_week_booking_is_drafted_for_that_week(client, heads, gen):
     before = client.get("/api/bookings", params={"mine": True}, headers=heads["club"]).json()
     first = ask(client, heads, "club", "book a classroom tuesday 2 to 3 pm for 50 people for a club meet")
     assert kinds(first) == ["draft"] and "which week" in first["reply"].lower()
     out = ask(client, heads, "club", "Regular week", draft_text=first["draft_text"], last_intent="book_venue")
-    assert out["intent"] == "book_venue" and kinds(out) == ["rooms"]
-    rooms = out["cards"][0]["data"]
-    assert rooms["week"] == "regular" and rooms["day"] == "TUE" and rooms["people"] == 50 and rooms["bookable"] is False
-    assert "spectra week" in out["reply"].lower() and "Make it a Spectra week request" in out["suggestions"]
+    assert out["intent"] == "book_venue" and kinds(out) == ["preview"]
+    prev = out["cards"][0]["data"]
+    assert prev["draft"]["week"] == "regular" and prev["draft"]["windows"][0]["day"] == "TUE"
     assert any(c["label"] == "Regular week" for c in out["understood"])
-    back = ask(client, heads, "club", "Make it a Spectra week request", draft_text=out["draft_text"], last_intent="book_venue")
-    assert kinds(back) == ["preview"]       # the last week said wins
+    back = ask(client, heads, "club", "Spectra week instead", draft_text=out["draft_text"], last_intent="book_venue")
+    assert back["cards"][0]["data"]["draft"]["week"] == "spectra"       # the last week said wins
     after = client.get("/api/bookings", params={"mine": True}, headers=heads["club"]).json()
     assert len(after) == len(before)
 

@@ -736,7 +736,7 @@ class DraftArgs(BaseModel):
     category: Literal["institute_event", "guest_lecture", "department_event", "club_event"] | None = None
     mandatory_for_groups: list[str] = Field(default_factory=list)
     week: Week | None = Field(None, description="The week the person named: spectra for Spectra week (Week 7), "
-                              "regular for a normal week. Leave it empty unless they said; the tool then asks.")
+                              "regular for an ordinary teaching week. Leave it empty unless they said; the tool then asks.")
 
 
 def _draft(ctx: Ctx, ds: Dataset, a: DraftArgs) -> dict:
@@ -774,20 +774,9 @@ def create_booking_draft(ctx: Ctx, a: DraftArgs) -> Out:
            "attendance": a.attendance, "room_id": d["requested_room"],
            "draft": a.model_dump(exclude_defaults=True)}      # the whole draft, so "add a projector" can change it
     if a.week is None:
-        return Out({"week_needed": True, "ask": "Ask whether this is for Spectra week (Week 7) or a regular week. "
-                    "Venue requests can only be sent for Spectra week; for a regular week you can show the free rooms."},
+        return Out({"week_needed": True, "ask": "Ask whether this is for Spectra week (Week 7) or a regular teaching week."},
                    memory=mem)
-    if a.week == "regular":
-        out = find_available_rooms(ctx, FreeArgs(day=a.day, from_period=a.from_period,
-                                                 to_period=a.from_period + d["duration_periods"] - 1,
-                                                 capacity=a.attendance, needs=a.needs, room_types=a.room_types,
-                                                 week="regular"))
-        out.data.update(bookable=False, note="Venue requests can only be sent for Spectra week (Week 7), so a "
-                        "regular week can't be booked. These rooms are free then in the normal timetable. Offer to "
-                        "make it a Spectra week request.")
-        out.cards[0]["data"]["bookable"] = False        # a regular week can't be booked, so no Book buttons
-        out.memory = mem
-        return out
+    d["week"] = a.week
     chk = bookings.check(ctx.db, ds, v, d, ctx.user)
     place = chk.get("placement") or {}
     for x in [place] + chk["alternatives"]:
@@ -800,6 +789,7 @@ def create_booking_draft(ctx: Ctx, a: DraftArgs) -> Out:
         data["sendable"] = False
         return Out(data, [card("preview", draft=d, guessed=[], notes=[], check=chk)], memory=mem)
     lines = [{"label": "Event", "value": d["title"]},
+             {"label": "Week", "value": "Spectra week (Week 7)" if a.week == "spectra" else "Regular week"},
              {"label": "When", "value": when(ds, d["windows"][0]["day"], a.from_period, a.to_period)
               + (f" ({d['duration_periods']} h)" if d["duration_periods"] < a.to_period - a.from_period + 1 else "")},
              {"label": "People", "value": str(d["attendance"])},

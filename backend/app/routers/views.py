@@ -10,6 +10,7 @@ from ..db import get_db
 from ..errors import bad_request
 from ..models import User
 from ..schemas import DashboardOut, FreeRoom
+from ..services.bookings import CLOSED, live_requests
 from ..services import bookings, proposals, state
 
 router = APIRouter(tags=["views"])
@@ -91,6 +92,10 @@ def rooms_free(day: str, from_period: int = Query(alias="from", ge=1, le=13),
         assign = week_view(ds, assign, fest.overrides)
         taken = [{"room_id": d.room_id, "day": d.day, "start_period": d.start_period, "end_period": d.end_period,
                   "request_id": d.request_id} for d in fest.decisions if d.room_id and d.status != "rejected"]
+    if week == "regular":       # rooms held by regular-week bookings
+        taken = [{**{k: b.decision[k] for k in ("room_id", "day", "start_period", "end_period")}, "request_id": b.id}
+                 for b in live_requests(db) if b.data.get("week") == "regular" and b.status not in CLOSED
+                 and b.decision and b.decision.get("room_id") and b.decision.get("status") != "rejected"]
     want = [n for n in needs.split(",") if n]
     room_types = [t for t in types.split(",") if t] or None
     ids = free_rooms(ds, assign, taken, day, from_period, to_period, capacity, want, room_types)

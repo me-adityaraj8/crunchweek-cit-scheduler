@@ -1,6 +1,7 @@
 import type { BookingDraft, PartialDraft, Window } from "@/api/types";
 
 export type Category = BookingDraft["requested_category"];
+export type BookingWeek = NonNullable<BookingDraft["week"]>;
 
 /** The booking form's own state. Numbers stay strings while being typed. */
 export interface FormState {
@@ -15,6 +16,7 @@ export interface FormState {
   requested_category: Category;
   repeat_days: string[];
   raw_text: string | null;
+  week: BookingWeek;
 }
 
 export const emptyForm = (): FormState => ({
@@ -29,10 +31,11 @@ export const emptyForm = (): FormState => ({
   requested_category: "club_event",
   repeat_days: [],
   raw_text: null,
+  week: "spectra",
 });
 
 /** Apply what the assistant understood. Fields it left empty keep what the person typed. */
-export function mergeDraft(form: FormState, d: PartialDraft): FormState {
+export function mergeDraft(form: FormState, d: PartialDraft & { week?: BookingWeek | null }): FormState {
   return {
     title: d.title ?? form.title,
     attendance: d.attendance != null ? String(d.attendance) : form.attendance,
@@ -45,6 +48,7 @@ export function mergeDraft(form: FormState, d: PartialDraft): FormState {
     requested_category: d.requested_category ?? form.requested_category,
     repeat_days: d.repeat_days.length ? d.repeat_days : form.repeat_days,
     raw_text: d.raw_text ?? form.raw_text,
+    week: d.week ?? form.week,
   };
 }
 
@@ -72,6 +76,7 @@ export function toDraft(f: FormState): BookingDraft | null {
     requested_category: f.requested_category,
     repeat_days: f.repeat_days,
     raw_text: f.raw_text,
+    week: f.week,
   };
 }
 
