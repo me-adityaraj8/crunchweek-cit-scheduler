@@ -8,10 +8,9 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Velora</title>
     <script>
-      // apply the saved theme before first paint, so dark mode doesn't flash light
+      // light by default; apply a saved dark choice before first paint, so it doesn't flash light
       try {
-        var t = localStorage.getItem("cit-theme")
-        if (t === "dark" || (!t && matchMedia("(prefers-color-scheme: dark)").matches)) document.documentElement.classList.add("dark")
+        if (localStorage.getItem("cit-theme") === "dark") document.documentElement.classList.add("dark")
       } catch (e) {}
     </script>
   </head>

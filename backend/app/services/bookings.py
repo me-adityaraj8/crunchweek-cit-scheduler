@@ -4,10 +4,12 @@ Code decides every booking (solver/fest.py, checked by core/checker.py). A perso
 the problem statement asks: a coordinator confirms a booking of their department's lab, and nobody
 confirms their own request (the Admin does instead)."""
 import dataclasses
+import threading
 from dataclasses import asdict
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import event, select, text
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from ..auth import DATASET_ROLE
@@ -63,6 +65,45 @@ def as_request(d: dict, user: User, rid: str, submitted_at: str, series_id: str 
             "needs": list(d["needs"]), "requested_room": d.get("requested_room") or None,
             "mandatory_for_groups": list(d["mandatory_for_groups"]), "series_id": series_id,
             "raw_text": d.get("raw_text")}
+
+
+# ---------------------------------------------------------------- the booking queue
+QUEUE_KEY = 74_200_001        # names the queue's Postgres lock; any fixed number no other code uses
+QUEUE_WAIT_S = 120
+_local_turn = threading.Lock()
+
+
+def take_turn(db: Session) -> None:
+    """Booking writes take turns, in the order they arrive: each waits until the one before it has
+    committed, so it decides with every request made so far and two people can't both get one room.
+
+    On Postgres the turn is a transaction-level advisory lock, held across every server instance until
+    commit or rollback (it works behind Neon's pooled connection too). On SQLite (one local process) it is
+    a lock released when the transaction ends. Taking it twice in one transaction is a no-op."""
+    if db.info.get("booking_turn"):
+        return
+    db.connection()      # the turn belongs to this transaction, so start it now
+    if db.get_bind().dialect.name == "postgresql":
+        try:
+            db.execute(text(f"SET LOCAL lock_timeout = '{QUEUE_WAIT_S}s'"))
+            db.execute(text("SELECT pg_advisory_xact_lock(:k)"), {"k": QUEUE_KEY})
+        except OperationalError:
+            raise _busy() from None
+        db.info["booking_turn"] = "pg"
+    else:
+        if not _local_turn.acquire(timeout=QUEUE_WAIT_S):
+            raise _busy()
+        db.info["booking_turn"] = "local"
+
+
+def _busy() -> ApiError:
+    return ApiError(503, "busy", "Bookings are busy deciding other requests. Try again in a minute.")
+
+
+@event.listens_for(Session, "after_transaction_end")
+def _end_turn(session: Session, transaction) -> None:
+    if transaction.parent is None and session.info.pop("booking_turn", None) == "local":
+        _local_turn.release()
 
 
 def _ids(db: Session, n: int) -> list[str]:
@@ -140,6 +181,7 @@ def apply_to_requests(db: Session, ds: Dataset, fest: FestResult) -> None:
 
 def redecide(db: Session, ds: Dataset, version: TimetableVersion, user: User | None) -> tuple[FestResult, dict]:
     """Decide every Spectra request against the active timetable and save the result on that version."""
+    take_turn(db)
     assign = state.to_assign(version.assignments)
     extra = extras(db)
     cache = dict((version.fest or {}).get("cache") or {})
@@ -156,6 +198,7 @@ def redecide(db: Session, ds: Dataset, version: TimetableVersion, user: User | N
 def adopt(db: Session, ds: Dataset, version: TimetableVersion, raw: dict | None, user: User | None) -> None:
     """Use decisions already computed for this timetable (by the repair that proposed it) if they still
     cover exactly the open app requests and pass the checker; otherwise decide again."""
+    take_turn(db)
     fest = state.fest_from(raw)
     extra = extras(db)
     if fest is not None and {r["id"] for r in extra} == {d.request_id for d in fest.decisions
@@ -312,6 +355,7 @@ def submit(db: Session, ds: Dataset, version: TimetableVersion, draft: dict, use
     problems = validate_draft(ds, draft)
     if problems:
         raise bad_request(problems[0], {"problems": problems})
+    take_turn(db)
     days = [d for d in draft.get("repeat_days", []) if d != draft["windows"][0]["day"]]
     drafts = [draft]
     for day in days:     # "every Mon and Wed": one linked request per extra day, same times
@@ -336,6 +380,7 @@ def _live(db: Session, rid: str) -> BookingRequest:
 
 
 def cancel(db: Session, ds: Dataset, version: TimetableVersion | None, rid: str, user: User) -> None:
+    take_turn(db)
     b = _live(db, rid)
     if b.created_by != user.id and user.role != "admin":
         raise forbidden("Only the person who made a request can cancel it")
@@ -349,6 +394,7 @@ def cancel(db: Session, ds: Dataset, version: TimetableVersion | None, rid: str,
 
 
 def decide(db: Session, ds: Dataset, version: TimetableVersion, rid: str, user: User, action: str, note: str) -> None:
+    take_turn(db)
     b = _live(db, rid)
     if b.status != "pending_approval":
         raise ApiError(409, "conflict", f"{rid} is not waiting for approval (it is {b.status.replace('_', ' ')})")
