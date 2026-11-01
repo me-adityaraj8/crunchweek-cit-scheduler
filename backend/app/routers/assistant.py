@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Depends, File, Response, UploadFile
+from fastapi import APIRouter, Depends, File, UploadFile
 from sqlalchemy.orm import Session
 
 from ..auth import current_user, require_roles
@@ -10,7 +10,7 @@ from ..llm import client as llm
 from ..llm.parse_booking import parse_booking
 from ..llm.parse_change import parse_change
 from ..models import User
-from ..schemas import AssistantIn, BookingParseOut, ChangeParseOut, SpeakIn, TranscribeOut
+from ..schemas import AssistantIn, BookingParseOut, ChangeParseOut, TranscribeOut
 from ..services import proposals, state
 
 router = APIRouter(tags=["assistant"])
@@ -38,19 +38,6 @@ async def transcribe(audio: UploadFile = File(...), user: User = Depends(current
     if not text:
         raise ApiError(422, "no_speech", "I couldn't hear any words. Try again a little closer to the mic.")
     return {"text": text}
-
-
-@router.post("/assistant/speak", response_class=Response,
-             responses={200: {"content": {"audio/wav": {}}, "description": "Velo's reply as speech"}})
-def speak(body: SpeakIn, user: User = Depends(current_user)):
-    """Velo's reply as speech (voice mode). 503 when the voice model isn't available, so the browser can
-    use its own voice; never an empty or made-up sound."""
-    try:
-        wav = llm.speak(body.text)
-    except llm.LLMUnavailable as e:
-        log.warning("speak failed: %s", e)
-        raise ApiError(503, "tts_unavailable", "Velo's voice isn't available right now.")
-    return Response(content=wav, media_type="audio/wav", headers={"Cache-Control": "no-store"})
 
 
 @router.post("/assistant/booking", response_model=BookingParseOut)

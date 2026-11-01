@@ -33,8 +33,6 @@ interface Velo extends Thread {
   open: boolean;
   /** the orb's mood in the chat; voice mode drives its own */
   mood: Mood;
-  voiceOpen: boolean;
-  setVoiceOpen: (v: boolean) => void;
   /** send a message and get Velo's answer back (voice mode); it lands in the thread like any other */
   ask: (text: string) => Promise<VeloOut>;
   expanded: boolean;
@@ -83,7 +81,6 @@ export function VeloProvider({ children }: { children: ReactNode }) {
   const [open, setOpenState] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [unread, setUnread] = useState(false);
-  const [voiceOpen, setVoiceOpen] = useState(false);
   // happy, confused and error are moments: shown, then back to idle
   const [moment, setMoment] = useState<{ mood: Mood; until: number } | null>(null);
   useEffect(() => {
@@ -179,8 +176,6 @@ export function VeloProvider({ children }: { children: ReactNode }) {
       ...thread,
       open,
       mood,
-      voiceOpen,
-      setVoiceOpen,
       ask,
       expanded,
       pending: askVelo.isPending,
@@ -194,7 +189,7 @@ export function VeloProvider({ children }: { children: ReactNode }) {
       setAction: (id, a) => setThread((th) => ({ ...th, messages: th.messages.map((m) => (m.id === id && m.from === "velo" ? { ...m, action: a } : m)) })),
       setFocus,
     }),
-    [thread, open, mood, voiceOpen, ask, expanded, askVelo.isPending, unread, focus, setOpen, toggle, send, setFocus],
+    [thread, open, mood, ask, expanded, askVelo.isPending, unread, focus, setOpen, toggle, send, setFocus],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

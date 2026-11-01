@@ -44,8 +44,6 @@ class Settings:
     gemini_api_key: str = os.environ.get("GEMINI_API_KEY", "")
     gemini_model: str = os.environ.get("GEMINI_MODEL") or "gemini-3.5-flash-lite"
     # Velo's spoken replies (voice mode). Unset or unavailable: the browser's own voice is used instead.
-    gemini_tts_model: str = os.environ.get("GEMINI_TTS_MODEL") or "gemini-2.5-flash-preview-tts"
-    gemini_tts_voice: str = os.environ.get("GEMINI_TTS_VOICE") or "Kore"
     # Velo's agent: an OpenAI-compatible chat model with tool calling. Groq by default; Gemini works through its
     # OpenAI-compatible endpoint. No key for the chosen provider: Velo uses its keyword rules instead.
     llm_provider: str = (os.environ.get("LLM_PROVIDER")

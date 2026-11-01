@@ -87,8 +87,16 @@ export function useRecorder(onAutoStop?: (wav: Blob) => void) {
   }, [release]);
 
   const start = useCallback(async () => {
-    const media = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } });
+    // made inside the tap, before the permission prompt: iOS Safari leaves a later one suspended (no audio)
     const audio = new AudioContext();
+    void audio.resume().catch(() => undefined);
+    let media: MediaStream;
+    try {
+      media = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } });
+    } catch (e) {
+      void audio.close();
+      throw e;
+    }
     const source = audio.createMediaStreamSource(media);
     // ScriptProcessor is old but runs everywhere without a separate worklet file
     const proc = audio.createScriptProcessor(4096, 1, 1);

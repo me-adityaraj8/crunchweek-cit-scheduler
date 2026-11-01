@@ -662,27 +662,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/assistant/speak": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Speak
-         * @description Velo's reply as speech (voice mode). 503 when the voice model isn't available, so the browser can
-         *     use its own voice; never an empty or made-up sound.
-         */
-        post: operations["speak_api_assistant_speak_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/assistant/booking": {
         parameters: {
             query?: never;
@@ -1752,11 +1731,6 @@ export interface components {
             start: number;
             /** Room */
             room: string;
-        };
-        /** SpeakIn */
-        SpeakIn: {
-            /** Text */
-            text: string;
         };
         /** SummaryOut */
         SummaryOut: {
@@ -3117,39 +3091,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TranscribeOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    speak_api_assistant_speak_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SpeakIn"];
-            };
-        };
-        responses: {
-            /** @description Velo's reply as speech */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "audio/wav": unknown;
                 };
             };
             /** @description Validation Error */

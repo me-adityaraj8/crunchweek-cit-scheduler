@@ -535,10 +535,6 @@ class TranscribeOut(BaseModel):
     text: str
 
 
-class SpeakIn(BaseModel):
-    text: str = Field(min_length=1, max_length=1200)
-
-
 class Health(BaseModel):
     ok: bool
     ortools: str
