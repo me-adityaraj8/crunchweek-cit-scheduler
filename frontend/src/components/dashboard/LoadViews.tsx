@@ -2,12 +2,15 @@ import { useMemo, useState } from "react";
 import { useSummary, useTimetable } from "@/api/hooks";
 import { Panel } from "@/components/states";
 import { Segmented } from "@/components/ui/controls";
-import { facultyLoad, groupWeeks } from "@/lib/load";
-import { DAYS, LUNCH_AFTER } from "@/lib/time";
+import type { Entry } from "@/api/types";
+import { facultyLoad, groupWeeks, slotIndex } from "@/lib/load";
+import { dayName, dayShort, DAYS, LUNCH_AFTER, periodLabel, periodRange } from "@/lib/time";
 import { cn, plural } from "@/lib/utils";
-import { Dot, DotRow, DotTable, dotCols, HourBox, KeyDot, Legend, ShowAll } from "./dots";
+import { Dot, DotRow, DotTable, dotCols, HourBox, KeyDot, Legend, Readout, ShowAll, type Reading } from "./dots";
 
 const SHOWN = 8;
+
+const code = (x: Entry) => `${x.course_id} ${x.course_title}`;
 
 /** Week entries and the dataset, shared by both views (one request each, cached). */
 function useWeek() {
@@ -20,6 +23,15 @@ function useWeek() {
 export function FacultyLoad({ department, className }: { department?: string | null; className?: string }) {
   const { summary, entries, days } = useWeek();
   const [all, setAll] = useState(false);
+  const [reading, setReading] = useState<Reading | null>(null);
+  const byDay = useMemo(() => {
+    const m = new Map<string, Entry[]>();
+    for (const x of [...entries].sort((a, b) => a.start_period - b.start_period)) {
+      const k = `${x.faculty_id}|${x.day}`;
+      m.set(k, [...(m.get(k) ?? []), x]);
+    }
+    return m;
+  }, [entries]);
   const rows = useMemo(() => {
     const load = facultyLoad(entries, days);
     return (summary?.faculty ?? [])
@@ -33,7 +45,8 @@ export function FacultyLoad({ department, className }: { department?: string | n
   const full = rows.reduce((n, f) => n + days.filter((d) => (f.week.byDay[d] ?? 0) >= f.max_hours_per_day).length, 0);
   return (
     <Panel title="Teaching load" aside={<span className="font-semibold text-ink-2">{full ? `${full} full days` : "No one at their limit"}</span>} bodyClassName="p-0" className={className}>
-      <DotTable days={days} name="Faculty" tail="Hrs" cols={cols} minWidth={560}>
+      <Readout reading={reading} hint="Point at a box to see what that person teaches that day." />
+      <DotTable days={days} name="Faculty" tail="Hrs" cols={cols} minWidth={560} onLeave={() => setReading(null)}>
         {(all ? rows : rows.slice(0, SHOWN)).map((f) => (
           <DotRow key={f.id} to={`/timetable?view=faculty&id=${encodeURIComponent(f.id)}`} label={`${f.name}: ${f.week.total} hours this week, at most ${f.max_hours_per_day} a day`} cols={cols}>
             <span className="min-w-0 truncate pl-1 text-[13px] font-bold">{f.name}</span>
@@ -42,7 +55,23 @@ export function FacultyLoad({ department, className }: { department?: string | n
               return (
                 <span key={d} className="flex items-center gap-[3px]" aria-hidden>
                   {Array.from({ length: Math.max(f.max_hours_per_day, h) }, (_, i) => (
-                    <HourBox key={i} tone={i >= f.max_hours_per_day ? "over" : i < h ? (h >= f.max_hours_per_day ? "full" : "taught") : "free"} />
+                    <span
+                      key={i}
+                      className="grid h-4 place-items-center"
+                      onPointerEnter={() => {
+                        const list = byDay.get(`${f.id}|${d}`) ?? [];
+                        setReading({
+                          key: `${f.id}|${d}|${i}`,
+                          tag: f.name,
+                          when: dayName(d),
+                          what: list.length ? list.map((x) => `${x.course_id} ${periodRange(x.start_period, x.start_period + x.duration - 1)}`).join(", ") : "No classes",
+                          state: `${h} of ${f.max_hours_per_day} h`,
+                          tone: h > f.max_hours_per_day ? "warn" : h ? "busy" : "free",
+                        });
+                      }}
+                    >
+                      <HourBox tone={i >= f.max_hours_per_day ? "over" : i < h ? (h >= f.max_hours_per_day ? "full" : "taught") : "free"} active={reading?.key === `${f.id}|${d}|${i}`} />
+                    </span>
                   ))}
                 </span>
               );
@@ -70,6 +99,8 @@ export function GroupDays({ department, className }: { department?: string | nul
   const { summary, entries, days } = useWeek();
   const [all, setAll] = useState(false);
   const [order, setOrder] = useState<"group" | "gaps">("group");
+  const [reading, setReading] = useState<Reading | null>(null);
+  const at = useMemo(() => slotIndex(entries, (x) => x.groups), [entries]);
   const lunchAfter = summary?.lunch_after ?? LUNCH_AFTER;
   const periods = (summary?.periods ?? []).filter((p) => p.teaching).map((p) => p.id);
   const rows = useMemo(() => {
@@ -102,7 +133,8 @@ export function GroupDays({ department, className }: { department?: string | nul
       bodyClassName="p-0"
       className={className}
     >
-      <DotTable days={days} name="Group" tail="Gaps" cols={cols} minWidth={640}>
+      <Readout reading={reading} hint="Point at a dot to see the class in that period." />
+      <DotTable days={days} name="Group" tail="Gaps" cols={cols} minWidth={640} onLeave={() => setReading(null)}>
         {(all ? rows : rows.slice(0, SHOWN)).map((g) => (
           <DotRow key={g.id} to={`/timetable?view=group&id=${encodeURIComponent(g.id)}`} label={`${g.name}: ${g.week!.gaps} free periods between classes this week`} cols={cols}>
             <span className="min-w-0 truncate pl-1 text-[13px] font-bold" title={g.name}>
@@ -113,7 +145,25 @@ export function GroupDays({ department, className }: { department?: string | nul
               return (
                 <span key={d} className="flex items-center" aria-hidden>
                   {periods.map((p) => (
-                    <Dot key={p} on={!!day?.busy.has(p)} gap={day?.gaps.has(p)} lunch={p === lunchAfter} />
+                    <Dot
+                      key={p}
+                      on={!!day?.busy.has(p)}
+                      gap={day?.gaps.has(p)}
+                      lunch={p === lunchAfter}
+                      active={reading?.key === `${g.id}|${d}|${p}`}
+                      onEnter={() => {
+                        const x = at(g.id, d, p);
+                        const gap = !!day?.gaps.has(p);
+                        setReading({
+                          key: `${g.id}|${d}|${p}`,
+                          tag: g.id,
+                          when: `${dayShort(d)} P${p} ${periodLabel(p, summary.periods)}`,
+                          what: x ? `${code(x)} · ${x.room_id} · ${x.faculty_name}` : gap ? "Nothing on, with classes either side" : "Nothing on",
+                          state: x ? "In class" : gap ? "Gap" : "Free",
+                          tone: x ? "busy" : gap ? "warn" : "free",
+                        });
+                      }}
+                    />
                   ))}
                 </span>
               );

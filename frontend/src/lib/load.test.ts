@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { facultyLoad, groupWeeks } from "./load";
+import { facultyLoad, groupWeeks, slotIndex } from "./load";
 
 const e = (over: Partial<{ day: string; start_period: number; duration: number; faculty_id: string; groups: string[] }>) => ({
   day: "MON",
@@ -34,5 +34,13 @@ describe("groupWeeks", () => {
   it("gives every group in a shared session the same periods", () => {
     const weeks = groupWeeks([e({ groups: ["G1", "G2"] })], ["MON"]);
     expect([...weeks.get("G2")!.days.MON.busy]).toEqual([1]);
+  });
+});
+
+describe("slotIndex", () => {
+  it("finds the session covering any period it spans", () => {
+    const at = slotIndex([e({ start_period: 2, duration: 2, faculty_id: "F9" })], (x) => [x.faculty_id]);
+    expect(at("F9", "MON", 3)?.faculty_id).toBe("F9");
+    expect(at("F9", "MON", 4)).toBeUndefined();
   });
 });

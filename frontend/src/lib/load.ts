@@ -59,3 +59,12 @@ export function groupWeeks(entries: Slot[], days: string[]): Map<string, GroupWe
   }
   return out;
 }
+
+/** Look up the session a room, person or group is in at a given day and period. `owners` names who a session belongs to. */
+export function slotIndex<T extends Pick<Slot, "day" | "start_period" | "duration">>(entries: T[], owners: (x: T) => string[]) {
+  const at = new Map<string, T>();
+  for (const x of entries)
+    for (const o of owners(x))
+      for (let p = x.start_period; p < x.start_period + x.duration; p++) at.set(`${o}|${x.day}|${p}`, x);
+  return (owner: string, day: string, period: number) => at.get(`${owner}|${day}|${period}`);
+}
