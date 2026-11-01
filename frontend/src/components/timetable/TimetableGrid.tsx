@@ -72,7 +72,7 @@ export function SessionCell({
       aria-label={label}
       aria-pressed={selected}
       className={cn(
-        "group relative flex h-full w-full flex-col gap-[3px] overflow-hidden rounded-[4px] border-2 border-[#111] px-[9px] py-2 text-left shadow-mount transition-[box-shadow,transform] duration-150 ease-arrive",
+        "group relative flex h-full w-full flex-col gap-px overflow-hidden rounded-[4px] border-2 border-[#111] px-[9px] py-[5px] text-left shadow-mount transition-[box-shadow,transform] duration-150 ease-arrive",
         "hover:z-10 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[5px_5px_0_var(--shade)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none",
         TINT[item.kind],
         moved && "border-dashed",
@@ -91,7 +91,7 @@ export function SessionCell({
           {MARK_LABEL[mark]}
         </span>
       )}
-      <span className="flex min-w-0 items-center gap-1.5">
+      <span className="flex min-w-0 shrink-0 items-center gap-1.5">
         <span className="min-w-0 truncate text-[15px] font-extrabold leading-[18px] tracking-[0.01em] text-ink">
           {e ? e.course_id : b!.request_id}
         </span>
@@ -102,10 +102,10 @@ export function SessionCell({
         )}
       </span>
       {!narrow && (
-        <span className="line-clamp-1 text-[12px] font-semibold leading-[1.25] text-ink">{e ? e.course_title : b!.title}</span>
+        <span className="shrink-0 truncate text-[12px] font-semibold leading-[15px] text-ink">{e ? e.course_title : b!.title}</span>
       )}
       {(!narrow || tall) && (
-        <span className="truncate text-[12px] leading-[1.25] text-ink-2">
+        <span className="shrink-0 truncate text-[12px] leading-[15px] text-ink-2">
           {narrow ? item.room : view === "room" ? (e ? `${e.groups.join(" ")} · ${e.faculty_name.replace(/^(Dr\.|Prof\.)\s+/, "")}` : "") : `${item.room} · ${secondLine(item, view)}`}
         </span>
       )}
