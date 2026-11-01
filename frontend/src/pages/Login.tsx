@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Segmented } from "@/components/ui/controls";
 import { Field, Input, PasswordInput } from "@/components/ui/field";
 import { LandingHeader, LandingSections, StatusDot, useLandingMotion, useStatuses, type DemoId } from "@/components/landing/Landing";
+import { gsap, splitWords } from "@/components/landing/motion";
 import { LoopText } from "@/components/ui/loop-text";
 import { Select } from "@/components/ui/select";
 import { byRole, type AccountOption } from "@/lib/accounts";
@@ -391,6 +392,15 @@ function CopyPassword() {
 /** Headline figures, straight from the loaded dataset's demo accounts. */
 function Figures() {
   const { data } = useDemoAccounts();
+  const box = useRef<HTMLDListElement>(null);
+  const counted = useRef(false);
+  // the figures count up from zero the first time they arrive
+  useEffect(() => {
+    if (!data || counted.current || !box.current || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    counted.current = true;
+    const tw = gsap.from(box.current.querySelectorAll("dd"), { textContent: 0, snap: { textContent: 1 }, duration: 1.4, delay: 0.6, stagger: 0.12, ease: "power2.out" });
+    return () => void tw.progress(1).kill();
+  }, [data]);
   const roles = data ? byRole(data) : null;
   const figs: [string, number | undefined][] = [
     ["faculty", roles?.faculty.length],
@@ -398,7 +408,7 @@ function Figures() {
     ["clubs", roles?.club.length],
   ];
   return (
-    <dl className="grid max-w-[460px] grid-cols-3 divide-x-2 divide-rule border-y-2 border-rule py-3">
+    <dl ref={box} className="grid max-w-[460px] grid-cols-3 divide-x-2 divide-rule border-y-2 border-rule py-3">
       {figs.map(([label, n]) => (
         <div key={label} className="px-4 first:pl-0">
           <dt className="eyebrow">{label}</dt>
@@ -438,7 +448,7 @@ export default function Login() {
   };
 
   return (
-    <div ref={page} className="lx-page min-h-dvh bg-platform text-ink">
+    <div ref={page} className="lx-page min-h-dvh overflow-x-clip bg-platform text-ink">
       <a href="#login" className="sr-only z-50 bg-sheet p-3 focus:not-sr-only focus:fixed focus:left-4 focus:top-4">
         Skip to log in
       </a>
@@ -449,18 +459,16 @@ export default function Login() {
           <div aria-hidden className="lx-grid absolute inset-0 -z-10" />
           <div aria-hidden className="lx-glow absolute -right-40 -top-40 -z-10 size-[680px] rounded-full" />
           <div className="mx-auto grid max-w-[1240px] items-center gap-12 px-4 pb-20 pt-10 sm:px-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-14 lg:pb-28 lg:pt-16">
-            <div className="flex min-w-0 flex-col gap-7">
-              <span data-hero className="inline-flex w-fit items-center gap-3 rounded-full border-2 border-rule-strong bg-sheet px-3.5 py-1.5">
+            <div className="lx-hero-copy flex min-w-0 flex-col gap-7">
+              <span data-hero-badge className="inline-flex w-fit items-center gap-3 rounded-full border-2 border-rule-strong bg-sheet px-3.5 py-1.5">
                 <StatusDot tone={solver[1]} label={`Solver ${solver[0]}`} />
                 <span className="h-3.5 w-0.5 bg-rule" />
                 <span className="text-[12.5px] font-semibold text-ink-2">Spectra week &apos;27 · CIT</span>
               </span>
-              <h1 id="hero-title" data-hero className="lx-h text-[42px] font-black uppercase leading-[0.94] tracking-[-0.045em] sm:text-[62px] xl:text-[74px]">
-                Campus time,
-                <br />
-                solved and
-                <br />
-                <span className="lx-plate mt-2">
+              <h1 id="hero-title" aria-label="Campus time, solved and explained." className="lx-h text-[42px] font-black uppercase leading-[0.94] tracking-[-0.045em] sm:text-[62px] xl:text-[74px]">
+                <span className="block">{splitWords("Campus time,")}</span>
+                <span className="block">{splitWords("solved and")}</span>
+                <span className="lx-plate mt-2" aria-hidden>
                   <LoopText words={["explained.", "clash-free.", "on time.", "approved."]} label="explained." />
                 </span>
               </h1>
@@ -550,7 +558,7 @@ export default function Login() {
           </div>
         </section>
 
-        <LandingSections onTry={tryRole} />
+        <LandingSections onTry={tryRole} onStart={toCard} />
       </main>
     </div>
   );

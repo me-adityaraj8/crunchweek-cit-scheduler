@@ -1,7 +1,7 @@
 import { RotateCcw } from "lucide-react";
 import { useRef } from "react";
 import { cn } from "@/lib/utils";
-import { gsap, useGsap } from "./motion";
+import { gsap, ScrollTrigger, useGsap } from "./motion";
 
 type Kind = "LEC" | "TUT" | "LAB";
 interface Block {
@@ -63,32 +63,45 @@ export function ProductPreview() {
   const root = useRef<HTMLDivElement>(null);
   const tl = useRef<gsap.core.Timeline | null>(null);
 
-  useGsap(root, (reduce) => {
+  // Desktop: the preview pins under the header and scrolling plays the story (and rewinds it).
+  // Smaller screens: it plays once when it scrolls into view, with a replay button.
+  useGsap(root, ({ reduce, desktop }) => {
     const el = root.current!;
-    const set = (s: string) => () => void (el.dataset.state = s);
     const moved = el.querySelector<HTMLElement>('[data-block="y"]');
     if (reduce) {
       el.dataset.state = "solved";
       gsap.set(moved, { "--c": MOVE_TO.c, "--r": MOVE_TO.r, x: 0, y: 0 });
       return;
     }
-    const t = gsap.timeline({ paused: true, defaults: { ease: "power3.out" } });
-    t.call(set("idle"))
-      .set(moved, { "--c": CLASH_B.c, "--r": CLASH_B.r })
-      .from(".pp-calm", { autoAlpha: 0, y: 12, scale: 0.94, stagger: 0.05, duration: 0.45 })
-      .from('[data-block="x"]', { autoAlpha: 0, y: 12, scale: 0.94, duration: 0.4 }, "-=0.1")
-      .fromTo(moved, { autoAlpha: 0, x: 60 }, { autoAlpha: 1, x: 7, y: 7, duration: 0.55 }, "+=0.15")
-      .call(set("clash"))
-      .fromTo('[data-block="x"] .pp-face, [data-block="y"] .pp-face', { x: 0 }, { keyframes: { x: [-3, 3, -2, 2, 0] }, duration: 0.35, ease: "none" })
-      .fromTo(".pp-badge", { scale: 0.6, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.3, ease: "back.out(3)" }, "<")
-      .call(set("solving"), [], "+=0.6")
-      .fromTo(".pp-progress", { scaleX: 0 }, { scaleX: 1, duration: 1.1, ease: "power1.inOut" })
-      .to(moved, { "--c": MOVE_TO.c, "--r": MOVE_TO.r, x: 0, y: 0, duration: 0.75, ease: "power3.inOut" })
-      .call(set("solved"))
-      .to(".pp-badge", { scale: 0.6, autoAlpha: 0, duration: 0.2 }, "<")
-      .fromTo(".pp-why-text", { autoAlpha: 0, y: 6 }, { autoAlpha: 1, y: 0, duration: 0.4 }, "+=0.05");
+    el.dataset.state = "idle";
+    el.toggleAttribute("data-scrub", desktop);
+    const t = gsap.timeline({ paused: !desktop, defaults: { ease: "power3.out" } });
+    t.set(moved, { "--c": CLASH_B.c, "--r": CLASH_B.r })
+      .from(".pp-calm", { autoAlpha: 0, y: 14, scale: 0.9, rotate: -3, stagger: 0.06, duration: 0.5 })
+      .from('[data-block="x"]', { autoAlpha: 0, y: 14, scale: 0.9, duration: 0.4 }, "-=0.1")
+      .fromTo(moved, { autoAlpha: 0, x: 80, rotate: 6 }, { autoAlpha: 1, x: 7, y: 7, rotate: 0, duration: 0.6 }, "+=0.15")
+      .addLabel("clash")
+      .fromTo('[data-block="x"] .pp-face, [data-block="y"] .pp-face', { x: 0 }, { keyframes: { x: [-4, 4, -3, 3, 0] }, duration: 0.4, ease: "none" })
+      .fromTo(".pp-badge", { scale: 0.4, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.35, ease: "back.out(3)" }, "<")
+      .addLabel("solving", "+=0.6")
+      .fromTo(".pp-progress", { scaleX: 0 }, { scaleX: 1, duration: 1.1, ease: "power1.inOut" }, "solving")
+      .to(moved, { "--c": MOVE_TO.c, "--r": MOVE_TO.r, x: 0, y: 0, duration: 0.8, ease: "power3.inOut" })
+      .addLabel("solved")
+      .to(".pp-badge", { scale: 0.4, autoAlpha: 0, duration: 0.2 }, "<")
+      .fromTo(".pp-why-text", { autoAlpha: 0, y: 8 }, { autoAlpha: 1, y: 0, duration: 0.45 }, "+=0.05")
+      .to({}, { duration: 0.2 }); // a beat on the answer before the pin lets go
+    // the state follows the playhead, so scrubbing backwards rewinds the colours too
+    const at = (l: string) => t.labels[l];
+    t.eventCallback("onUpdate", () => {
+      const now = t.time();
+      el.dataset.state = now >= at("solved") ? "solved" : now >= at("solving") ? "solving" : now >= at("clash") ? "clash" : "idle";
+    });
     tl.current = t;
-    gsap.timeline({ scrollTrigger: { trigger: el, start: "top 72%", once: true, onEnter: () => void t.play(0) } });
+    if (desktop) {
+      ScrollTrigger.create({ trigger: el, start: "top 92px", end: "+=520", pin: true, scrub: 0.3, animation: t, anticipatePin: 1 });
+    } else {
+      ScrollTrigger.create({ trigger: el, start: "top 72%", once: true, onEnter: () => void t.play(0) });
+    }
     return () => void (tl.current = null);
   });
 

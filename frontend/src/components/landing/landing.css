@@ -62,6 +62,61 @@
   padding: 0 0.16em 0.02em;
 }
 
+/* ---------------------------------------------------------------- split words
+   each word clips its own box so it can rise out of the baseline; a little bottom padding keeps
+   descenders and the comma inside the clip */
+.lx-w { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: 0.08em; margin-bottom: -0.08em; }
+.lx-wi { display: inline-block; will-change: transform; }
+
+/* ---------------------------------------------------------------- marquee */
+.lx-row { will-change: transform; }
+.lx-row-outline { color: transparent; -webkit-text-stroke: 1.5px var(--ink); letter-spacing: 0; }
+.lx-row-outline .lx-star { background: var(--k-lab-tint); }
+@media (min-width: 640px) { .lx-row-outline { -webkit-text-stroke-width: 2px; } }
+
+/* ---------------------------------------------------------------- Velo band
+   always a night surface, in both themes: Velo's orb glows against it. The tokens are redefined
+   here, shadows included (they're resolved where they're declared, so they need restating) */
+.lx-velo {
+  --platform: #111110;
+  --sheet: #1b1b19;
+  --sheet-2: #242422;
+  --ink: #f1efe8;
+  --ink-2: #c9c6bc;
+  --ink-3: #9d9a90;
+  --rule: #34342f;
+  --rule-strong: #e9e6dd;
+  --signal-soft: #0f3338;
+  --signal-ink: #071417;
+  --shade: #0a5560;
+  --mount: 2px 2px 0 var(--shade);
+  --panel: 6px 6px 0 var(--shade);
+  color: var(--ink);
+  background:
+    radial-gradient(600px circle at 12% 30%, color-mix(in oklab, #ff4fa3 16%, transparent), transparent 70%),
+    radial-gradient(700px circle at 85% 80%, color-mix(in oklab, var(--signal) 12%, transparent), transparent 70%),
+    #111110;
+}
+.dark .lx-velo { border-color: var(--rule); }
+.vx-mood { color: var(--ink-3); }
+
+/* ---------------------------------------------------------------- statement */
+.lx-sw { display: inline; }
+.lx-sw-last {
+  display: inline-block;
+  background: var(--signal);
+  color: var(--signal-ink);
+  border: 3px solid var(--rule-strong);
+  box-shadow: 5px 5px 0 var(--rule-strong);
+  padding: 0 0.14em;
+  transform: rotate(-1.5deg);
+}
+.dark .lx-sw-last { color: #071417; box-shadow: 5px 5px 0 var(--card-shade, #0a5560); }
+
+/* ---------------------------------------------------------------- closing band */
+.lx-closing { background-image: radial-gradient(circle at 1px 1px, rgb(17 17 17 / 0.18) 1px, transparent 0); background-size: 18px 18px; }
+.lx-closing-title { will-change: transform; }
+
 /* ---------------------------------------------------------------- status dot */
 .lx-status { color: var(--ink-3); }
 .lx-status-dot { background: var(--wait); }
@@ -188,6 +243,8 @@
   .lx-spot::before { display: none; }
   .pp-replay { display: none !important; }
 }
+/* pinned and scrubbed on desktop: scrolling is the replay */
+.pp[data-scrub] .pp-replay { display: none; }
 .dark .pp[data-state="clash"] .pp-clashing .pp-face,
 .dark .pp[data-state="solving"] .pp-clashing .pp-face { color: #ffe1dc; }
 /* the big caps: tight, but with enough air that words never touch (more in the dark, where light type
