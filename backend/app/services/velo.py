@@ -5,6 +5,7 @@ browser to the usual endpoints, after the person confirms, with the usual role c
 import re
 from dataclasses import dataclass
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..core.explain import _time, explain_session
@@ -12,7 +13,9 @@ from ..core.model import Dataset
 from ..errors import ApiError
 from ..llm import velo as route
 from ..llm.parse_booking import parse_booking
-from ..models import User
+from ..llm.parse_change import parse_change
+from ..llm.timeparse import romanise
+from ..models import User, VeloConversation, VeloMessage
 from ..routers.timetable import course_dept, course_titles
 from ..routers.views import pending_for, rooms_free
 from ..schemas import VeloIn
@@ -61,13 +64,26 @@ def _version(t: Turn):
 
 
 # ---------------------------------------------------------------- rooms and bookings
+def too_big(ds: Dataset, people: int, needs: list[str]) -> str:
+    """Why no room type fits, naming the biggest bookable venue so the person knows what is possible."""
+    venues = [r for r in ds.rooms.values() if "event" in r["allowed_uses"]]
+    big = max(venues, key=lambda r: r["capacity"], default=None)
+    if big and big["capacity"] < people:
+        return (f"No venue seats {people} people: the largest is {big['id']} with {big['capacity']}. "
+                f"Split the event or plan for {big['capacity']} or fewer.")
+    return f"No bookable room fits {people} people with {', '.join(needs) or 'those needs'}. Try fewer people or fewer needs."
+
+
 def find_rooms(t: Turn) -> dict:
     row, ds = state.active_dataset(t.db)
     p = parse_booking(ds, t.body.text, t.user.role, t.body.today)
     d, guessed = p["draft"], set(p["guessed_fields"])
     chips = [chip("Find a room")]
     if not d["windows"]:
-        return {"reply": "Which day and time? For example, Tuesday 4 to 6 pm.", "understood": chips,
+        # keep the parser's question about the day ("today" is Sunday...), not the booking-only ones
+        ask = (p["follow_up"] or "").replace("About how many people will attend?", "").replace(
+            "Which day of Spectra week, and what time?", "").strip()
+        return {"reply": ask or "Which day and time? For example, Tuesday 4 to 6 pm.", "understood": chips,
                 "suggestions": ["Free rooms tomorrow 10 to 12", "Free halls Friday evening for 100"], "_llm": p["llm"]}
     w = d["windows"][0]
     a, b = w["from_period"], w["to_period"]
@@ -89,6 +105,16 @@ def find_rooms(t: Turn) -> dict:
     reply = (f"{len(rooms)} {'room is' if len(rooms) == 1 else 'rooms are'} free {slot}"
              + (f" for {capacity} people" if d["attendance"] else "") + "." if rooms else
              f"No room is free {slot} with what you asked for. Try another time or fewer needs.")
+    if (want := d.get("requested_room")) in ds.rooms:      # "is LH-3 free...": answer about LH-3 first
+        others = [r for r in rooms if r["id"] != want]
+        if len(others) < len(rooms):
+            reply = f"Yes, {want} is free {slot}." + (f" {len(others)} similar rooms are too." if others else "")
+            rooms = [next(r for r in rooms if r["id"] == want)] + others
+        else:
+            cap = ds.rooms[want]["capacity"]
+            reply = (f"{want} seats {cap}, fewer than {capacity}." if cap < capacity else f"No, {want} is taken {slot}.") + (
+                f" {len(others)} similar {'room is' if len(others) == 1 else 'rooms are'} free: "
+                + ", ".join(r["id"] for r in others[:3]) + "." if others else " Try another time.")
     return {"reply": reply, "understood": chips, "_llm": p["llm"],
             "cards": [card("rooms", day=w["day"], start=a, end=b, when=slot, people=d["attendance"],
                            needs=d["needs"], week="spectra" if spectra else "regular", total=len(rooms),
@@ -128,10 +154,26 @@ _REGULAR = r"regular|normal week|usual week|this week|next week|every week|weekl
 
 def _week(text: str) -> str | None:
     """The week the person last named: "spectra", "regular", or None when they haven't said."""
-    t = text.lower()
+    t = romanise(text).lower()
     last = {w: max((m.end() for m in re.finditer(pat, t)), default=-1) for w, pat in (("spectra", _SPECTRA), ("regular", _REGULAR))}
     best = max(last, key=last.get)
     return best if last[best] >= 0 else None
+
+
+def _rooms_asked(t: Turn) -> str | None:
+    """The room search this booking points back to ("book it", "that one", "wahi"), if the last turn was one."""
+    if not t.body.conversation_id or not re.search(r"\b(it|that( one)?|this one|same|wahi|vahi|use)\b",
+                                                   t.body.text.lower()):
+        return None
+    c = t.db.get(VeloConversation, t.body.conversation_id)
+    if c is None or c.user_id != t.user.id:
+        return None
+    last = t.db.scalars(select(VeloMessage).where(VeloMessage.conversation_id == c.id)
+                        .order_by(VeloMessage.id.desc()).limit(2)).all()
+    if len(last) == 2 and last[0].role == "assistant" and last[1].role == "user" and any(
+            k.get("kind") == "rooms" for k in (last[0].payload or {}).get("cards", [])):
+        return last[1].content
+    return None
 
 
 def book_venue(t: Turn) -> dict:
@@ -139,6 +181,8 @@ def book_venue(t: Turn) -> dict:
     carry = t.body.last_intent == "book_venue" and t.body.draft_text and not re.search(
         r"\b(book|reserve)\b", t.body.text.lower())
     text = f"{t.body.draft_text}. {t.body.text}" if carry else t.body.text
+    if not carry and (asked := _rooms_asked(t)):     # "ok book it" right after "is LH-3 free Wednesday 2 to 4?"
+        text = f"{asked}. {t.body.text}"
     p = parse_booking(ds, text, t.user.role, t.body.today)
     d, guessed = p["draft"], set(p["guessed_fields"])
     if (re.match(r"\s*(book|reserve|need|free|find|i want)\b", d["title"], re.I) or len(d["title"]) > 80
@@ -160,7 +204,7 @@ def book_venue(t: Turn) -> dict:
     v = state.require_version(t.db, row)
     full = {**d, "attendance": d["attendance"], "room_types": d["room_types"] or [], "week": week}
     if not full["room_types"]:
-        return {"reply": "No bookable room fits that many people with those needs. Try fewer people or fewer needs.",
+        return {"reply": too_big(ds, d["attendance"], d["needs"]),
                 "understood": chips, "draft_text": text, "_llm": p["llm"],
                 "cards": [card("draft", draft=d, guessed=sorted(guessed), notes=p["notes"], question=None)]}
     chk = bookings.check(t.db, ds, v, full, t.user)
@@ -387,6 +431,38 @@ def disruptions(t: Turn) -> dict:
             "suggestions": [f"Explain proposal #{items[0]['id']}"]}
 
 
+def unavailable(t: Turn) -> dict:
+    """"I'm on leave tomorrow": prepare the same unavailability change the agent would, for them to confirm."""
+    from . import velo_tools     # it imports this module
+    chips = [chip("Can't teach")]
+    if t.user.role not in velo_tools.TEACHING:
+        return {"reply": "Leave is handled for teaching staff. To move a venue booking, cancel it and book another slot.",
+                "understood": chips, "suggestions": ["What happened to my requests?"]}
+    ds, v = _version(t)
+    p = parse_change(ds, state.to_assign(v.assignments), t.body.text, t.user.faculty_id, t.body.today)
+    it = p["intent"]
+    if not it or it["type"] != "faculty_unavailable":
+        return {"reply": p["follow_up"] or "Which day(s) can't you teach?", "understood": chips, "_llm": p["llm"],
+                "suggestions": ["Tomorrow, the whole day", "Friday 10 to 12"]}
+    chips += [chip(", ".join(DAY[d] for d in it["days"])), chip(f"P{min(it['periods'])}–P{max(it['periods'])}")]
+    ctx = velo_tools.Ctx(t.db, t.user, t.body.conversation_id)
+    try:
+        out = velo_tools.create_change_proposal(ctx, velo_tools.ChangeArgs(
+            type="faculty_unavailable", faculty=it["faculty_id"], days=it["days"], periods=it["periods"],
+            reason=it["reason"]))
+    except velo_tools.ToolError as e:
+        return {"reply": str(e) + ".", "understood": chips, "_llm": p["llm"]}
+    hit = out.data["affected_sessions"]
+    if not hit:     # nothing to repair: don't leave a card that would send an empty change
+        t.db.rollback()
+        return {"reply": f"You have no classes {', '.join(DAY[d] for d in it['days'])} in that time, so nothing needs "
+                         "to move.", "understood": chips, "_llm": p["llm"]}
+    reply = (f"{len(hit)} of your sessions fall{'s' if len(hit) == 1 else ''} in that time"
+             f" ({', '.join(hit)}). Press Send to Admin and the repair solver will propose the fewest moves; nothing "
+             "changes until the Admin approves.")
+    return {"reply": reply, "understood": chips, "cards": out.cards, "_llm": p["llm"]}
+
+
 # ---------------------------------------------------------------- navigation and help
 def navigate(t: Turn) -> dict:
     path = route.PAGES.get(t.found.get("page") or "", None)
@@ -423,7 +499,8 @@ def help_(t: Turn) -> dict:
 
 HANDLERS = {"find_rooms": find_rooms, "book_venue": book_venue, "booking_status": booking_status,
             "cancel_booking": cancel_booking, "explain_session": explain, "alternatives": alternatives,
-            "approvals": approvals, "proposals": disruptions, "navigate": navigate, "help": help_}
+            "approvals": approvals, "proposals": disruptions, "unavailable": unavailable, "navigate": navigate,
+            "help": help_}
 
 
 def answer(db: Session, user: User, body: VeloIn) -> dict:

@@ -12,7 +12,8 @@ from ..core.model import MAX_PERIOD, Dataset
 from ..core.priority import effective_category
 from ..solver.fest import CAT_LABEL
 from . import client
-from .timeparse import HINTS, end_period, resolve_relative, start_period, today_code
+from .timeparse import (HINTS, NAMES, date_weekday, end_period, relative_weekday, resolve_relative, romanise,
+                        start_period, today_code)
 
 DAY_CODES = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
 CATEGORIES = ["institute_event", "guest_lecture", "department_event", "club_event"]
@@ -84,6 +85,7 @@ def _hour(h: int, m: int, mer: str | None, evening: bool) -> str:
 
 
 def rules(ds: Dataset, text: str) -> dict:
+    text = romanise(text)
     t = " " + text.lower() + " "
     evening = bool(re.search(r"\b(evening|shaam|night|raat|pm)\b", t))
     out = {"title": "", "attendance": None, "duration_hours": None, "windows": [], "repeat_days": [], "room_types": [],
@@ -117,6 +119,8 @@ def rules(ds: Dataset, text: str) -> dict:
     days = [code for code, words in _DAY_WORDS.items() if any(re.search(rf"\b{w}\b", t) for w in words)]
     rel = "tomorrow" if re.search(r"\b(kal|tomorrow|tmrw)\b", t) else "day_after" if re.search(r"\b(parso|day after)\b", t) \
         else "today" if re.search(r"\b(aaj|today|tonight)\b", t) else None
+    if not days and not rel and (on := date_weekday(text)):
+        days = [on]          # "4th November" -> its weekday; a weekend one is turned down in finish()
     every = bool(re.search(r"\b(every|each|daily|har|both days|all of)\b", t))
     if not days and re.search(r"\b(daily|every day|all (of )?(fest|spectra) week|roz)\b", t):
         days = list(ds.days)
@@ -211,7 +215,9 @@ def finish(ds: Dataset, raw: dict, text: str, role: str, today: str) -> dict:
                 guessed.append("windows")
                 notes.append(f"\"{w['relative_day'].replace('_', ' ')}\" read as {day} (today taken as {today})")
             else:
-                questions.append(f"That falls after {ds.days[-1]}, outside Spectra week. Which day?")
+                lands = NAMES.get(relative_weekday(w["relative_day"], today) or "", "that day")
+                questions.append(f"\"{w['relative_day'].replace('_', ' ')}\" is {lands}, not a teaching day "
+                                 f"({ds.days[0]}–{ds.days[-1]}). Which day?")
                 continue
         if not day:
             continue

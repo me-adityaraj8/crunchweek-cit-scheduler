@@ -6,9 +6,10 @@ Nothing here answers anything: services/velo.py does that with the same code the
 import re
 
 from . import client
+from .timeparse import romanise
 
 INTENTS = ["find_rooms", "book_venue", "booking_status", "cancel_booking", "explain_session", "alternatives",
-           "approvals", "proposals", "navigate", "help"]
+           "approvals", "proposals", "unavailable", "navigate", "help"]
 PAGES = {"overview": "/", "timetable": "/timetable", "exams": "/exams", "spectra": "/spectra", "changes": "/changes",
          "approvals": "/approvals", "rooms": "/rooms", "book": "/book", "data": "/data", "settings": "/settings"}
 
@@ -28,10 +29,15 @@ _CANCEL = r"\b(cancel|withdraw|call off|hatao|remove my)\b"
 _STATUS = r"\b(status|what happened|kya hua|approved|rejected|my requests?|my bookings?|did (it|my|we) get|where is my)\b"
 _APPROVALS = r"\b(approv\w*|pending|waiting for me|to review|my inbox|sign off)\b"
 _PROPOSALS = r"\b(disruption|proposals?|repair|change requests?|leave|unavailab\w*|moved sessions?)\b"
+# the person themself can't teach: "I'm on leave tomorrow", "main kal nahi aa paunga"
+_AWAY = (r"\b(i'?m|i am|i will be|i'?ll be|i won'?t|i can'?t|i cannot|main|mai|mujhe)\b.*"
+         r"\b(on leave|leave|unavailable|not available|away|off|sick|out of station|can'?t (come|teach|take)|"
+         r"chhutti|nahi aa)")
 _ALTS = r"\b(alternatives?|another (slot|time)|other (slots?|times?)|reschedul\w*|move (it|this|my|the)|shift|kahan aur)\b"
 _WHY = r"\b(why|explain|reason|kyun|kyon|how come|where is|when is|when does|allocat\w*|placed)\b"
 _FREE = r"\b(free|available|empty|vacant|khali|unused|open)\b"
-_PLACE = r"\b(rooms?|halls?|labs?|venues?|classrooms?|auditorium|space|spaces|jagah)\b"
+_PLACE = (r"\b(rooms?|halls?|labs?|venues?|classrooms?|auditorium|space|spaces|jagah|oat|aud|open[- ]air|"
+          r"seminar|theatre|lh-?\d+|sh-?\d+|cr-?\d+)\b")
 _BOOK = r"\b(book|reserve|booking|chahiye|need a (room|hall|venue|space|lab)|organi[sz]e|host)\b"
 _HELP = r"^\s*(hi|hello|hey|namaste|help|what can you do|who are you|kya kar sakte)\b"
 
@@ -59,6 +65,7 @@ def page_in(text: str) -> str | None:
 
 def rules(text: str, focus: dict | None, booking_open: bool) -> str | None:
     """The intent the keywords make clear, or None when they don't."""
+    text = romanise(text)
     t = " " + text.lower() + " "
     found = ids(text)
     if _has(_HELP, text.lower()):
@@ -69,8 +76,11 @@ def rules(text: str, focus: dict | None, booking_open: bool) -> str | None:
         return "cancel_booking"
     if found["request_id"] or _has(_STATUS, t) and _has(r"\b(requests?|bookings?|venue|my)\b", t):
         return "booking_status"
-    if _has(_APPROVALS, t) and not _has(r"\bmy (request|booking)", t):
+    # "book ... approved by the Dean" is a booking, not the approvals list
+    if _has(_APPROVALS, t) and not _has(r"\bmy (request|booking)", t) and not _has(r"\b(book|reserve)\b", t):
         return "approvals"
+    if _has(_AWAY, t) and not found["proposal_id"]:
+        return "unavailable"
     if found["proposal_id"] or _has(_PROPOSALS, t):
         return "proposals"
     session = found["course_id"] or (focus or {}).get("kind") == "session"

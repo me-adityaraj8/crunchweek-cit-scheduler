@@ -13,6 +13,7 @@ Intents:
 - alternatives: other possible slots for a class, moving or rescheduling it.
 - approvals: what is waiting for them to approve or review.
 - proposals: disruption repairs and change proposals (sessions moved because of leave, a closed room, a change file).
+- unavailable: the person says they themself can't teach at some time (on leave, sick, away) and wants their classes handled.
 - navigate: they want to open a part of the app.
 - help: greetings, what Velo can do, or anything outside the above.
 

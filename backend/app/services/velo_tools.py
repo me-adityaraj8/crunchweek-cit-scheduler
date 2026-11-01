@@ -23,13 +23,14 @@ from ..core.explain import _time, explain_booking
 from ..core.model import LAST_TEACHING, MAX_PERIOD, Dataset, block
 from ..errors import ApiError, bad_request, conflict, forbidden, not_found
 from ..llm.parse_booking import ROLE_DEFAULT
+from ..llm.timeparse import NAMES, relative_weekday, resolve_relative, today_code
 from ..models import User, VeloAction
 from ..routers.exams import get_exams
 from ..routers.timetable import course_dept, course_titles
 from ..routers.timetable import timetable as timetable_view
 from ..routers.views import dashboard, pending_for, rooms_free
 from . import bookings, proposals, state
-from .velo import DAY, PAGE_LABEL, ROLE_PAGES, STATUS, _proposal, _request_row, _session_card, card, when
+from .velo import DAY, PAGE_LABEL, ROLE_PAGES, STATUS, _proposal, _request_row, _session_card, card, too_big, when
 
 ALL = ("admin", "coordinator", "faculty", "club")
 STAFF = ("admin", "coordinator")
@@ -93,7 +94,18 @@ def _need_version(ctx: Ctx):
     return row, ds, v
 
 
+RELATIVE = {"today": "today", "aaj": "today", "tomorrow": "tomorrow", "kal": "tomorrow",
+            "day after tomorrow": "day_after", "day after": "day_after", "parso": "day_after", "parson": "day_after"}
+
+
 def _day(ds: Dataset, day: str) -> str:
+    rel = RELATIVE.get(day.strip().lower())
+    if rel:      # the model passed the word itself: work it out from the real date
+        ref = today_code(ds, None)
+        d = resolve_relative(ds, rel, ref)
+        if d is None:
+            raise ToolError(f"{day} is {NAMES[relative_weekday(rel, ref)]}, not a teaching day. Days: {', '.join(ds.days)}")
+        return d
     d = day.upper()[:3]
     if d not in ds.days:
         raise ToolError(f"{day} is not a teaching day. Days: {', '.join(ds.days)}")
@@ -261,7 +273,7 @@ def explain_scheduling_decision(ctx: Ctx, a: ExplainArgs) -> Out:
 
 # ---------------------------------------------------------------- rooms
 class FreeArgs(BaseModel):
-    day: str = Field(description="MON..SAT")
+    day: str = Field(description="MON..FRI")
     from_period: int = Field(ge=1, le=MAX_PERIOD)
     to_period: int = Field(ge=1, le=MAX_PERIOD)
     capacity: int = Field(1, ge=1, le=5000)
@@ -756,7 +768,7 @@ def _draft(ctx: Ctx, ds: Dataset, a: DraftArgs) -> dict:
                         and not set(a.needs) - _room_feats(x) and x["capacity"] >= a.attendance
                         and (x["type"] not in labs or "computers" in a.needs)})
     if not types:
-        raise ToolError(f"No bookable room fits {a.attendance} people with {', '.join(a.needs) or 'those needs'}")
+        raise ToolError(too_big(ds, a.attendance, a.needs))
     groups = [_find(ds.groups, g, "student group") for g in a.mandatory_for_groups]
     return {"title": a.title, "attendance": a.attendance, "duration_periods": dur,
             "windows": [{"day": day, "from_period": a.from_period, "to_period": a.to_period}], "room_types": types,

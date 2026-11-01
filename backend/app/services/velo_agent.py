@@ -20,7 +20,8 @@ from sqlalchemy.orm import Session
 from ..config import settings
 from ..llm import chat
 from ..llm.client import LLMUnavailable, prompt
-from ..models import User, VeloConversation, VeloMessage
+from ..llm.timeparse import day_context
+from ..models import User, VeloAction, VeloConversation, VeloMessage
 from ..schemas import VeloIn
 from . import state, velo_tools
 from .velo import PAGE_LABEL, chip
@@ -112,7 +113,7 @@ def system_prompt(db: Session, user: User, body: VeloIn, c: VeloConversation) ->
         focus = f" They have {body.focus.kind} {body.focus.id} open on the page."
     page = PAGE_LABEL.get(body.page.split("?")[0].rstrip("/") or "/", body.page)
     return prompt("velo_agent").format(
-        institute=ds.raw.get("institute", "the institute"), who=_who(db, user), today=body.today or "unknown",
+        institute=ds.raw.get("institute", "the institute"), who=_who(db, user), today=day_context(ds, body.today),
         page=page, focus=focus, priority=" > ".join(ds.priority_order), days=", ".join(ds.days), periods=periods,
         room_types=", ".join(sorted({r["type"] for r in ds.rooms.values()})), features=", ".join(feats),
         groups=groups, memory=memory)
@@ -269,6 +270,9 @@ def record(db: Session, user: User, body: VeloIn, out: dict) -> str:
     if out.get("draft_text"):       # its booking draft, in words: the agent picks it up on the next turn
         mem = {k: v for k, v in (c.memory or {}).items() if k != "draft"}
         c.memory = {**mem, "draft_text": out["draft_text"]}
+    for k in out.get("cards", []):     # a card it prepared on the first turn belongs to the new conversation
+        if k["kind"] == "action" and (a := db.get(VeloAction, k["data"]["id"])) is not None:
+            a.conversation_id = c.id
     db.add(VeloMessage(conversation_id=c.id, role="user", content=body.text, payload={"page": body.page}))
     db.add(VeloMessage(conversation_id=c.id, role="assistant", content=out["reply"],
                        payload={"tools": [], "cards": out.get("cards", []), "errors": [], "mode": out.get("mode")}))
