@@ -68,3 +68,17 @@ def test_tools_accept_tomorrow_as_a_day(monkeypatch):
     at(monkeypatch, 2026, 11, 1)
     assert _day(DS, "tomorrow") == "MON"
     assert _day(DS, "kal") == "MON"
+
+
+def test_the_prompt_says_2_to_4_is_afternoon_periods(client, monkeypatch):
+    from backend.app.db import SessionLocal
+    from backend.app.models import User, VeloConversation
+    from backend.app.schemas import VeloIn
+    from backend.app.services.velo_agent import system_prompt
+
+    at(monkeypatch, 2026, 11, 1)
+    with SessionLocal() as db:
+        user = db.query(User).filter_by(email="cse.coord@cit.demo").one()
+        prompt = system_prompt(db, user, VeloIn(text="Free rooms tomorrow 2 to 4 for 40 people"),
+                               VeloConversation(id="t", user_id=user.id, memory={}, summary=""))
+    assert '"2 to 4" is 14:00–16:00, P6–P7' in prompt       # worked out from the period table, lunch included

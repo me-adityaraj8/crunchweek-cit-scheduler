@@ -272,10 +272,13 @@ def explain_scheduling_decision(ctx: Ctx, a: ExplainArgs) -> Out:
 
 
 # ---------------------------------------------------------------- rooms
+PERIOD_HINT = "A period number from the calendar, not a clock hour (convert times with the period table)"
+
+
 class FreeArgs(BaseModel):
     day: str = Field(description="MON..FRI")
-    from_period: int = Field(ge=1, le=MAX_PERIOD)
-    to_period: int = Field(ge=1, le=MAX_PERIOD)
+    from_period: int = Field(ge=1, le=MAX_PERIOD, description=PERIOD_HINT)
+    to_period: int = Field(ge=1, le=MAX_PERIOD, description="Last period, inclusive (the one that ends at the end time)")
     capacity: int = Field(1, ge=1, le=5000)
     needs: list[str] = Field(default_factory=list, description="Features like projector, pa_system, stage, ac, computers")
     room_types: list[str] = Field(default_factory=list, description="classroom, lecture_hall, seminar_hall, auditorium, lab_cs ...")
@@ -738,7 +741,7 @@ def _pending(ctx: Ctx, tool_name: str, args: dict, title: str, lines: list[dict]
 class DraftArgs(BaseModel):
     title: str = Field(min_length=1, max_length=120)
     day: str
-    from_period: int = Field(ge=1, le=MAX_PERIOD, description="First period of the window the event may use")
+    from_period: int = Field(ge=1, le=MAX_PERIOD, description="First period of the window the event may use. " + PERIOD_HINT)
     to_period: int = Field(ge=1, le=MAX_PERIOD, description="Last period of that window")
     duration_periods: int | None = Field(None, ge=1, le=MAX_PERIOD, description="Hours needed; default the whole window")
     attendance: int = Field(ge=1, le=100000)

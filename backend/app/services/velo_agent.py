@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 from ..config import settings
 from ..llm import chat
 from ..llm.client import LLMUnavailable, prompt
-from ..llm.timeparse import day_context
+from ..llm.timeparse import day_context, end_period, start_period
 from ..models import User, VeloAction, VeloConversation, VeloMessage
 from ..schemas import VeloIn
 from . import state, velo_tools
@@ -97,6 +97,12 @@ def _who(db: Session, user: User) -> str:
     return ", ".join(parts)
 
 
+def _clock_example(ds) -> str:
+    """ "2 to 4" in this dataset's periods, worked out by the same code the keyword parser uses."""
+    a, b = start_period(ds, "14:00"), end_period(ds, "16:00")
+    return f"14:00–16:00, P{a}–P{b}" if a and b else "14:00–16:00"
+
+
 def system_prompt(db: Session, user: User, body: VeloIn, c: VeloConversation) -> str:
     _, ds = state.active_dataset(db)
     cal = ds.calendar
@@ -116,7 +122,7 @@ def system_prompt(db: Session, user: User, body: VeloIn, c: VeloConversation) ->
         institute=ds.raw.get("institute", "the institute"), who=_who(db, user), today=day_context(ds, body.today),
         page=page, focus=focus, priority=" > ".join(ds.priority_order), days=", ".join(ds.days), periods=periods,
         room_types=", ".join(sorted({r["type"] for r in ds.rooms.values()})), features=", ".join(feats),
-        groups=groups, memory=memory)
+        groups=groups, memory=memory, clock_example=_clock_example(ds))
 
 
 def _args(raw) -> dict | None:

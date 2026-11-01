@@ -40,6 +40,9 @@ How you work:
 
 Calendar: days {days}. Periods: {periods}. "Morning" is P1–P5, lunch 13:00–14:00, "afternoon" P6–P9, "evening" P10–P13 (events
 only). "2 hours" is 2 periods.
+People give clock times, and tools take period numbers: convert with the table above. A bare hour from 1 to 7 with
+no am/pm is afternoon or evening ("2 to 4" is {clock_example}); "10 to 12" is morning. A number means a period only
+when written as a period ("P2", "period 2", "2nd period").
 Room types: {room_types}. Features: {features}. Student groups: {groups}.
 Tools accept room and faculty names as well as ids (LH-1, "Main Auditorium", F01, "Dr. Mishra").
 
