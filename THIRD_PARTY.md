@@ -11,7 +11,7 @@
 | psycopg (binary) | 3.3.6 | LGPL-3.0 | Postgres driver |
 | PyJWT | 2.15.1 | MIT | Login tokens |
 | bcrypt | 5.0.0 | Apache-2.0 | Password hashing |
-| httpx | 0.28.1 | BSD-3-Clause | Gemini API calls, test client, exports script |
+| httpx | 0.28.1 | BSD-3-Clause | Gemini and Groq API calls, test client, exports script |
 | python-multipart | 0.0.32 | Apache-2.0 | JSON file uploads as form data |
 | pytest | 9.2.0 | MIT | Tests (dev only) |
 
@@ -34,7 +34,10 @@
 | Inter variable font (@fontsource-variable/inter) | 5.3.0 | OFL-1.1 | Text and headings |
 | Geist Mono variable font (@fontsource-variable/geist-mono) | 5.3.0 | OFL-1.1 | Codes, caps labels, the split-flap boards |
 | GSAP + ScrollTrigger (gsap) | 3.13.0 | GSAP Standard License (free, incl. commercial) | Landing page motion (entrances, reveals, product preview, scroll rail) |
+| three.js (three) | 0.186.1 | MIT | 3D rendering for Velo's animated orb |
+| React Three Fiber (@react-three/fiber) | 9.8.1 | MIT | React renderer for three.js (the Velo orb) |
 | Vite, @vitejs/plugin-react | 7.3.7, 5.2.0 | MIT | Dev server and build |
 | TypeScript | 5.9.3 | Apache-2.0 | Types (dev only) |
 | openapi-typescript | 7.13.0 | MIT | API types generated from `/api/openapi.json` (dev only) |
 | Vitest, Testing Library (react, dom), jsdom | 3.2.7, 16.3.3, 10.4.2, 26.1.0 | MIT | Frontend tests (dev only) |
+| @types/three | 0.186.0 | MIT | Types for three.js (dev only) |
